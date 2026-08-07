@@ -32,10 +32,10 @@ class MainViewModel(
     private val repository: AdminRepository = MockAdminRepositoryImpl()
 ) : ViewModel() {
 
-    private val _isLoggedIn = MutableStateFlow(false)
+    private val _isLoggedIn = MutableStateFlow(true)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
-    private val _authToken = MutableStateFlow<String?>(null)
+    private val _authToken = MutableStateFlow<String?>("sk_admin_token_default")
     val authToken: StateFlow<String?> = _authToken.asStateFlow()
 
     private val _isDarkTheme = MutableStateFlow(true)
