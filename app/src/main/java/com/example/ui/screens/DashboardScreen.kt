@@ -71,11 +71,6 @@ fun DashboardScreen(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Modernized Hero Welcome Header
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            DashboardHeroHeader()
-        }
-
         // Section Title: Quick Stats
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(
@@ -182,65 +177,6 @@ fun DashboardScreen(
         // Bottom Spacing
         item(span = { GridItemSpan(maxLineSpan) }) {
             Spacer(modifier = Modifier.height(28.dp))
-        }
-    }
-}
-
-@Composable
-private fun DashboardHeroHeader() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 4.dp),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
-    ) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color(0xFF0288D1),
-                            Color(0xFF01579B)
-                        )
-                    )
-                )
-                .padding(20.dp)
-        ) {
-            Column {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.End,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.ElectricBolt,
-                        contentDescription = null,
-                        tint = Color(0xFFFFB74D),
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                Text(
-                    text = "Sancak Kombi",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = Color.White
-                )
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    text = "Operasyonel süreçlerinize ve saha modüllerinize anında erişin.",
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.85f),
-                    lineHeight = 18.sp
-                )
-            }
         }
     }
 }
