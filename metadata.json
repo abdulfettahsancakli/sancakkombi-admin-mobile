@@ -1,0 +1,6 @@
+{
+  "name": "Sancak Kombi Admin",
+  "description": "Sancak Kombi Mobil Yönetim Paneli - Faz 1 (Auth, Dashboard & Modül Navigasyonu)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
