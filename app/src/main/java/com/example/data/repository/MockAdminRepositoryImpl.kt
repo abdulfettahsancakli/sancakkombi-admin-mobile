@@ -448,13 +448,9 @@ class MockAdminRepositoryImpl : AdminRepository {
     }
 
     override suspend fun login(password: String): Result<String> {
-        delay(400)
-        return if (password.isNotBlank()) {
-            val mockToken = "sk_token_" + UUID.randomUUID().toString().take(16)
-            Result.success(mockToken)
-        } else {
-            Result.failure(IllegalArgumentException("Şifre boş bırakılamaz."))
-        }
+        delay(300)
+        val mockToken = "sk_token_" + UUID.randomUUID().toString().take(16)
+        return Result.success(mockToken)
     }
 
     override suspend fun logout() {}
