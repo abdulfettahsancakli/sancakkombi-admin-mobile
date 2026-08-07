@@ -103,7 +103,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             Text(
-                text = "Mobil Yönetim Paneli",
+                text = "Mobil Uygulama",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -132,7 +132,7 @@ fun LoginScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Sancak Kombi yönetim paneline doğrudan erişim sağlayabilirsiniz.",
+                        text = "Sancak Kombi mobil uygulamasına doğrudan erişim sağlayabilirsiniz.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -177,7 +177,7 @@ fun LoginScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "Yönetim Paneline Giriş Yap",
+                                text = "Giriş Yap",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 16.sp
                             )
