@@ -1,0 +1,22 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Background rounded shield/badge -->
+    <path
+        android:fillColor="#0288D1"
+        android:pathData="M54,12 C72,12 88,18 88,38 C88,66 54,96 54,96 C54,96 20,66 20,38 C20,18 36,12 54,12 Z" />
+
+    <!-- Inner flame background (yellow-orange) -->
+    <path
+        android:fillColor="#FF9800"
+        android:pathData="M54,32 C54,32 68,48 68,62 C68,70 61.7,76 54,76 C46.3,76 40,70 40,62 C40,48 54,32 54,32 Z" />
+
+    <!-- Inner flame core (bright yellow) -->
+    <path
+        android:fillColor="#FFE082"
+        android:pathData="M54,45 C54,45 61,56 61,64 C61,68 57.9,71 54,71 C50.1,71 47,68 47,64 C47,56 54,45 54,45 Z" />
+
+</vector>
