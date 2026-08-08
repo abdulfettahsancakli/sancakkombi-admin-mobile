@@ -9,9 +9,9 @@ import androidx.compose.ui.graphics.Color
 
 private val DarkColorScheme = darkColorScheme(
     primary = AccentGreenDark,
-    onPrimary = LightSurface,
-    primaryContainer = AccentGreenDarkHover,
-    onPrimaryContainer = DarkTextPrimary,
+    onPrimary = DarkBg,
+    primaryContainer = AccentGreenDarkContainer,
+    onPrimaryContainer = AccentGreenDark,
     background = DarkBg,
     onBackground = DarkTextPrimary,
     surface = DarkSurface,

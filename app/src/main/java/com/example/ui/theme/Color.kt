@@ -2,23 +2,23 @@ package com.example.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Dark Theme Palette (Default for Sancak Kombi)
-val DarkBg = Color(0xFF020617)          // Slate 950
-val DarkSurface = Color(0xFF0A0F1E)     // Deep Navy Surface
-val DarkSurfaceVariant = Color(0xFF070C1A) // Deeper Navy
-val DarkBorder = Color(0xFF1E293B)      // Slate 800
+// Dark Theme Palette (2026 Deep Slate / Emerald)
+val DarkBg = Color(0xFF090D16)          // Deep Midnight Slate
+val DarkSurface = Color(0xFF131B2E)     // Elevated Navy Glass Surface
+val DarkSurfaceVariant = Color(0xFF1E293B) // Slate 800 Surface Variant
+val DarkBorder = Color(0xFF334155)      // Slate 700 Border
 
-val AccentGreenDark = Color(0xFF22C55E)  // Vibrant Brand Emerald
-val AccentGreenDarkHover = Color(0xFF16A34A)
+val AccentGreenDark = Color(0xFF22C55E)  // Vibrant Emerald
+val AccentGreenDarkContainer = Color(0xFF0F291E)
 
 val DarkTextPrimary = Color(0xFFF8FAFC)
 val DarkTextSecondary = Color(0xFF94A3B8)
-val DarkTextMuted = Color(0xFF475569)
+val DarkTextMuted = Color(0xFF64748B)
 
-// Light Theme Palette (2026 Design System)
-val LightBg = Color(0xFFF4F7F6)         // Dynamic Soft Background
+// Light Theme Palette (2026 Soft Mint / Forest Emerald)
+val LightBg = Color(0xFFF4F7F6)         // Dynamic Soft Canvas Background
 val LightSurface = Color(0xFFFFFFFF)    // Pure White Surface
-val LightSurfaceVariant = Color(0xFFE8EEEC) // Soft Green Tint Surface
+val LightSurfaceVariant = Color(0xFFE8EEEC) // Soft Green Tint Surface Variant
 val LightBorder = Color(0x14000000)     // Subtle 0.08 alpha border
 
 val AccentGreenPrimary = Color(0xFF2E7D32) // MD3 Green 800

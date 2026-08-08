@@ -156,7 +156,7 @@ fun CustomersScreen(
                     onClick = onBackClick,
                     shape = RoundedCornerShape(14.dp),
                     color = MaterialTheme.colorScheme.surface,
-                    border = BorderStroke(1.dp, Color(0x14000000)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
                     shadowElevation = 2.dp,
                     modifier = Modifier.testTag("back_button")
                 ) {
@@ -175,8 +175,8 @@ fun CustomersScreen(
 
                 Surface(
                     shape = RoundedCornerShape(20.dp),
-                    color = Color(0xFFE8F5E9),
-                    border = BorderStroke(1.dp, Color(0xFFA5D6A7).copy(alpha = 0.5f))
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -186,14 +186,14 @@ fun CustomersScreen(
                             modifier = Modifier
                                 .size(8.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF2E7D32))
+                                .background(MaterialTheme.colorScheme.primary)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "${customers.size} Müşteri",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF2E7D32)
+                            color = MaterialTheme.colorScheme.onPrimaryContainer
                         )
                     }
                 }
@@ -206,7 +206,7 @@ fun CustomersScreen(
                 text = "Müşteri Yönetimi",
                 fontSize = 28.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFF1A1A1A),
+                color = MaterialTheme.colorScheme.onBackground,
                 letterSpacing = (-0.5).sp
             )
 
@@ -220,14 +220,14 @@ fun CustomersScreen(
                     Text(
                         "Ad, telefon veya ilçe ara...",
                         fontSize = 14.sp,
-                        color = Color(0xFF757575)
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 },
                 leadingIcon = {
                     Icon(
                         imageVector = Icons.Default.Search,
                         contentDescription = null,
-                        tint = Color(0xFF2E7D32),
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(22.dp)
                     )
                 },
@@ -237,17 +237,19 @@ fun CustomersScreen(
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Temizle",
-                                tint = Color(0xFF757575)
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
                     }
                 },
                 shape = RoundedCornerShape(24.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = Color(0xFF2E7D32),
-                    unfocusedBorderColor = Color(0x14000000),
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
+                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                    focusedContainerColor = MaterialTheme.colorScheme.surface,
+                    unfocusedContainerColor = MaterialTheme.colorScheme.surface,
+                    focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                    unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
@@ -260,7 +262,7 @@ fun CustomersScreen(
             // Segmented Control (iOS 19 / MD3 Expressive Synthesis)
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFE8EEEC),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -272,7 +274,7 @@ fun CustomersScreen(
                     Surface(
                         onClick = { filterOnlyActiveAppointments = false },
                         shape = RoundedCornerShape(10.dp),
-                        color = if (!filterOnlyActiveAppointments) Color.White else Color.Transparent,
+                        color = if (!filterOnlyActiveAppointments) MaterialTheme.colorScheme.surface else Color.Transparent,
                         shadowElevation = if (!filterOnlyActiveAppointments) 2.dp else 0.dp,
                         modifier = Modifier.weight(1f)
                     ) {
@@ -280,7 +282,7 @@ fun CustomersScreen(
                             text = "Tüm Müşteriler (${customers.size})",
                             fontSize = 12.sp,
                             fontWeight = if (!filterOnlyActiveAppointments) FontWeight.Bold else FontWeight.Medium,
-                            color = if (!filterOnlyActiveAppointments) Color(0xFF2E7D32) else Color(0xFF757575),
+                            color = if (!filterOnlyActiveAppointments) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 10.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -289,7 +291,7 @@ fun CustomersScreen(
                     Surface(
                         onClick = { filterOnlyActiveAppointments = true },
                         shape = RoundedCornerShape(10.dp),
-                        color = if (filterOnlyActiveAppointments) Color.White else Color.Transparent,
+                        color = if (filterOnlyActiveAppointments) MaterialTheme.colorScheme.surface else Color.Transparent,
                         shadowElevation = if (filterOnlyActiveAppointments) 2.dp else 0.dp,
                         modifier = Modifier.weight(1f)
                     ) {
@@ -297,7 +299,7 @@ fun CustomersScreen(
                             text = "Aktif Randevusu Olanlar",
                             fontSize = 12.sp,
                             fontWeight = if (filterOnlyActiveAppointments) FontWeight.Bold else FontWeight.Medium,
-                            color = if (filterOnlyActiveAppointments) Color(0xFF2E7D32) else Color(0xFF757575),
+                            color = if (filterOnlyActiveAppointments) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.padding(vertical = 10.dp),
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
@@ -444,11 +446,11 @@ fun CustomersScreen(
                                 },
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) Color(0xFFF1F8E9) else Color.White
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface
                             ),
                             border = BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) Color(0xFF2E7D32) else Color(0x14000000)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
                         ) {
@@ -482,7 +484,7 @@ fun CustomersScreen(
                                         text = cust.name,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 15.sp,
-                                        color = Color(0xFF1A1A1A)
+                                        color = MaterialTheme.colorScheme.onSurface
                                     )
 
                                     Spacer(modifier = Modifier.height(4.dp))
@@ -490,13 +492,13 @@ fun CustomersScreen(
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Surface(
                                             shape = RoundedCornerShape(8.dp),
-                                            color = Color(0xFFE8EEEC)
+                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                                         ) {
                                             Text(
                                                 text = cust.district,
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.SemiBold,
-                                                color = Color(0xFF2E7D32),
+                                                color = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                             )
                                         }
@@ -506,7 +508,7 @@ fun CustomersScreen(
                                         Text(
                                             text = cust.phone,
                                             fontSize = 13.sp,
-                                            color = Color(0xFF757575)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -522,14 +524,14 @@ fun CustomersScreen(
                                             context.startActivity(intent)
                                         },
                                         shape = CircleShape,
-                                        color = Color(0xFFE3F2FD),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
                                         modifier = Modifier.size(44.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
                                             Icon(
                                                 imageVector = Icons.Default.Call,
                                                 contentDescription = "Ara",
-                                                tint = Color(0xFF1976D2),
+                                                tint = MaterialTheme.colorScheme.primary,
                                                 modifier = Modifier.size(20.dp)
                                             )
                                         }
@@ -547,7 +549,7 @@ fun CustomersScreen(
                                             }
                                         },
                                         shape = CircleShape,
-                                        color = Color(0xFFE8F5E9),
+                                        color = Color(0xFF10B981).copy(alpha = 0.15f),
                                         modifier = Modifier.size(44.dp)
                                     ) {
                                         Box(contentAlignment = Alignment.Center) {
@@ -582,8 +584,8 @@ fun CustomersScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            border = BorderStroke(1.dp, Color(0xFF2E7D32).copy(alpha = 0.25f)),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
                             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
                         ) {
                             Column(modifier = Modifier.padding(20.dp)) {
@@ -614,13 +616,13 @@ fun CustomersScreen(
                                             text = cust.name,
                                             style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
-                                            color = Color(0xFF1A1A1A)
+                                            color = MaterialTheme.colorScheme.onSurface
                                         )
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
                                             text = "${cust.district} • ${cust.phone}",
                                             fontSize = 13.sp,
-                                            color = Color(0xFF757575)
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
@@ -632,7 +634,7 @@ fun CustomersScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(14.dp))
-                                        .background(Color(0xFFE8EEEC))
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
                                         .padding(4.dp)
                                 ) {
                                     TabOption(
@@ -670,8 +672,10 @@ fun CustomersScreen(
                                         label = { Text("Müşteri Ad Soyad") },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF2E7D32),
-                                            unfocusedBorderColor = Color(0x14000000)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                         ),
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true
@@ -683,12 +687,14 @@ fun CustomersScreen(
                                         value = editPhone,
                                         onValueChange = { editPhone = it },
                                         label = { Text("Telefon Numarası") },
-                                        leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color(0xFF2E7D32)) },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF2E7D32),
-                                            unfocusedBorderColor = Color(0x14000000)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                         ),
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true
@@ -700,11 +706,13 @@ fun CustomersScreen(
                                         value = editDistrict,
                                         onValueChange = { editDistrict = it },
                                         label = { Text("İlçe / Bölge") },
-                                        leadingIcon = { Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFF2E7D32)) },
+                                        leadingIcon = { Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF2E7D32),
-                                            unfocusedBorderColor = Color(0x14000000)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                         ),
                                         modifier = Modifier.fillMaxWidth(),
                                         singleLine = true
@@ -718,8 +726,10 @@ fun CustomersScreen(
                                         label = { Text("Açık Adres Detayı") },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF2E7D32),
-                                            unfocusedBorderColor = Color(0x14000000)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                         ),
                                         modifier = Modifier.fillMaxWidth(),
                                         minLines = 2
@@ -734,8 +744,10 @@ fun CustomersScreen(
                                         placeholder = { Text("Örn: Demirdöküm Nitromix kombi, 3. kat") },
                                         shape = RoundedCornerShape(12.dp),
                                         colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = Color(0xFF2E7D32),
-                                            unfocusedBorderColor = Color(0x14000000)
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                                         ),
                                         modifier = Modifier.fillMaxWidth(),
                                         minLines = 2
@@ -1123,8 +1135,8 @@ private fun NewCustomerDialog(
                         }
                     },
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, Color(0xFF2E7D32)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF2E7D32)),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
                     modifier = Modifier.fillMaxWidth().height(46.dp)
                 ) {
                     Icon(imageVector = Icons.Default.Contacts, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1140,8 +1152,10 @@ private fun NewCustomerDialog(
                     label = { Text("Müşteri Ad Soyad *") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2E7D32),
-                        unfocusedBorderColor = Color(0x14000000)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -1153,12 +1167,14 @@ private fun NewCustomerDialog(
                     value = phone,
                     onValueChange = { phone = it },
                     label = { Text("Telefon Numarası *") },
-                    leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = Color(0xFF2E7D32)) },
+                    leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2E7D32),
-                        unfocusedBorderColor = Color(0x14000000)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -1172,8 +1188,10 @@ private fun NewCustomerDialog(
                     label = { Text("İlçe / Bölge") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2E7D32),
-                        unfocusedBorderColor = Color(0x14000000)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
@@ -1187,8 +1205,10 @@ private fun NewCustomerDialog(
                     label = { Text("Adres Detayı") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2E7D32),
-                        unfocusedBorderColor = Color(0x14000000)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2
@@ -1202,8 +1222,10 @@ private fun NewCustomerDialog(
                     label = { Text("Kombi / Özel Notlar") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color(0xFF2E7D32),
-                        unfocusedBorderColor = Color(0x14000000)
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
+                        unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
+                        focusedTextColor = MaterialTheme.colorScheme.onSurface,
+                        unfocusedTextColor = MaterialTheme.colorScheme.onSurface
                     ),
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 2

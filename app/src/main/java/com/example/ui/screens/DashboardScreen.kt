@@ -1,9 +1,13 @@
 package com.example.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,33 +22,55 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddAlert
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.ElectricBolt
-import androidx.compose.material.icons.filled.Event
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Handyman
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Wallet
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -52,6 +78,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AdminModule
 import com.example.data.model.DashboardStats
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @Composable
 fun DashboardScreen(
@@ -60,9 +89,15 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     val modules = AdminModule.values().toList()
+    var showNotificationDialog by remember { mutableStateOf(false) }
+
+    val currentDateStr = remember {
+        val sdf = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr", "TR"))
+        sdf.format(Date())
+    }
 
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 158.dp),
+        columns = GridCells.Fixed(2),
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
@@ -71,112 +106,785 @@ fun DashboardScreen(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // Section Title: Quick Stats
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Performans ve Özet",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-            }
-        }
-
-        // 6 Modern Stat Cards
-        item {
-            ModernStatCard(
-                label = "BUGÜNKÜ RANDEVU",
-                value = stats.bugunkuRandevu.toString(),
-                icon = Icons.Default.Event,
-                accentColor = Color(0xFF0288D1),
-                badgeText = "Günlük",
-                testTag = "stat_today_appointments"
+        // 1. Dynamic Greeting Command Header
+        item(span = { GridItemSpan(2) }) {
+            DashboardGreetingHeader(
+                currentDate = currentDateStr,
+                unreadNotificationCount = 3,
+                onOpenNotifications = { showNotificationDialog = true }
             )
         }
 
+        // 2. Operational Alert Banner
+        item(span = { GridItemSpan(2) }) {
+            OperationalAlertBanner(
+                pendingCount = stats.bugunkuRandevu,
+                pendingApprovals = stats.bekleyenOnay,
+                onActionClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+            )
+        }
+
+        // 3. Quick Actions Bar (Horizontal Scrollable Chips)
+        item(span = { GridItemSpan(2) }) {
+            QuickActionsBar(
+                onNavigateToModule = onNavigateToModule
+            )
+        }
+
+        // 4. Hero Bento Cell: "Bu Ay Gelir" with Sparkline Micro-Chart
+        item(span = { GridItemSpan(2) }) {
+            RevenueHeroBentoCard(
+                revenueText = stats.buAyGelir,
+                growthPercentage = "+12%",
+                onCardClick = { onNavigateToModule(AdminModule.FINANS) }
+            )
+        }
+
+        // 5. Split Row Bento Cards
+        // Left: "Bugünkü Randevu" (with Live Pulse Dot)
         item {
-            ModernStatCard(
-                label = "BEKLEYEN ONAY",
+            TodayAppointmentsBentoCard(
+                count = stats.bugunkuRandevu,
+                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+            )
+        }
+
+        // Right: "Açık Alacak" (with Tahsil Et shortcut)
+        item {
+            ReceivablesBentoCard(
+                amountText = stats.acikAlacak,
+                onClick = { onNavigateToModule(AdminModule.FINANS) }
+            )
+        }
+
+        // 6. Secondary Row Bento Cells (Bekleyen Onay & Bu Hafta Tamamlanan)
+        item {
+            CompactMetricBentoCard(
+                title = "BEKLEYEN ONAY",
                 value = stats.bekleyenOnay.toString(),
                 icon = Icons.Default.PendingActions,
                 accentColor = Color(0xFFF59E0B),
                 badgeText = "Aksiyon",
-                testTag = "stat_pending_approvals"
+                testTag = "stat_pending_approvals",
+                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
             )
         }
 
         item {
-            ModernStatCard(
-                label = "BU HAFTA TAMAMLANAN",
+            CompactMetricBentoCard(
+                title = "HAFTALIK TAMAMLANAN",
                 value = stats.buHaftaTamamlanan.toString(),
                 icon = Icons.Default.CheckCircle,
                 accentColor = Color(0xFF10B981),
-                badgeText = "Haftalık",
-                testTag = "stat_weekly_completed"
+                badgeText = "Tamamlanan",
+                testTag = "stat_weekly_completed",
+                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
             )
         }
 
-        item {
-            ModernStatCard(
-                label = "AÇIK ALACAK",
-                value = stats.acikAlacak,
-                icon = Icons.Default.AccountBalanceWallet,
-                accentColor = Color(0xFFEF4444),
-                badgeText = "Takip Et",
-                testTag = "stat_receivables"
-            )
+        // 7. Section Header: Yönetim Modülleri
+        item(span = { GridItemSpan(2) }) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 12.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Yönetim Modülleri",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                ) {
+                    Text(
+                        text = "9 Aktif Modül",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
         }
 
-        item {
-            ModernStatCard(
-                label = "BU AY SERVİS",
-                value = stats.buAyServis.toString(),
-                icon = Icons.Default.Handyman,
-                accentColor = Color(0xFF8B5CF6),
-                badgeText = "Aylık",
-                testTag = "stat_monthly_services"
-            )
-        }
-
-        item {
-            ModernStatCard(
-                label = "BU AY GELİR",
-                value = stats.buAyGelir,
-                icon = Icons.Default.TrendingUp,
-                accentColor = Color(0xFF059669),
-                badgeText = "Ciro",
-                testTag = "stat_monthly_revenue"
-            )
-        }
-
-        // Section Title: Admin Modules
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Text(
-                text = "Yönetim Modülleri",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(top = 16.dp, bottom = 4.dp)
-            )
-        }
-
-        // 9 Modernized Admin Module Cards
+        // 8. Compact Module Bento Cards
         items(modules) { module ->
-            ModernModuleCard(
+            CompactBentoModuleCard(
                 module = module,
+                stats = stats,
                 onClick = { onNavigateToModule(module) }
             )
         }
 
-        // Bottom Spacing
-        item(span = { GridItemSpan(maxLineSpan) }) {
-            Spacer(modifier = Modifier.height(28.dp))
+        // Bottom Spacing for Floating Nav Bar
+        item(span = { GridItemSpan(2) }) {
+            Spacer(modifier = Modifier.height(72.dp))
+        }
+    }
+
+    if (showNotificationDialog) {
+        NotificationCenterDialog(onDismiss = { showNotificationDialog = false })
+    }
+}
+
+@Composable
+private fun DashboardGreetingHeader(
+    currentDate: String,
+    unreadNotificationCount: Int,
+    onOpenNotifications: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        shadowElevation = 2.dp
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Profile Avatar Box
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "SK",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(12.dp))
+
+                Column {
+                    Text(
+                        text = "Günaydın, Sancak Kombi",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = currentDate,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            // Notification Bell with Badge Counter
+            Box(contentAlignment = Alignment.TopEnd) {
+                IconButton(
+                    onClick = onOpenNotifications,
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Notifications,
+                        contentDescription = "Bildirimler",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                if (unreadNotificationCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFEF4444)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = unreadNotificationCount.toString(),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun OperationalAlertBanner(
+    pendingCount: Int,
+    pendingApprovals: Int,
+    onActionClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onActionClick() }
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            PulseEffectDot(color = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Operasyon Durumu",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = "Bugün $pendingCount aktif randevu ve $pendingApprovals onay bekleyen teklifiniz var.",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(16.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun QuickActionsBar(
+    onNavigateToModule: (AdminModule) -> Unit
+) {
+    Column {
+        Text(
+            text = "Hızlı İşlemler",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            item {
+                QuickActionChip(
+                    label = "+ Randevu Ekle",
+                    icon = Icons.Default.DateRange,
+                    accentColor = Color(0xFF0288D1),
+                    onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+                )
+            }
+            item {
+                QuickActionChip(
+                    label = "+ Teklif Oluştur",
+                    icon = Icons.Default.Description,
+                    accentColor = Color(0xFF8B5CF6),
+                    onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
+                )
+            }
+            item {
+                QuickActionChip(
+                    label = "+ Müşteri Ekle",
+                    icon = Icons.Default.PersonAdd,
+                    accentColor = Color(0xFF10B981),
+                    onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
+                )
+            }
+            item {
+                QuickActionChip(
+                    label = "Kasa & Gelir",
+                    icon = Icons.Default.Wallet,
+                    accentColor = Color(0xFF059669),
+                    onClick = { onNavigateToModule(AdminModule.FINANS) }
+                )
+            }
+            item {
+                QuickActionChip(
+                    label = "WhatsApp Gönder",
+                    icon = Icons.AutoMirrored.Filled.Chat,
+                    accentColor = Color(0xFF25D366),
+                    onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun QuickActionChip(
+    label: String,
+    icon: ImageVector,
+    accentColor: Color,
+    onClick: () -> Unit
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
+        shadowElevation = 1.dp
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(24.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(13.dp)
+                )
+            }
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun RevenueHeroBentoCard(
+    revenueText: String,
+    growthPercentage: String,
+    onCardClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCardClick() }
+            .testTag("stat_monthly_revenue"),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Box(modifier = Modifier.fillMaxWidth()) {
+            // Background Canvas Sparkline
+            SparklineCanvasChart(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .align(Alignment.BottomCenter),
+                lineColor = Color(0xFF22C55E)
+            )
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF22C55E).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingUp,
+                                contentDescription = null,
+                                tint = Color(0xFF22C55E),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "BU AY GELİR (CİRO)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+
+                    // Green Trend Badge
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF22C55E).copy(alpha = 0.15f),
+                        border = BorderStroke(1.dp, Color(0xFF22C55E).copy(alpha = 0.3f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.TrendingUp,
+                                contentDescription = null,
+                                tint = Color(0xFF22C55E),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = growthPercentage,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF22C55E)
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = revenueText,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    letterSpacing = (-0.5).sp
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Geçen aya kıyasla performans %12 artış gösterdi",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TodayAppointmentsBentoCard(
+    count: Int,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .testTag("stat_today_appointments"),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFF0288D1).copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DateRange,
+                        contentDescription = null,
+                        tint = Color(0xFF0288D1),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                PulseEffectDot(color = Color(0xFF22C55E))
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "BUGÜNKÜ RANDEVU",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.3.sp
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = count.toString(),
+                fontSize = 26.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Tamamlanmayı bekliyor",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReceivablesBentoCard(
+    amountText: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .testTag("stat_receivables"),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(Color(0xFFEF4444).copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Receipt,
+                        contentDescription = null,
+                        tint = Color(0xFFEF4444),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Surface(
+                    onClick = onClick,
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFEF4444).copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = "Tahsil Et",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFEF4444),
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = "AÇIK ALACAK",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.3.sp
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = amountText,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = Color(0xFFEF4444)
+            )
+
+            Spacer(modifier = Modifier.height(4.dp))
+
+            Text(
+                text = "Müşteri ödemeleri takibi",
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactMetricBentoCard(
+    title: String,
+    value: String,
+    icon: ImageVector,
+    accentColor: Color,
+    badgeText: String,
+    testTag: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+            .testTag(testTag),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = accentColor.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = title,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                letterSpacing = 0.3.sp
+            )
+
+            Spacer(modifier = Modifier.height(2.dp))
+
+            Text(
+                text = value,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
+private fun CompactBentoModuleCard(
+    module: AdminModule,
+    stats: DashboardStats,
+    onClick: () -> Unit
+) {
+    val (moduleAccent, badgeText) = when (module) {
+        AdminModule.MUSTERILER -> Color(0xFF0288D1) to "123 Kayıtlı"
+        AdminModule.RANDEVULAR -> Color(0xFF10B981) to "${stats.bugunkuRandevu} Bugünkü"
+        AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6) to "SMS & WA"
+        AdminModule.ISTATISTIKLER -> Color(0xFF3B82F6) to "Raporlar"
+        AdminModule.FINANS -> Color(0xFF059669) to stats.acikAlacak
+        AdminModule.TEKLIFLER -> Color(0xFF6366F1) to "3 Aktif"
+        AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899) to "2 Yaklaşan"
+        AdminModule.GOOGLE_ADS -> Color(0xFFEA4335) to "%98 Performans"
+        AdminModule.WHATSAPP_CONNECT -> Color(0xFF25D366) to "Bağlı"
+    }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .clickable { onClick() }
+            .testTag("module_card_${module.id}"),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(moduleAccent.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = module.icon,
+                        contentDescription = module.title,
+                        tint = moduleAccent,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = moduleAccent.copy(alpha = 0.12f)
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = moduleAccent,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            Text(
+                text = module.title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 1
+            )
         }
     }
 }
@@ -191,74 +899,15 @@ fun ModernStatCard(
     testTag: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .testTag(testTag),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(accentColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = accentColor.copy(alpha = 0.08f)
-                ) {
-                    Text(
-                        text = badgeText,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = accentColor,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text(
-                text = label,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                letterSpacing = 0.3.sp
-            )
-
-            Spacer(modifier = Modifier.height(2.dp))
-
-            Text(
-                text = value,
-                fontSize = 19.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = if (accentColor == Color(0xFFEF4444) || accentColor == Color(0xFF10B981) || accentColor == Color(0xFF059669)) accentColor else MaterialTheme.colorScheme.onSurface
-            )
-        }
-    }
+    CompactMetricBentoCard(
+        title = label,
+        value = value,
+        icon = icon,
+        accentColor = accentColor,
+        badgeText = badgeText,
+        testTag = testTag,
+        onClick = {}
+    )
 }
 
 @Composable
@@ -267,107 +916,195 @@ fun ModuleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    ModernModuleCard(module = module, onClick = onClick, modifier = modifier)
+    CompactBentoModuleCard(
+        module = module,
+        stats = DashboardStats(1, 2, 14, "₺500", 28, "₺8.870"),
+        onClick = onClick
+    )
 }
 
 @Composable
-fun ModernModuleCard(
-    module: AdminModule,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
+private fun SparklineCanvasChart(
+    modifier: Modifier = Modifier,
+    lineColor: Color = Color(0xFF22C55E)
 ) {
-    val moduleAccent = when (module) {
-        AdminModule.MUSTERILER -> Color(0xFF0288D1)
-        AdminModule.RANDEVULAR -> Color(0xFF10B981)
-        AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6)
-        AdminModule.ISTATISTIKLER -> Color(0xFF3B82F6)
-        AdminModule.FINANS -> Color(0xFF059669)
-        AdminModule.TEKLIFLER -> Color(0xFF6366F1)
-        AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899)
-        AdminModule.GOOGLE_ADS -> Color(0xFFEA4335)
-        AdminModule.WHATSAPP_CONNECT -> Color(0xFF25D366)
-    }
+    Canvas(modifier = modifier) {
+        val width = size.width
+        val height = size.height
+        if (width <= 0f || height <= 0f) return@Canvas
 
-    Card(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .clickable { onClick() }
-            .testTag("module_card_${module.id}"),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(moduleAccent.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = module.icon,
-                    contentDescription = module.title,
-                    tint = moduleAccent,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+        val points = listOf(
+            0.05f to 0.85f,
+            0.20f to 0.65f,
+            0.35f to 0.70f,
+            0.50f to 0.40f,
+            0.65f to 0.50f,
+            0.80f to 0.20f,
+            0.95f to 0.10f
+        )
 
-            Spacer(modifier = Modifier.height(14.dp))
+        val path = Path()
+        val fillPath = Path()
 
-            Text(
-                text = module.title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface
-            )
+        val firstX = points[0].first * width
+        val firstY = points[0].second * height
 
-            Spacer(modifier = Modifier.height(4.dp))
+        path.moveTo(firstX, firstY)
+        fillPath.moveTo(firstX, height)
+        fillPath.lineTo(firstX, firstY)
 
-            Text(
-                text = module.description,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                lineHeight = 16.sp,
-                maxLines = 3
-            )
+        for (i in 1 until points.size) {
+            val prevX = points[i - 1].first * width
+            val prevY = points[i - 1].second * height
+            val currX = points[i].first * width
+            val currY = points[i].second * height
 
-            Spacer(modifier = Modifier.height(16.dp))
+            val controlX1 = prevX + (currX - prevX) / 2f
+            val controlY1 = prevY
+            val controlX2 = prevX + (currX - prevX) / 2f
+            val controlY2 = currY
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Aç",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = moduleAccent
-                )
-                Box(
-                    modifier = Modifier
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(moduleAccent.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Aç",
-                        tint = moduleAccent,
-                        modifier = Modifier.size(14.dp)
-                    )
-                }
-            }
+            path.cubicTo(controlX1, controlY1, controlX2, controlY2, currX, currY)
+            fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, currX, currY)
         }
+
+        fillPath.lineTo(width, height)
+        fillPath.close()
+
+        drawPath(
+            path = fillPath,
+            brush = Brush.verticalGradient(
+                colors = listOf(
+                    lineColor.copy(alpha = 0.25f),
+                    Color.Transparent
+                )
+            )
+        )
+
+        drawPath(
+            path = path,
+            color = lineColor,
+            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+        )
     }
 }
 
+@Composable
+private fun PulseEffectDot(
+    modifier: Modifier = Modifier,
+    color: Color = Color(0xFF22C55E)
+) {
+    val infiniteTransition = rememberInfiniteTransition(label = "pulse")
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1.0f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "alpha"
+    )
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 0.8f,
+        targetValue = 1.35f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "scale"
+    )
+
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(14.dp)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(color.copy(alpha = alpha * 0.45f))
+        )
+        Box(
+            modifier = Modifier
+                .size(8.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+    }
+}
+
+@Composable
+private fun NotificationCenterDialog(
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(22.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Bildirim Merkezi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                NotificationItemCard(
+                    title = "Teklif Onayı Bekliyor",
+                    desc = "Teklif #1024 müşteriden yanıt beklemektedir.",
+                    time = "10 dk önce",
+                    isUnread = true
+                )
+                NotificationItemCard(
+                    title = "Yaklaşan Periyodik Bakım",
+                    desc = "Ahmet Yılmaz müşterisinin 1 yıllık kombi bakımı geldi.",
+                    time = "1 saat önce",
+                    isUnread = true
+                )
+                NotificationItemCard(
+                    title = "Servis Tamamlandı",
+                    desc = "Kombisi tamir edilen servis tamamlandı olarak işaretlendi.",
+                    time = "3 saat önce",
+                    isUnread = false
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Kapat", fontWeight = FontWeight.Bold)
+            }
+        }
+    )
+}
+
+@Composable
+private fun NotificationItemCard(
+    title: String,
+    desc: String,
+    time: String,
+    isUnread: Boolean
+) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = if (isUnread) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, if (isUnread) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
+    ) {
+        Column(modifier = Modifier.padding(10.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                Text(text = time, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Spacer(modifier = Modifier.height(2.dp))
+            Text(text = desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
