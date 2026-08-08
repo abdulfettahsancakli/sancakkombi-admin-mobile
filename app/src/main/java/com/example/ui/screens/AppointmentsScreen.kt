@@ -8,15 +8,19 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +45,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -231,76 +237,134 @@ fun AppointmentsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Filter Bar Card
-            Card(
+            // Filter Chips Bar (Horizontal Scrollable Chips)
+            LazyRow(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surface
-                ),
-                elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ExposedDropdownMenuBox(
-                            expanded = expandedFilter,
-                            onExpandedChange = { expandedFilter = !expandedFilter },
-                            modifier = Modifier.weight(1.2f)
-                        ) {
-                            OutlinedTextField(
-                                value = selectedStatusFilter?.label ?: "Tüm Durumlar",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text("DURUM", fontSize = 10.sp) },
-                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedFilter) },
-                                modifier = Modifier.menuAnchor()
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == null,
+                        onClick = { selectedStatusFilter = null },
+                        label = { Text("Tümü ($countTotal)", fontWeight = FontWeight.Bold) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = MaterialTheme.colorScheme.primary,
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == AppointmentStatus.BEKLIYOR,
+                        onClick = { selectedStatusFilter = AppointmentStatus.BEKLIYOR },
+                        label = { Text("Bekleyen ($countBekliyor)", fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFF59E0B))
                             )
-                            ExposedDropdownMenu(
-                                expanded = expandedFilter,
-                                onDismissRequest = { expandedFilter = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text("Tüm Durumlar") },
-                                    onClick = {
-                                        selectedStatusFilter = null
-                                        expandedFilter = false
-                                    }
-                                )
-                                AppointmentStatus.values().forEach { st ->
-                                    DropdownMenuItem(
-                                        text = { Text(st.label) },
-                                        onClick = {
-                                            selectedStatusFilter = st
-                                            expandedFilter = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        OutlinedTextField(
-                            value = startDate,
-                            onValueChange = { startDate = it },
-                            label = { Text("BAŞLANGIÇ", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFF59E0B),
+                            selectedLabelColor = Color.White
                         )
-
-                        Spacer(modifier = Modifier.width(8.dp))
-
-                        OutlinedTextField(
-                            value = endDate,
-                            onValueChange = { endDate = it },
-                            label = { Text("BİTİŞ", fontSize = 10.sp) },
-                            modifier = Modifier.weight(1f),
-                            singleLine = true
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == AppointmentStatus.ONAYLANDI,
+                        onClick = { selectedStatusFilter = AppointmentStatus.ONAYLANDI },
+                        label = { Text("Onaylanan ($countOnaylandi)", fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF0288D1))
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF0288D1),
+                            selectedLabelColor = Color.White
                         )
-                    }
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == AppointmentStatus.TAMAMLANDI,
+                        onClick = { selectedStatusFilter = AppointmentStatus.TAMAMLANDI },
+                        label = { Text("Tamamlandı ($countTamamlandi)", fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF2E7D32))
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFF2E7D32),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+                item {
+                    FilterChip(
+                        selected = selectedStatusFilter == AppointmentStatus.IPTAL,
+                        onClick = { selectedStatusFilter = AppointmentStatus.IPTAL },
+                        label = { Text("İptal ($countIptal)", fontWeight = FontWeight.SemiBold) },
+                        leadingIcon = {
+                            Box(
+                                modifier = Modifier
+                                    .size(8.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFFD32F2F))
+                            )
+                        },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFD32F2F),
+                            selectedLabelColor = Color.White
+                        )
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Date Range Bar
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CalendarMonth,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Tarih Aralığı: $startDate - $endDate",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Spacer(modifier = Modifier.weight(1f))
+                    Text(
+                        text = "Değiştir",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.clickable { /* Date picker trigger */ }
+                    )
                 }
             }
 
@@ -467,199 +531,239 @@ private fun AppointmentCard(
 ) {
     val statusColor = when (appointment.status) {
         AppointmentStatus.BEKLIYOR -> Color(0xFFF59E0B)
-        AppointmentStatus.ONAYLANDI -> Color(0xFF3B82F6)
-        AppointmentStatus.TAMAMLANDI -> Color(0xFF10B981)
-        AppointmentStatus.IPTAL -> Color(0xFFEF4444)
+        AppointmentStatus.ONAYLANDI -> Color(0xFF0288D1)
+        AppointmentStatus.TAMAMLANDI -> Color(0xFF2E7D32)
+        AppointmentStatus.IPTAL -> Color(0xFFD32F2F)
     }
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            // Header Row: Date / Time + Status Badge
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = appointment.date,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = appointment.timeSlot,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
+            // Left Status Color Accent Bar
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .fillMaxHeight()
+                    .background(statusColor)
+            )
 
-                // Status Badge
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = statusColor.copy(alpha = 0.15f)
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .padding(14.dp)
+            ) {
+                // Header Row: Time & Status Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = "• ${appointment.status.label}",
-                        color = statusColor,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 11.sp,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "${appointment.date} | ${appointment.timeSlot}",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    // Status Badge (Guaranteed single line, no character wrapping)
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = statusColor.copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, statusColor.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = appointment.status.label,
+                            color = statusColor,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp,
+                            maxLines = 1,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(10.dp))
 
-            // Customer Info & Phone Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
+                // Customer Info Area
+                Text(
+                    text = appointment.customerName,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f)
+                    ) {
+                        Text(
+                            text = appointment.serviceType,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
                     Text(
-                        text = appointment.customerName,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = appointment.district,
+                        text = "📍 ${appointment.district}",
                         fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Quick Action Chips: Ara, WhatsApp, Rota
-                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (appointment.addressDetail.isNotBlank()) {
+                    Text(
+                        text = appointment.addressDetail,
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+
+                if (appointment.problemNote.isNotBlank()) {
+                    Text(
+                        text = "Not: ${appointment.problemNote}",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Quick Action Dock (Saha Dock'u: 48dp height minimum touch targets)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     OutlinedButton(
                         onClick = onCall,
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.height(32.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Call, contentDescription = null, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text("Ara", fontSize = 10.sp)
+                        Icon(imageVector = Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Ara", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     OutlinedButton(
                         onClick = onWhatsapp,
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.height(32.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = Color(0xFF25D366)
+                        ),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(44.dp)
                     ) {
-                        Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text("WhatsApp", fontSize = 10.sp)
+                        Icon(imageVector = Icons.Default.Send, contentDescription = null, tint = Color(0xFF25D366), modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("WhatsApp", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF25D366))
                     }
 
                     OutlinedButton(
                         onClick = onRoute,
-                        shape = RoundedCornerShape(6.dp),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(12.dp))
-                        Spacer(modifier = Modifier.width(2.dp))
-                        Text("Rota", fontSize = 10.sp)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // Service & Address
-            Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                modifier = Modifier.padding(vertical = 2.dp)
-            ) {
-                Text(
-                    text = appointment.serviceType,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                )
-            }
-
-            if (appointment.addressDetail.isNotBlank()) {
-                Text(
-                    text = "Adres: ${appointment.addressDetail}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
-
-            if (appointment.problemNote.isNotBlank()) {
-                Text(
-                    text = "Not: ${appointment.problemNote}",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(top = 2.dp)
-                )
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Action Buttons Bar
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                if (appointment.status == AppointmentStatus.BEKLIYOR) {
-                    OutlinedButton(
-                        onClick = onConfirm,
-                        shape = RoundedCornerShape(8.dp),
-                        modifier = Modifier.height(34.dp)
-                    ) {
-                        Text("Onayla", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-
-                if (appointment.status != AppointmentStatus.TAMAMLANDI && appointment.status != AppointmentStatus.IPTAL) {
-                    Button(
-                        onClick = onComplete,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = MaterialTheme.colorScheme.primary
                         ),
                         modifier = Modifier
-                            .height(34.dp)
-                            .testTag("complete_job_button")
+                            .weight(1f)
+                            .height(44.dp)
                     ) {
-                        Text("Tamamla", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-
-                    OutlinedButton(
-                        onClick = onCancel,
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFEF4444)
-                        ),
-                        modifier = Modifier.height(34.dp)
-                    ) {
-                        Text("İptal", fontSize = 11.sp, color = Color(0xFFEF4444))
+                        Icon(imageVector = Icons.Default.Navigation, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Rota", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(10.dp))
 
-                IconButton(
-                    onClick = onEdit,
-                    modifier = Modifier.size(34.dp)
+                // Primary Management Action Bar
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Icon(imageVector = Icons.Default.Edit, contentDescription = "Düzenle", modifier = Modifier.size(18.dp))
-                }
+                    if (appointment.status == AppointmentStatus.BEKLIYOR) {
+                        Button(
+                            onClick = onConfirm,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF0288D1)),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Text("✓ Onayla", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(34.dp)
-                ) {
-                    Icon(imageVector = Icons.Default.Delete, contentDescription = "Sil", tint = Color(0xFFEF4444), modifier = Modifier.size(18.dp))
+                    if (appointment.status != AppointmentStatus.TAMAMLANDI && appointment.status != AppointmentStatus.IPTAL) {
+                        Button(
+                            onClick = onComplete,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                            modifier = Modifier
+                                .height(38.dp)
+                                .testTag("complete_job_button")
+                        ) {
+                            Text("✓ İş Kapanış & İmza", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = onCancel,
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFD32F2F)),
+                            modifier = Modifier.height(38.dp)
+                        ) {
+                            Text("İptal", fontSize = 12.sp, color = Color(0xFFD32F2F))
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.weight(1f))
+
+                    IconButton(
+                        onClick = onEdit,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = "Düzenle", modifier = Modifier.size(18.dp))
+                    }
+
+                    IconButton(
+                        onClick = onDelete,
+                        modifier = Modifier.size(38.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Delete, contentDescription = "Sil", tint = Color(0xFFD32F2F), modifier = Modifier.size(18.dp))
+                    }
                 }
             }
         }

@@ -41,6 +41,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
+import com.example.data.model.IstanbulLocationData
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -54,19 +55,25 @@ fun EditAppointmentDialog(
     var customerName by remember { mutableStateOf(appointment.customerName) }
     var phone by remember { mutableStateOf(appointment.phone) }
     var email by remember { mutableStateOf(appointment.email) }
-    var district by remember { mutableStateOf(appointment.district) }
+    var district by remember { mutableStateOf(if (appointment.district.isNotBlank()) appointment.district else "Bayrampaşa") }
+    var neighborhood by remember { mutableStateOf(IstanbulLocationData.getNeighborhoods(district).firstOrNull() ?: "") }
+    var streetDoorNo by remember { mutableStateOf(appointment.addressDetail) }
     var date by remember { mutableStateOf(appointment.date) }
     var timeSlot by remember { mutableStateOf(appointment.timeSlot) }
     var serviceType by remember { mutableStateOf(appointment.serviceType) }
     var status by remember { mutableStateOf(appointment.status) }
-    var addressDetail by remember { mutableStateOf(appointment.addressDetail) }
     var problemNote by remember { mutableStateOf(appointment.problemNote) }
 
-    val districts = listOf("Bayrampaşa", "Esenler", "Gaziosmanpaşa", "Zeytinburnu", "Fatih", "Eyüpsultan")
+    val districts = IstanbulLocationData.districts
+    val currentNeighborhoods = remember(district) { IstanbulLocationData.getNeighborhoods(district) }
+    val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(district, neighborhood) }
+
     val timeSlots = listOf("09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00")
     val services = listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarım", "Gaz Kaçağı Tespiti")
 
     var expandedDistrict by remember { mutableStateOf(false) }
+    var expandedNeighborhood by remember { mutableStateOf(false) }
+    var expandedStreet by remember { mutableStateOf(false) }
     var expandedTimeSlot by remember { mutableStateOf(false) }
     var expandedService by remember { mutableStateOf(false) }
     var expandedStatus by remember { mutableStateOf(false) }
@@ -134,16 +141,19 @@ fun EditAppointmentDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // E-posta & İlçe
+                // E-posta
+                OutlinedTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = { Text("E-posta") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // İlçe & Mahalle Dropdowns
                 Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = email,
-                        onValueChange = { email = it },
-                        label = { Text("E-posta") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
                     ExposedDropdownMenuBox(
                         expanded = expandedDistrict,
                         onExpandedChange = { expandedDistrict = !expandedDistrict },
@@ -167,9 +177,95 @@ fun EditAppointmentDialog(
                                     onClick = {
                                         district = item
                                         expandedDistrict = false
+                                        val nList = IstanbulLocationData.getNeighborhoods(item)
+                                        if (nList.isNotEmpty()) {
+                                            neighborhood = nList.first()
+                                            val sList = IstanbulLocationData.getStreets(item, nList.first())
+                                            streetDoorNo = if (sList.isNotEmpty()) "${sList.first()} No:12" else ""
+                                        } else {
+                                            neighborhood = ""
+                                            streetDoorNo = ""
+                                        }
                                     }
                                 )
                             }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    ExposedDropdownMenuBox(
+                        expanded = expandedNeighborhood,
+                        onExpandedChange = { expandedNeighborhood = !expandedNeighborhood },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = neighborhood,
+                            onValueChange = {
+                                neighborhood = it
+                                expandedNeighborhood = true
+                            },
+                            label = { Text("Mahalle *") },
+                            placeholder = { Text("Mahalle seçin") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedNeighborhood) },
+                            modifier = Modifier.menuAnchor(),
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedNeighborhood,
+                            onDismissRequest = { expandedNeighborhood = false }
+                        ) {
+                            currentNeighborhoods.forEach { nItem ->
+                                DropdownMenuItem(
+                                    text = { Text(nItem) },
+                                    onClick = {
+                                        neighborhood = nItem
+                                        expandedNeighborhood = false
+                                        val sList = IstanbulLocationData.getStreets(district, nItem)
+                                        if (sList.isNotEmpty()) {
+                                            streetDoorNo = "${sList.first()} No:12"
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // Cadde / Sokak / Kapı No
+                ExposedDropdownMenuBox(
+                    expanded = expandedStreet,
+                    onExpandedChange = { expandedStreet = !expandedStreet },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = streetDoorNo,
+                        onValueChange = {
+                            streetDoorNo = it
+                            expandedStreet = true
+                        },
+                        label = { Text("Cadde / Sokak / Kapı No") },
+                        placeholder = { Text("Sokak seçin veya yazın") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStreet) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        singleLine = true
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedStreet,
+                        onDismissRequest = { expandedStreet = false }
+                    ) {
+                        currentStreets.forEach { sItem ->
+                            DropdownMenuItem(
+                                text = { Text(sItem) },
+                                onClick = {
+                                    streetDoorNo = "$sItem No:12"
+                                    expandedStreet = false
+                                }
+                            )
                         }
                     }
                 }
@@ -284,19 +380,9 @@ fun EditAppointmentDialog(
                 Spacer(modifier = Modifier.height(10.dp))
 
                 OutlinedTextField(
-                    value = addressDetail,
-                    onValueChange = { addressDetail = it },
-                    label = { Text("Adres Detayı") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2
-                )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
                     value = problemNote,
                     onValueChange = { problemNote = it },
-                    label = { Text("Sorun Notu") },
+                    label = { Text("Sorun Notu / Ek Açıklama") },
                     modifier = Modifier.fillMaxWidth(),
                     minLines = 3
                 )
@@ -332,6 +418,7 @@ fun EditAppointmentDialog(
 
                     Button(
                         onClick = {
+                            val fullAddress = if (neighborhood.isNotBlank()) "$neighborhood $streetDoorNo".trim() else streetDoorNo
                             val updated = appointment.copy(
                                 customerName = customerName,
                                 phone = phone,
@@ -341,7 +428,7 @@ fun EditAppointmentDialog(
                                 timeSlot = timeSlot,
                                 serviceType = serviceType,
                                 status = status,
-                                addressDetail = addressDetail,
+                                addressDetail = fullAddress,
                                 problemNote = problemNote
                             )
                             onSave(updated)

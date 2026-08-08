@@ -64,6 +64,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
+import com.example.data.model.IstanbulLocationData
 import com.example.data.remote.GeminiVoiceAppointmentParser
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -80,8 +81,8 @@ fun NewAppointmentDialog(
     var customerName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("Bayrampaşa") }
-    var neighborhood by remember { mutableStateOf("") }
-    var streetDoorNo by remember { mutableStateOf("") }
+    var neighborhood by remember { mutableStateOf("Muratpaşa Mah.") }
+    var streetDoorNo by remember { mutableStateOf("Kamil Caddesi No:12") }
     var date by remember { mutableStateOf("05.08.2026") }
     var timeSlot by remember { mutableStateOf("13:00 - 15:00") }
     var serviceType by remember { mutableStateOf("Kombi Bakım & Servis") }
@@ -96,9 +97,9 @@ fun NewAppointmentDialog(
 
     val sampleVoicePrompts = remember {
         listOf(
-            "Yarın 14:00'te Esenler'de Ahmet Yılmaz'a kombi bakımı ekle, tel 05354443322",
-            "Pazartesi Bayrampaşa'da Mehmet Demir kombi su sızdırıyor arıza servisi 05321112233",
-            "Zeytinburnu Merkez Mahallesinde Mustafa Bey petek temizliği haftaya cuma"
+            "Yarın 14:00'te Esenler Menderes Mahallesinde Ahmet Yılmaz'a kombi bakımı ekle, tel 05354443322",
+            "Pazartesi Bayrampaşa Muratpaşa Mahallesinde Mehmet Demir kombi su sızdırıyor arıza servisi 05321112233",
+            "Gaziosmanpaşa Barbaros Hayrettin Paşa Mahallesinde Mustafa Bey petek temizliği"
         )
     }
 
@@ -126,11 +127,16 @@ fun NewAppointmentDialog(
         }
     }
 
-    val districts = listOf("Bayrampaşa", "Esenler", "Gaziosmanpaşa", "Zeytinburnu", "Fatih", "Eyüpsultan")
+    val districts = IstanbulLocationData.districts
+    val currentNeighborhoods = remember(district) { IstanbulLocationData.getNeighborhoods(district) }
+    val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(district, neighborhood) }
+
     val timeSlots = listOf("09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00")
     val services = listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarım", "Gaz Kaçağı Tespiti")
 
     var expandedDistrict by remember { mutableStateOf(false) }
+    var expandedNeighborhood by remember { mutableStateOf(false) }
+    var expandedStreet by remember { mutableStateOf(false) }
     var expandedTimeSlot by remember { mutableStateOf(false) }
     var expandedService by remember { mutableStateOf(false) }
     var expandedStatus by remember { mutableStateOf(false) }
@@ -180,22 +186,30 @@ fun NewAppointmentDialog(
                 // ==================== GEMINI VOICE AI SECTION ====================
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
                                 text = "Gemini Sesli / Metin AI Asistanı",
-                                fontSize = 13.sp,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.primary
                             )
@@ -203,7 +217,7 @@ fun NewAppointmentDialog(
 
                         Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            text = "Randevu detaylarını doğrudan konuşarak veya yazarak söyleyin, AI formu otomatik doldursun.",
+                            text = "Randevu detaylarını serbest cümlelerle söyleyin veya yazın, AI tüm alanları anında doldursun.",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -252,7 +266,7 @@ fun NewAppointmentDialog(
 
                         // Quick Sample Voice Chips
                         Text(
-                            text = "Hızlı Test Cümleleri (Tıkla ve Doldur):",
+                            text = "Hızlı Doldurma Cümleleri:",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -272,8 +286,9 @@ fun NewAppointmentDialog(
                                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
                                 ) {
                                     Text(
-                                        text = "💬 " + prompt.take(35) + "...",
+                                        text = "💬 " + prompt.take(32) + "...",
                                         fontSize = 10.sp,
+                                        fontWeight = FontWeight.Medium,
                                         color = MaterialTheme.colorScheme.onSurface,
                                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                     )
@@ -287,8 +302,8 @@ fun NewAppointmentDialog(
                             val isSuccess = aiSuccessState == true
                             Surface(
                                 shape = RoundedCornerShape(10.dp),
-                                color = if (isSuccess) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f),
-                                border = BorderStroke(1.dp, if (isSuccess) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                                color = if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(top = 10.dp)
@@ -297,7 +312,7 @@ fun NewAppointmentDialog(
                                     text = msg,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (isSuccess) Color(0xFF047857) else Color(0xFFB45309),
+                                    color = if (isSuccess) Color(0xFF2E7D32) else Color(0xFFB45309),
                                     modifier = Modifier.padding(8.dp)
                                 )
                             }
@@ -368,6 +383,15 @@ fun NewAppointmentDialog(
                                     onClick = {
                                         district = item
                                         expandedDistrict = false
+                                        val nList = IstanbulLocationData.getNeighborhoods(item)
+                                        if (nList.isNotEmpty()) {
+                                            neighborhood = nList.first()
+                                            val sList = IstanbulLocationData.getStreets(item, nList.first())
+                                            streetDoorNo = if (sList.isNotEmpty()) "${sList.first()} No:12" else ""
+                                        } else {
+                                            neighborhood = ""
+                                            streetDoorNo = ""
+                                        }
                                     }
                                 )
                             }
@@ -376,27 +400,81 @@ fun NewAppointmentDialog(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    OutlinedTextField(
-                        value = neighborhood,
-                        onValueChange = { neighborhood = it },
-                        label = { Text("Mahalle *") },
-                        placeholder = { Text("Mahalle adı") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
+                    ExposedDropdownMenuBox(
+                        expanded = expandedNeighborhood,
+                        onExpandedChange = { expandedNeighborhood = !expandedNeighborhood },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        OutlinedTextField(
+                            value = neighborhood,
+                            onValueChange = {
+                                neighborhood = it
+                                expandedNeighborhood = true
+                            },
+                            label = { Text("Mahalle *") },
+                            placeholder = { Text("Mahalle seçin") },
+                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedNeighborhood) },
+                            modifier = Modifier.menuAnchor(),
+                            singleLine = true
+                        )
+                        ExposedDropdownMenu(
+                            expanded = expandedNeighborhood,
+                            onDismissRequest = { expandedNeighborhood = false }
+                        ) {
+                            currentNeighborhoods.forEach { nItem ->
+                                DropdownMenuItem(
+                                    text = { Text(nItem) },
+                                    onClick = {
+                                        neighborhood = nItem
+                                        expandedNeighborhood = false
+                                        val sList = IstanbulLocationData.getStreets(district, nItem)
+                                        if (sList.isNotEmpty()) {
+                                            streetDoorNo = "${sList.first()} No:12"
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Cadde / Sokak
-                OutlinedTextField(
-                    value = streetDoorNo,
-                    onValueChange = { streetDoorNo = it },
-                    label = { Text("Cadde / Sokak / Kapı No") },
-                    placeholder = { Text("Atatürk Cad. No:12/A") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
+                // Cadde / Sokak / Kapı No
+                ExposedDropdownMenuBox(
+                    expanded = expandedStreet,
+                    onExpandedChange = { expandedStreet = !expandedStreet },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    OutlinedTextField(
+                        value = streetDoorNo,
+                        onValueChange = {
+                            streetDoorNo = it
+                            expandedStreet = true
+                        },
+                        label = { Text("Cadde / Sokak / Kapı No") },
+                        placeholder = { Text("Sokak seçin veya yazın") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStreet) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        singleLine = true
+                    )
+                    ExposedDropdownMenu(
+                        expanded = expandedStreet,
+                        onDismissRequest = { expandedStreet = false }
+                    ) {
+                        currentStreets.forEach { sItem ->
+                            DropdownMenuItem(
+                                text = { Text(sItem) },
+                                onClick = {
+                                    streetDoorNo = "$sItem No:12"
+                                    expandedStreet = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(10.dp))
 

@@ -128,7 +128,10 @@ fun BottomNavBar(
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .clickable {
+                            .clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null
+                            ) {
                                 onNavigate(item.route, item.module)
                             }
                             .padding(horizontal = 10.dp, vertical = 6.dp)

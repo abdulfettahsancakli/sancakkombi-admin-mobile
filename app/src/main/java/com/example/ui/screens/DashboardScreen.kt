@@ -33,6 +33,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.BarChart
@@ -88,7 +90,6 @@ fun DashboardScreen(
     onNavigateToModule: (AdminModule) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val modules = AdminModule.values().toList()
     var showNotificationDialog by remember { mutableStateOf(false) }
 
     val currentDateStr = remember {
@@ -115,14 +116,7 @@ fun DashboardScreen(
             )
         }
 
-        // 2. Quick Actions Bar
-        item(span = { GridItemSpan(2) }) {
-            QuickActionsBar(
-                onNavigateToModule = onNavigateToModule
-            )
-        }
-
-        // ==================== 5 CORE KPI CARDS (ALL VISIBLE AT ONCE) ====================
+        // ==================== 5 CORE KPI CARDS ====================
 
         // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
         item(span = { GridItemSpan(2) }) {
@@ -175,19 +169,17 @@ fun DashboardScreen(
             )
         }
 
-        // ===============================================================================
-
-        // Section Header: Yönetim Modülleri
+        // ==================== HIZLI İŞLEMLER (YÖNETİM MODÜLLERİ YERİNE AŞAĞIDA) ====================
         item(span = { GridItemSpan(2) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, bottom = 2.dp),
+                    .padding(top = 10.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Yönetim Modülleri",
+                    text = "Hızlı İşlemler",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
@@ -198,7 +190,7 @@ fun DashboardScreen(
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
                 ) {
                     Text(
-                        text = "9 Aktif Modül",
+                        text = "Sık Kullanılanlar",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.primary,
@@ -208,12 +200,63 @@ fun DashboardScreen(
             }
         }
 
-        // Compact Module Bento Cards
-        items(modules) { module ->
-            CompactBentoModuleCard(
-                module = module,
-                stats = stats,
-                onClick = { onNavigateToModule(module) }
+        item {
+            QuickActionGridCard(
+                title = "Yeni Randevu",
+                subtitle = "Randevu ekle & planla",
+                icon = Icons.Default.DateRange,
+                accentColor = Color(0xFF0288D1),
+                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+            )
+        }
+
+        item {
+            QuickActionGridCard(
+                title = "Teklif Oluştur",
+                subtitle = "Hızlı teklif sun",
+                icon = Icons.Default.Description,
+                accentColor = Color(0xFF8B5CF6),
+                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
+            )
+        }
+
+        item {
+            QuickActionGridCard(
+                title = "Müşteri Ekle",
+                subtitle = "Yeni müşteri kaydı",
+                icon = Icons.Default.PersonAdd,
+                accentColor = Color(0xFF10B981),
+                onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
+            )
+        }
+
+        item {
+            QuickActionGridCard(
+                title = "Kasa & Gelir",
+                subtitle = "Finansal hareket",
+                icon = Icons.Default.Wallet,
+                accentColor = Color(0xFF059669),
+                onClick = { onNavigateToModule(AdminModule.FINANS) }
+            )
+        }
+
+        item {
+            QuickActionGridCard(
+                title = "WhatsApp Gönder",
+                subtitle = "Müşteriye bildir",
+                icon = Icons.AutoMirrored.Filled.Chat,
+                accentColor = Color(0xFF25D366),
+                onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
+            )
+        }
+
+        item {
+            QuickActionGridCard(
+                title = "Bakım Takvimi",
+                subtitle = "Periyodik bakımlar",
+                icon = Icons.Default.Handyman,
+                accentColor = Color(0xFFF97316),
+                onClick = { onNavigateToModule(AdminModule.BAKIM_TAKVIMLERI) }
             )
         }
 
@@ -365,103 +408,65 @@ private fun OperationalAlertBanner(
 }
 
 @Composable
-private fun QuickActionsBar(
-    onNavigateToModule: (AdminModule) -> Unit
-) {
-    Column {
-        Text(
-            text = "Hızlı İşlemler",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(bottom = 6.dp)
-        )
-
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            item {
-                QuickActionChip(
-                    label = "+ Randevu Ekle",
-                    icon = Icons.Default.DateRange,
-                    accentColor = Color(0xFF0288D1),
-                    onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-                )
-            }
-            item {
-                QuickActionChip(
-                    label = "+ Teklif Oluştur",
-                    icon = Icons.Default.Description,
-                    accentColor = Color(0xFF8B5CF6),
-                    onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
-                )
-            }
-            item {
-                QuickActionChip(
-                    label = "+ Müşteri Ekle",
-                    icon = Icons.Default.PersonAdd,
-                    accentColor = Color(0xFF10B981),
-                    onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
-                )
-            }
-            item {
-                QuickActionChip(
-                    label = "Kasa & Gelir",
-                    icon = Icons.Default.Wallet,
-                    accentColor = Color(0xFF059669),
-                    onClick = { onNavigateToModule(AdminModule.FINANS) }
-                )
-            }
-            item {
-                QuickActionChip(
-                    label = "WhatsApp Gönder",
-                    icon = Icons.AutoMirrored.Filled.Chat,
-                    accentColor = Color(0xFF25D366),
-                    onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun QuickActionChip(
-    label: String,
+private fun QuickActionGridCard(
+    title: String,
+    subtitle: String,
     icon: ImageVector,
     accentColor: Color,
     onClick: () -> Unit
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)),
-        shadowElevation = 1.dp
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
+        shadowElevation = 1.dp,
+        modifier = Modifier.fillMaxWidth()
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(24.dp)
+                    .size(40.dp)
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.15f)),
+                    .background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
-                    contentDescription = null,
+                    contentDescription = title,
                     tint = accentColor,
-                    modifier = Modifier.size(13.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = label,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface
+            Spacer(modifier = Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
+                modifier = Modifier.size(16.dp)
             )
         }
     }
