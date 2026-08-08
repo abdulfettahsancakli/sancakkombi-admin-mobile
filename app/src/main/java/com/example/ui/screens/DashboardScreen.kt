@@ -115,6 +115,13 @@ fun DashboardScreen(
             )
         }
 
+        // 2. Quick Actions Bar
+        item(span = { GridItemSpan(2) }) {
+            QuickActionsBar(
+                onNavigateToModule = onNavigateToModule
+            )
+        }
+
         // ==================== 5 CORE KPI CARDS (ALL VISIBLE AT ONCE) ====================
 
         // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
@@ -169,13 +176,6 @@ fun DashboardScreen(
         }
 
         // ===============================================================================
-
-        // Quick Actions Bar
-        item(span = { GridItemSpan(2) }) {
-            QuickActionsBar(
-                onNavigateToModule = onNavigateToModule
-            )
-        }
 
         // Section Header: Yönetim Modülleri
         item(span = { GridItemSpan(2) }) {
