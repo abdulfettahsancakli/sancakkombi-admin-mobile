@@ -1,22 +1,38 @@
 package com.example.ui.components
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -32,11 +48,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,6 +64,8 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
+import com.example.data.remote.GeminiVoiceAppointmentParser
+import kotlinx.coroutines.launch
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -53,6 +75,8 @@ fun NewAppointmentDialog(
     onSave: (Appointment) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     var customerName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("Bayrampaşa") }
@@ -63,6 +87,44 @@ fun NewAppointmentDialog(
     var serviceType by remember { mutableStateOf("Kombi Bakım & Servis") }
     var status by remember { mutableStateOf(AppointmentStatus.ONAYLANDI) }
     var problemNote by remember { mutableStateOf("") }
+
+    // Voice AI States
+    var voiceInputText by remember { mutableStateOf("") }
+    var isAiAnalyzing by remember { mutableStateOf(false) }
+    var aiStatusMessage by remember { mutableStateOf<String?>(null) }
+    var aiSuccessState by remember { mutableStateOf<Boolean?>(null) }
+
+    val sampleVoicePrompts = remember {
+        listOf(
+            "Yarın 14:00'te Esenler'de Ahmet Yılmaz'a kombi bakımı ekle, tel 05354443322",
+            "Pazartesi Bayrampaşa'da Mehmet Demir kombi su sızdırıyor arıza servisi 05321112233",
+            "Zeytinburnu Merkez Mahallesinde Mustafa Bey petek temizliği haftaya cuma"
+        )
+    }
+
+    val processVoiceWithGemini: (String) -> Unit = { rawPrompt ->
+        if (rawPrompt.isNotBlank()) {
+            isAiAnalyzing = true
+            aiStatusMessage = null
+            coroutineScope.launch {
+                val parsed = GeminiVoiceAppointmentParser.parseVoiceText(rawPrompt)
+                isAiAnalyzing = false
+
+                if (parsed.customerName.isNotBlank()) customerName = parsed.customerName
+                if (parsed.phone.isNotBlank()) phone = parsed.phone
+                if (parsed.district.isNotBlank()) district = parsed.district
+                if (parsed.neighborhood.isNotBlank()) neighborhood = parsed.neighborhood
+                if (parsed.streetDoorNo.isNotBlank()) streetDoorNo = parsed.streetDoorNo
+                if (parsed.date.isNotBlank()) date = parsed.date
+                if (parsed.timeSlot.isNotBlank()) timeSlot = parsed.timeSlot
+                if (parsed.serviceType.isNotBlank()) serviceType = parsed.serviceType
+                if (parsed.problemNote.isNotBlank()) problemNote = parsed.problemNote
+
+                aiStatusMessage = parsed.aiSummaryMessage
+                aiSuccessState = parsed.missingFields.isEmpty()
+            }
+        }
+    }
 
     val districts = listOf("Bayrampaşa", "Esenler", "Gaziosmanpaşa", "Zeytinburnu", "Fatih", "Eyüpsultan")
     val timeSlots = listOf("09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00")
@@ -81,7 +143,7 @@ fun NewAppointmentDialog(
             modifier = modifier
                 .fillMaxWidth(0.92f)
                 .padding(vertical = 16.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 6.dp
         ) {
@@ -103,7 +165,7 @@ fun NewAppointmentDialog(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Telefonla gelen randevuyu manuel olarak kaydet.",
+                            text = "Sesli komutla veya manuel form doldurarak kaydet.",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -112,6 +174,137 @@ fun NewAppointmentDialog(
                         Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat")
                     }
                 }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ==================== GEMINI VOICE AI SECTION ====================
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text(
+                                text = "Gemini Sesli / Metin AI Asistanı",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "Randevu detaylarını doğrudan konuşarak veya yazarak söyleyin, AI formu otomatik doldursun.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        OutlinedTextField(
+                            value = voiceInputText,
+                            onValueChange = { voiceInputText = it },
+                            placeholder = { Text("Örn: 'Yarın 14:00 Esenler Ahmet Yılmaz kombi bakımı 05321112233'") },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.Mic,
+                                    contentDescription = "Mikrofon",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            trailingIcon = {
+                                if (isAiAnalyzing) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    IconButton(
+                                        onClick = { processVoiceWithGemini(voiceInputText) },
+                                        enabled = voiceInputText.isNotBlank()
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Send,
+                                            contentDescription = "Gönder",
+                                            tint = if (voiceInputText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                                        )
+                                    }
+                                }
+                            },
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { processVoiceWithGemini(voiceInputText) }),
+                            singleLine = true,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Quick Sample Voice Chips
+                        Text(
+                            text = "Hızlı Test Cümleleri (Tıkla ve Doldur):",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(sampleVoicePrompts) { prompt ->
+                                Surface(
+                                    onClick = {
+                                        voiceInputText = prompt
+                                        processVoiceWithGemini(prompt)
+                                    },
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = MaterialTheme.colorScheme.surface,
+                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                ) {
+                                    Text(
+                                        text = "💬 " + prompt.take(35) + "...",
+                                        fontSize = 10.sp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        // AI Feedback Banner
+                        AnimatedVisibility(visible = aiStatusMessage != null) {
+                            val msg = aiStatusMessage ?: ""
+                            val isSuccess = aiSuccessState == true
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSuccess) Color(0xFF10B981).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                border = BorderStroke(1.dp, if (isSuccess) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 10.dp)
+                            ) {
+                                Text(
+                                    text = msg,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isSuccess) Color(0xFF047857) else Color(0xFFB45309),
+                                    modifier = Modifier.padding(8.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                // =================================================================
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -187,7 +380,7 @@ fun NewAppointmentDialog(
                         value = neighborhood,
                         onValueChange = { neighborhood = it },
                         label = { Text("Mahalle *") },
-                        placeholder = { Text("Mahalle seçin") },
+                        placeholder = { Text("Mahalle adı") },
                         modifier = Modifier.weight(1f),
                         singleLine = true
                     )
@@ -195,28 +388,15 @@ fun NewAppointmentDialog(
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // Cadde / Sokak & Daire No
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = streetDoorNo,
-                        onValueChange = { streetDoorNo = it },
-                        label = { Text("Cadde / Sokak *") },
-                        placeholder = { Text("Cadde veya sokak yazın") },
-                        modifier = Modifier.weight(1.5f),
-                        singleLine = true
-                    )
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    OutlinedTextField(
-                        value = "",
-                        onValueChange = {},
-                        label = { Text("Daire No") },
-                        placeholder = { Text("No:5/3") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
+                // Cadde / Sokak
+                OutlinedTextField(
+                    value = streetDoorNo,
+                    onValueChange = { streetDoorNo = it },
+                    label = { Text("Cadde / Sokak / Kapı No") },
+                    placeholder = { Text("Atatürk Cad. No:12/A") },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
@@ -333,10 +513,10 @@ fun NewAppointmentDialog(
                 OutlinedTextField(
                     value = problemNote,
                     onValueChange = { problemNote = it },
-                    label = { Text("Sorun Notu") },
+                    label = { Text("Sorun / Servis Notu") },
                     placeholder = { Text("Müşterinin belirttiği arıza veya talep notu...") },
                     modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
+                    minLines = 2
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -392,3 +572,4 @@ fun NewAppointmentDialog(
         }
     }
 }
+
