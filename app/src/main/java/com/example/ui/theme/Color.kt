@@ -15,18 +15,20 @@ val DarkTextPrimary = Color(0xFFF8FAFC)
 val DarkTextSecondary = Color(0xFF94A3B8)
 val DarkTextMuted = Color(0xFF475569)
 
-// Light Theme Palette
-val LightBg = Color(0xFFF1F5F9)         // Slate 100
-val LightSurface = Color(0xFFFFFFFF)    // Pure White
-val LightSurfaceVariant = Color(0xFFE2E8F0) // Slate 200
-val LightBorder = Color(0xFFCBD5E1)     // Slate 300
+// Light Theme Palette (2026 Design System)
+val LightBg = Color(0xFFF4F7F6)         // Dynamic Soft Background
+val LightSurface = Color(0xFFFFFFFF)    // Pure White Surface
+val LightSurfaceVariant = Color(0xFFE8EEEC) // Soft Green Tint Surface
+val LightBorder = Color(0x14000000)     // Subtle 0.08 alpha border
 
-val AccentGreenLight = Color(0xFF16A34A)
-val AccentGreenLightHover = Color(0xFF15803D)
+val AccentGreenPrimary = Color(0xFF2E7D32) // MD3 Green 800
+val AccentGreenGradientStart = Color(0xFF43A047)
+val AccentGreenGradientEnd = Color(0xFF1B5E20)
+val AccentBlue = Color(0xFF1976D2)
 
-val LightTextPrimary = Color(0xFF0F172A)
-val LightTextSecondary = Color(0xFF475569)
-val LightTextMuted = Color(0xFF94A3B8)
+val LightTextPrimary = Color(0xFF1A1A1A)
+val LightTextSecondary = Color(0xFF757575)
+val LightTextMuted = Color(0xFF9E9E9E)
 
 // Status Colors
 val StatusPendingBg = Color(0xFF451A03)
