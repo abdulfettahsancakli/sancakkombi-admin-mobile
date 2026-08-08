@@ -102,11 +102,11 @@ fun DashboardScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .testTag("dashboard_screen"),
-        contentPadding = PaddingValues(16.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        contentPadding = PaddingValues(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // 1. Dynamic Greeting Command Header
+        // 1. Compact Header
         item(span = { GridItemSpan(2) }) {
             DashboardGreetingHeader(
                 currentDate = currentDateStr,
@@ -115,23 +115,9 @@ fun DashboardScreen(
             )
         }
 
-        // 2. Operational Alert Banner
-        item(span = { GridItemSpan(2) }) {
-            OperationalAlertBanner(
-                pendingCount = stats.bugunkuRandevu,
-                pendingApprovals = stats.bekleyenOnay,
-                onActionClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
+        // ==================== 5 CORE KPI CARDS (ALL VISIBLE AT ONCE) ====================
 
-        // 3. Quick Actions Bar (Horizontal Scrollable Chips)
-        item(span = { GridItemSpan(2) }) {
-            QuickActionsBar(
-                onNavigateToModule = onNavigateToModule
-            )
-        }
-
-        // 4. Hero Bento Cell: "Bu Ay Gelir" with Sparkline Micro-Chart
+        // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
         item(span = { GridItemSpan(2) }) {
             RevenueHeroBentoCard(
                 revenueText = stats.buAyGelir,
@@ -140,8 +126,7 @@ fun DashboardScreen(
             )
         }
 
-        // 5. Split Row Bento Cards
-        // Left: "Bugünkü Randevu" (with Live Pulse Dot)
+        // KPI 2: Bugünkü Randevu
         item {
             TodayAppointmentsBentoCard(
                 count = stats.bugunkuRandevu,
@@ -149,7 +134,7 @@ fun DashboardScreen(
             )
         }
 
-        // Right: "Açık Alacak" (with Tahsil Et shortcut)
+        // KPI 3: Açık Alacak
         item {
             ReceivablesBentoCard(
                 amountText = stats.acikAlacak,
@@ -157,7 +142,7 @@ fun DashboardScreen(
             )
         }
 
-        // 6. Secondary Row Bento Cells (Bekleyen Onay & Bu Hafta Tamamlanan)
+        // KPI 4: Bekleyen Onay
         item {
             CompactMetricBentoCard(
                 title = "BEKLEYEN ONAY",
@@ -170,6 +155,7 @@ fun DashboardScreen(
             )
         }
 
+        // KPI 5: Haftalık Tamamlanan
         item {
             CompactMetricBentoCard(
                 title = "HAFTALIK TAMAMLANAN",
@@ -182,18 +168,27 @@ fun DashboardScreen(
             )
         }
 
-        // 7. Section Header: Yönetim Modülleri
+        // ===============================================================================
+
+        // Quick Actions Bar
+        item(span = { GridItemSpan(2) }) {
+            QuickActionsBar(
+                onNavigateToModule = onNavigateToModule
+            )
+        }
+
+        // Section Header: Yönetim Modülleri
         item(span = { GridItemSpan(2) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 4.dp),
+                    .padding(top = 8.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "Yönetim Modülleri",
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -213,7 +208,7 @@ fun DashboardScreen(
             }
         }
 
-        // 8. Compact Module Bento Cards
+        // Compact Module Bento Cards
         items(modules) { module ->
             CompactBentoModuleCard(
                 module = module,
@@ -485,98 +480,108 @@ private fun RevenueHeroBentoCard(
             .testTag("stat_monthly_revenue"),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            // Background Canvas Sparkline
-            SparklineCanvasChart(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .align(Alignment.BottomCenter),
-                lineColor = Color(0xFF22C55E)
-            )
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF22C55E).copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TrendingUp,
-                                contentDescription = null,
-                                tint = Color(0xFF22C55E),
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "BU AY GELİR (CİRO)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            letterSpacing = 0.5.sp
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF10B981).copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-
-                    // Green Trend Badge
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF22C55E).copy(alpha = 0.15f),
-                        border = BorderStroke(1.dp, Color(0xFF22C55E).copy(alpha = 0.3f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.TrendingUp,
-                                contentDescription = null,
-                                tint = Color(0xFF22C55E),
-                                modifier = Modifier.size(12.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = growthPercentage,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF22C55E)
-                            )
-                        }
-                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "BU AY GELİR (CİRO)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        letterSpacing = 0.4.sp
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(12.dp))
+                // Green Trend Badge
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color(0xFF10B981).copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.25f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = growthPercentage,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF10B981)
+                        )
+                    }
+                }
+            }
 
-                Text(
-                    text = revenueText,
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    letterSpacing = (-0.5).sp
-                )
+            Spacer(modifier = Modifier.height(10.dp))
 
-                Spacer(modifier = Modifier.height(4.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column {
+                    Text(
+                        text = revenueText,
+                        fontSize = 26.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        letterSpacing = (-0.5).sp
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = "Geçen aya kıyasla +%12 artış",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
 
-                Text(
-                    text = "Geçen aya kıyasla performans %12 artış gösterdi",
-                    fontSize = 11.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // Dedicated Sparkline Mini Chart Container
+                Box(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(42.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF10B981).copy(alpha = 0.05f))
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    SparklineCanvasChart(
+                        modifier = Modifier.fillMaxSize(),
+                        lineColor = Color(0xFF10B981)
+                    )
+                }
             }
         }
     }
@@ -926,7 +931,7 @@ fun ModuleCard(
 @Composable
 private fun SparklineCanvasChart(
     modifier: Modifier = Modifier,
-    lineColor: Color = Color(0xFF22C55E)
+    lineColor: Color = Color(0xFF10B981)
 ) {
     Canvas(modifier = modifier) {
         val width = size.width
@@ -934,13 +939,12 @@ private fun SparklineCanvasChart(
         if (width <= 0f || height <= 0f) return@Canvas
 
         val points = listOf(
-            0.05f to 0.85f,
-            0.20f to 0.65f,
-            0.35f to 0.70f,
-            0.50f to 0.40f,
-            0.65f to 0.50f,
-            0.80f to 0.20f,
-            0.95f to 0.10f
+            0.05f to 0.80f,
+            0.22f to 0.65f,
+            0.40f to 0.70f,
+            0.58f to 0.42f,
+            0.75f to 0.50f,
+            0.92f to 0.18f
         )
 
         val path = Path()
@@ -968,23 +972,40 @@ private fun SparklineCanvasChart(
             fillPath.cubicTo(controlX1, controlY1, controlX2, controlY2, currX, currY)
         }
 
-        fillPath.lineTo(width, height)
+        val lastX = points.last().first * width
+        val lastY = points.last().second * height
+
+        fillPath.lineTo(lastX, height)
         fillPath.close()
 
+        // Gradient Fill
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
                 colors = listOf(
-                    lineColor.copy(alpha = 0.25f),
-                    Color.Transparent
+                    lineColor.copy(alpha = 0.35f),
+                    lineColor.copy(alpha = 0.02f)
                 )
             )
         )
 
+        // Curve Stroke
         drawPath(
             path = path,
             color = lineColor,
-            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+            style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
+        )
+
+        // Endpoint Glow Dot
+        drawCircle(
+            color = lineColor.copy(alpha = 0.25f),
+            radius = 6.dp.toPx(),
+            center = androidx.compose.ui.geometry.Offset(lastX, lastY)
+        )
+        drawCircle(
+            color = lineColor,
+            radius = 3.dp.toPx(),
+            center = androidx.compose.ui.geometry.Offset(lastX, lastY)
         )
     }
 }
