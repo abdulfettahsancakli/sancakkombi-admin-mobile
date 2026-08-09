@@ -60,6 +60,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
@@ -70,8 +73,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -96,7 +102,9 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.example.data.model.Appointment
 import com.example.data.model.Customer
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 @Composable
@@ -116,6 +124,7 @@ fun CustomersScreen(
     var selectedCustomer by remember { mutableStateOf(customers.firstOrNull()) }
     var activeTab by remember { mutableStateOf("bilgiler") } // "bilgiler", "randevular", "islemler"
     var showNewCustomerDialog by remember { mutableStateOf(false) }
+    var showBulkImportDialog by remember { mutableStateOf(false) }
     var filterOnlyActiveAppointments by remember { mutableStateOf(false) }
 
     // Position Y for details card smooth scroll
@@ -320,78 +329,110 @@ fun CustomersScreen(
                     .weight(1f)
                     .verticalScroll(scrollState)
             ) {
-                // "Yeni Müşteri Kaydı Oluştur" Hero Quick Action Card with Primary Green Gradient
-                Card(
+                // Hero Action Cards Row
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .clickable { showNewCustomerDialog = true }
                         .padding(bottom = 16.dp),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color.Transparent),
-                    elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Box(
+                    // "Yeni Müşteri Ekle" Card
+                    Card(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color(0xFF43A047),
-                                        Color(0xFF1B5E20)
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { showNewCustomerDialog = true },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFF43A047), Color(0xFF1B5E20))
                                     )
                                 )
-                            )
-                            .padding(16.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(14.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.2f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.PersonAdd,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-
-                            Spacer(modifier = Modifier.width(14.dp))
-
-                            Column(modifier = Modifier.weight(1f)) {
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.PersonAdd,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
                                 Text(
-                                    text = "Yeni Müşteri Kaydı Oluştur",
+                                    text = "Yeni Müşteri Ekle",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 15.sp,
+                                    fontSize = 14.sp,
                                     color = Color.White
                                 )
-                                Spacer(modifier = Modifier.height(2.dp))
                                 Text(
-                                    text = "Manuel form veya rehberden içe aktar",
-                                    fontSize = 12.sp,
-                                    color = Color.White.copy(alpha = 0.9f)
+                                    text = "Tekil Form Kaydı",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
                                 )
                             }
+                        }
+                    }
 
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.25f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = "Ekle",
-                                    tint = Color.White,
-                                    modifier = Modifier.size(22.dp)
+                    // "Toplu Rehber Aktar" Card
+                    Card(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable { showBulkImportDialog = true },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(Color(0xFF0288D1), Color(0xFF01579B))
+                                    )
+                                )
+                                .padding(14.dp)
+                        ) {
+                            Column {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(Color.White.copy(alpha = 0.2f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Contacts,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.height(10.dp))
+                                Text(
+                                    text = "Toplu Rehber Aktar",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 14.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = "Tüm Rehber / 100+ Kişi",
+                                    fontSize = 11.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
                                 )
                             }
                         }
@@ -988,6 +1029,21 @@ fun CustomersScreen(
             }
         )
     }
+
+    // Bulk Import Contacts Dialog
+    if (showBulkImportDialog) {
+        BulkImportContactsDialog(
+            existingCustomers = customers,
+            onDismiss = { showBulkImportDialog = false },
+            onImportCustomers = { newCustomers ->
+                newCustomers.forEach { cust -> onAddCustomer(cust) }
+                if (newCustomers.isNotEmpty()) {
+                    selectedCustomer = newCustomers.first()
+                }
+                showBulkImportDialog = false
+            }
+        )
+    }
 }
 
 @Composable
@@ -1370,5 +1426,500 @@ private fun getAvatarColor(name: String): Color {
     val hash = name.hashCode()
     val index = (hash % colors.size + colors.size) % colors.size
     return colors[index]
+}
+
+private data class PhoneContactItem(
+    val name: String,
+    val phone: String,
+    val isAlreadyAdded: Boolean = false
+)
+
+@Composable
+private fun BulkImportContactsDialog(
+    existingCustomers: List<Customer>,
+    onDismiss: () -> Unit,
+    onImportCustomers: (List<Customer>) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    var contacts by remember { mutableStateOf<List<PhoneContactItem>>(emptyList()) }
+    var selectedPhones by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var isLoading by remember { mutableStateOf(true) }
+    var searchQuery by remember { mutableStateOf("") }
+    var hideExisting by remember { mutableStateOf(true) }
+    var defaultDistrict by remember { mutableStateOf("Bayrampaşa") }
+
+    val existingPhonesSet = remember(existingCustomers) {
+        existingCustomers.map { it.phone.replace("[^0-9]".toRegex(), "") }.filter { it.isNotBlank() }.toSet()
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            Toast.makeText(context, "Telefon Rehberi erişim izni verilmedi.", Toast.LENGTH_SHORT).show()
+            isLoading = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val hasPerm = ContextCompat.checkSelfPermission(
+            context, Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (!hasPerm) {
+            permissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        }
+
+        withContext(Dispatchers.IO) {
+            val list = mutableListOf<PhoneContactItem>()
+            val seenNumbers = mutableSetOf<String>()
+            try {
+                val cr = context.contentResolver
+                val cursor = cr.query(
+                    ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                    arrayOf(
+                        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+                        ContactsContract.CommonDataKinds.Phone.NUMBER
+                    ),
+                    null,
+                    null,
+                    "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC"
+                )
+                cursor?.use { c ->
+                    val nameIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+                    val numIdx = c.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+                    while (c.moveToNext()) {
+                        val rawName = if (nameIdx != -1) c.getString(nameIdx) ?: "" else ""
+                        val rawNum = if (numIdx != -1) c.getString(numIdx) ?: "" else ""
+                        val cleanNum = rawNum.replace("[^0-9]".toRegex(), "")
+
+                        if (rawName.isNotBlank() && cleanNum.length >= 7 && !seenNumbers.contains(cleanNum)) {
+                            seenNumbers.add(cleanNum)
+                            val isAdded = existingPhonesSet.contains(cleanNum)
+                            list.add(PhoneContactItem(name = rawName, phone = rawNum, isAlreadyAdded = isAdded))
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+            withContext(Dispatchers.Main) {
+                contacts = list
+                isLoading = false
+            }
+        }
+    }
+
+    val filteredContacts = remember(contacts, searchQuery, hideExisting) {
+        contacts.filter { item ->
+            val matchesSearch = searchQuery.isBlank() ||
+                    item.name.contains(searchQuery, ignoreCase = true) ||
+                    item.phone.contains(searchQuery)
+            val matchesHide = !hideExisting || !item.isAlreadyAdded
+            matchesSearch && matchesHide
+        }
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = modifier
+                .fillMaxWidth(0.94f)
+                .padding(vertical = 16.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Contacts,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Toplu Rehber İçe Aktar",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Rehberinizdeki tüm veya seçili kişileri tek tıkla ekleyin",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat")
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(
+                                text = "Telefon rehberindeki kişiler taranıyor...",
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                } else if (contacts.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Rehberde aktarılacak kişi bulunamadı veya rehber izni yok.",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                } else {
+                    // Search Input
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Rehberde isim veya numara ara...", fontSize = 13.sp) },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp)) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Default.Close, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                        ),
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Options Bar: Default District & Hide Existing Toggle
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        OutlinedTextField(
+                            value = defaultDistrict,
+                            onValueChange = { defaultDistrict = it },
+                            label = { Text("Varsayılan İlçe", fontSize = 11.sp) },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.width(150.dp),
+                            singleLine = true
+                        )
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { hideExisting = !hideExisting }
+                        ) {
+                            Text(
+                                text = "Ekli Olanları Gizle",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Switch(
+                                checked = hideExisting,
+                                onCheckedChange = { hideExisting = it },
+                                modifier = Modifier.height(24.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Quick Select Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Surface(
+                            onClick = {
+                                val allPhones = filteredContacts.filter { !it.isAlreadyAdded }.map { it.phone }.toSet()
+                                selectedPhones = selectedPhones + allPhones
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Tümünü Seç",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+
+                        Surface(
+                            onClick = {
+                                val first50 = filteredContacts.filter { !it.isAlreadyAdded }.take(50).map { it.phone }.toSet()
+                                selectedPhones = first50
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "İlk 50 Kişi",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+
+                        Surface(
+                            onClick = {
+                                val first100 = filteredContacts.filter { !it.isAlreadyAdded }.take(100).map { it.phone }.toSet()
+                                selectedPhones = first100
+                            },
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "İlk 100 Kişi",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+
+                        Surface(
+                            onClick = { selectedPhones = emptySet() },
+                            shape = RoundedCornerShape(10.dp),
+                            color = MaterialTheme.colorScheme.surfaceVariant,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = "Temizle",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(vertical = 8.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    // Status Counter Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "BULUNAN KİŞİLER (${filteredContacts.size})",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = "Seçilen: ${selectedPhones.size}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    // Contacts List Area
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(260.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        items(filteredContacts, key = { it.phone }) { contact ->
+                            val isSelected = selectedPhones.contains(contact.phone)
+                            val isDisabled = contact.isAlreadyAdded
+
+                            Surface(
+                                onClick = {
+                                    if (!isDisabled) {
+                                        selectedPhones = if (isSelected) {
+                                            selectedPhones - contact.phone
+                                        } else {
+                                            selectedPhones + contact.phone
+                                        }
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.4f)
+                                        else MaterialTheme.colorScheme.surface,
+                                border = BorderStroke(
+                                    width = 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)
+                                )
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Checkbox(
+                                        checked = isSelected || isDisabled,
+                                        onCheckedChange = { checked ->
+                                            if (!isDisabled) {
+                                                selectedPhones = if (checked) selectedPhones + contact.phone else selectedPhones - contact.phone
+                                            }
+                                        },
+                                        enabled = !isDisabled,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.width(10.dp))
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = contact.name,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.sp,
+                                            color = if (isDisabled) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurface
+                                        )
+                                        Text(
+                                            text = contact.phone,
+                                            fontSize = 11.sp,
+                                            color = if (isDisabled) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f) else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+
+                                    if (isDisabled) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = Color(0xFF10B981).copy(alpha = 0.15f)
+                                        ) {
+                                            Text(
+                                                text = "Kayıtlı",
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = Color(0xFF059669),
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Action Buttons
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = onDismiss,
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.weight(1f).height(46.dp)
+                        ) {
+                            Text("İptal", color = Color(0xFF757575))
+                        }
+
+                        Button(
+                            onClick = {
+                                val selectedContacts = contacts.filter { selectedPhones.contains(it.phone) }
+                                val newCustomers = selectedContacts.map { c ->
+                                    Customer(
+                                        id = UUID.randomUUID().toString(),
+                                        name = c.name,
+                                        phone = c.phone,
+                                        district = defaultDistrict.ifBlank { "Bayrampaşa" },
+                                        address = "Rehberden Toplu İçe Aktarıldı",
+                                        appointmentCount = 0,
+                                        activeAppointmentCount = 0,
+                                        notes = "Telefon rehberinden toplu aktarıldı"
+                                    )
+                                }
+                                onImportCustomers(newCustomers)
+                                Toast.makeText(context, "${newCustomers.size} müşteri başarıyla rehberden aktarıldı!", Toast.LENGTH_LONG).show()
+                            },
+                            enabled = selectedPhones.isNotEmpty(),
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                            contentPadding = androidx.compose.foundation.layout.PaddingValues(),
+                            modifier = Modifier.weight(1.8f).height(46.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        brush = if (selectedPhones.isNotEmpty()) {
+                                            Brush.linearGradient(colors = listOf(Color(0xFF0288D1), Color(0xFF01579B)))
+                                        } else {
+                                            Brush.linearGradient(colors = listOf(Color(0xFFBDBDBD), Color(0xFF9E9E9E)))
+                                        },
+                                        shape = RoundedCornerShape(16.dp)
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = "${selectedPhones.size} Kişiyi İçe Aktar",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
