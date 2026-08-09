@@ -11,6 +11,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -44,6 +45,7 @@ import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
@@ -78,6 +80,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
@@ -425,6 +428,11 @@ fun CustomersScreen(
                         val avatarColor = remember(cust.id) { getAvatarColor(cust.name) }
                         val initials = remember(cust.name) { getInitials(cust.name) }
 
+                        val rotationAngle by animateFloatAsState(
+                            targetValue = if (isSelected) 180f else 0f,
+                            label = "chevronRotation"
+                        )
+
                         val cardBg by animateColorAsState(
                             targetValue = if (isSelected)
                                 MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
@@ -443,7 +451,7 @@ fun CustomersScreen(
                                 },
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surface
                             ),
                             border = BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
@@ -513,7 +521,7 @@ fun CustomersScreen(
                                         }
                                     }
 
-                                    // Call / WhatsApp / Expand (+/-) Toggle Buttons
+                                    // Call / WhatsApp / Modern Detay Expand Toggle Buttons
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -562,21 +570,33 @@ fun CustomersScreen(
                                             }
                                         }
 
-                                        // + / - Toggle Button
+                                        // Modern Animated Chevron Expand Button ("Detay" Pill)
                                         Surface(
                                             onClick = {
                                                 selectedCustomer = if (isSelected) null else cust
                                             },
-                                            shape = CircleShape,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
-                                            modifier = Modifier.size(40.dp)
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                                            modifier = Modifier.height(40.dp)
                                         ) {
-                                            Box(contentAlignment = Alignment.Center) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
+                                            ) {
+                                                Text(
+                                                    text = if (isSelected) "Kapat" else "Detay",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.primary
+                                                )
                                                 Icon(
-                                                    imageVector = if (isSelected) Icons.Default.Remove else Icons.Default.Add,
-                                                    contentDescription = if (isSelected) "Kapat (-)" else "Aç (+)",
+                                                    imageVector = Icons.Default.KeyboardArrowDown,
+                                                    contentDescription = if (isSelected) "Kapat" else "Detay Göster",
                                                     tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(20.dp)
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .rotate(rotationAngle)
                                                 )
                                             }
                                         }
