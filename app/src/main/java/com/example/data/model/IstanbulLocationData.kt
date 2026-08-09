@@ -54,29 +54,51 @@ object IstanbulLocationData {
     // sokak verisi bulunur (assets/istanbul_sokaklari_mahalle.json, web ile senkron).
     // Diğer ilçelerde eşleşme yoksa fallbackStreets'e düşülür.
     @Volatile
+    private var cachedRawJson: String? = null
+
+    @Volatile
     private var streetsByDistrictMahalleCache: Map<String, Map<String, List<String>>>? = null
 
-    private fun loadStreetsByDistrictMahalle(context: Context): Map<String, Map<String, List<String>>> {
+    private fun getParsedData(context: Context): Map<String, Map<String, List<String>>> {
         streetsByDistrictMahalleCache?.let { return it }
 
-        val json = context.applicationContext.assets
-            .open("istanbul_sokaklari_mahalle.json")
-            .bufferedReader(Charsets.UTF_8)
-            .use { it.readText() }
+        synchronized(this) {
+            streetsByDistrictMahalleCache?.let { return it }
 
-        val type = Types.newParameterizedType(
-            Map::class.java,
-            String::class.java,
-            Types.newParameterizedType(
-                Map::class.java,
-                String::class.java,
-                Types.newParameterizedType(List::class.java, String::class.java)
-            )
-        )
-        val adapter = Moshi.Builder().build().adapter<Map<String, Map<String, List<String>>>>(type)
-        val parsed = adapter.fromJson(json) ?: emptyMap()
-        streetsByDistrictMahalleCache = parsed
-        return parsed
+            val json = cachedRawJson ?: try {
+                context.applicationContext.assets
+                    .open("istanbul_sokaklari_mahalle.json")
+                    .bufferedReader(Charsets.UTF_8)
+                    .use { it.readText() }
+                    .also { cachedRawJson = it }
+            } catch (e: Exception) {
+                ""
+            }
+
+            if (json.isBlank()) {
+                val emptyMap = emptyMap<String, Map<String, List<String>>>()
+                streetsByDistrictMahalleCache = emptyMap
+                return emptyMap
+            }
+
+            return try {
+                val type = Types.newParameterizedType(
+                    Map::class.java,
+                    String::class.java,
+                    Types.newParameterizedType(
+                        Map::class.java,
+                        String::class.java,
+                        Types.newParameterizedType(List::class.java, String::class.java)
+                    )
+                )
+                val adapter = Moshi.Builder().build().adapter<Map<String, Map<String, List<String>>>>(type)
+                val parsed = adapter.fromJson(json) ?: emptyMap()
+                streetsByDistrictMahalleCache = parsed
+                parsed
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
     }
 
     fun getNeighborhoods(district: String): List<String> {
@@ -88,7 +110,7 @@ object IstanbulLocationData {
 
     fun getStreets(context: Context, district: String, neighborhood: String): List<String> {
         val plainNeighborhood = neighborhood.removeSuffix(" Mah.").trim()
-        val streets = loadStreetsByDistrictMahalle(context)[district]?.get(plainNeighborhood)
+        val streets = getParsedData(context)[district]?.get(plainNeighborhood)
         return if (!streets.isNullOrEmpty()) streets else fallbackStreets
     }
 }

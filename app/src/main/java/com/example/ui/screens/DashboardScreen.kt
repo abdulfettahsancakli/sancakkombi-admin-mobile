@@ -116,71 +116,18 @@ fun DashboardScreen(
             )
         }
 
-        // ==================== 5 CORE KPI CARDS ====================
-
-        // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
-        item(span = { GridItemSpan(2) }) {
-            RevenueHeroBentoCard(
-                revenueText = stats.buAyGelir,
-                growthPercentage = "+12%",
-                onCardClick = { onNavigateToModule(AdminModule.FINANS) }
-            )
-        }
-
-        // KPI 2: Bugünkü Randevu
-        item {
-            TodayAppointmentsBentoCard(
-                count = stats.bugunkuRandevu,
-                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
-
-        // KPI 3: Açık Alacak
-        item {
-            ReceivablesBentoCard(
-                amountText = stats.acikAlacak,
-                onClick = { onNavigateToModule(AdminModule.FINANS) }
-            )
-        }
-
-        // KPI 4: Bekleyen Onay
-        item {
-            CompactMetricBentoCard(
-                title = "BEKLEYEN ONAY",
-                value = stats.bekleyenOnay.toString(),
-                icon = Icons.Default.PendingActions,
-                accentColor = Color(0xFFF59E0B),
-                badgeText = "Aksiyon",
-                testTag = "stat_pending_approvals",
-                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
-            )
-        }
-
-        // KPI 5: Haftalık Tamamlanan
-        item {
-            CompactMetricBentoCard(
-                title = "HAFTALIK TAMAMLANAN",
-                value = stats.buHaftaTamamlanan.toString(),
-                icon = Icons.Default.CheckCircle,
-                accentColor = Color(0xFF10B981),
-                badgeText = "Tamamlanan",
-                testTag = "stat_weekly_completed",
-                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
-
-        // ==================== HIZLI İŞLEMLER (YÖNETİM MODÜLLERİ YERİNE AŞAĞIDA) ====================
+        // ==================== HIZLI İŞLEMLER (GÜNAYDIN BÖLÜMÜNÜN HEMEN ALTINDA) ====================
         item(span = { GridItemSpan(2) }) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp, bottom = 2.dp),
+                    .padding(top = 4.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = "Hızlı İşlemler",
-                    fontSize = 16.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onBackground
                 )
@@ -257,6 +204,59 @@ fun DashboardScreen(
                 icon = Icons.Default.Handyman,
                 accentColor = Color(0xFFF97316),
                 onClick = { onNavigateToModule(AdminModule.BAKIM_TAKVIMLERI) }
+            )
+        }
+
+        // ==================== 5 CORE KPI CARDS ====================
+
+        // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
+        item(span = { GridItemSpan(2) }) {
+            RevenueHeroBentoCard(
+                revenueText = stats.buAyGelir,
+                growthPercentage = "+12%",
+                onCardClick = { onNavigateToModule(AdminModule.FINANS) }
+            )
+        }
+
+        // KPI 2: Bugünkü Randevu
+        item {
+            TodayAppointmentsBentoCard(
+                count = stats.bugunkuRandevu,
+                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+            )
+        }
+
+        // KPI 3: Açık Alacak
+        item {
+            ReceivablesBentoCard(
+                amountText = stats.acikAlacak,
+                onClick = { onNavigateToModule(AdminModule.FINANS) }
+            )
+        }
+
+        // KPI 4: Bekleyen Onay
+        item {
+            CompactMetricBentoCard(
+                title = "BEKLEYEN ONAY",
+                value = stats.bekleyenOnay.toString(),
+                icon = Icons.Default.PendingActions,
+                accentColor = Color(0xFFF59E0B),
+                badgeText = "Aksiyon",
+                testTag = "stat_pending_approvals",
+                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
+            )
+        }
+
+        // KPI 5: Haftalık Tamamlanan
+        item {
+            CompactMetricBentoCard(
+                title = "HAFTALIK TAMAMLANAN",
+                value = stats.buHaftaTamamlanan.toString(),
+                icon = Icons.Default.CheckCircle,
+                accentColor = Color(0xFF10B981),
+                badgeText = "Tamamlanan",
+                testTag = "stat_weekly_completed",
+                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
             )
         }
 
