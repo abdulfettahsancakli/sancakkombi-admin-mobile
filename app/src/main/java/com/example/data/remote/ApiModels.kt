@@ -32,7 +32,15 @@ data class SuccessResponseDto(
     val warning: String? = null,
     val error: String? = null,
     val status: String? = null,
-    val active: Boolean? = null
+    val active: Boolean? = null,
+    val channel: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class SendBankTransferRequestDto(
+    val paymentAccountKey: String,
+    val amount: Double? = null,
+    val promisedPaymentDate: String? = null
 )
 
 @JsonClass(generateAdapter = true)

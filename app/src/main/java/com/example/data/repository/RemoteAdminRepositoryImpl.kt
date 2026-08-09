@@ -277,6 +277,26 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun sendBankTransferMessage(
+        appointmentId: String,
+        paymentAccountKey: String,
+        amount: Double?,
+        promisedPaymentDate: String?
+    ): Result<String> = requireToken { token ->
+        val req = com.example.data.remote.SendBankTransferRequestDto(
+            paymentAccountKey = paymentAccountKey,
+            amount = amount,
+            promisedPaymentDate = promisedPaymentDate
+        )
+        val response = api.sendBankTransfer(authHeader(token), appointmentId, req)
+        if (response.isSuccessful) {
+            val channel = response.body()?.channel ?: "whatsapp"
+            Result.success(channel)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
     override suspend fun deleteAppointment(id: String): Result<Unit> = requireToken { token ->
         val response = api.deleteAppointment(authHeader(token), id)
         if (response.isSuccessful) {

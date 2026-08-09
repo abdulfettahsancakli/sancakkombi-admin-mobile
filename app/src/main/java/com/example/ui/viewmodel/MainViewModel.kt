@@ -270,6 +270,24 @@ class MainViewModel(
         }
     }
 
+    fun sendBankTransferMessage(
+        appointmentId: String,
+        paymentAccountKey: String,
+        amount: Double? = null,
+        promisedPaymentDate: String? = null,
+        onResult: (Result<String>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val res = repository.sendBankTransferMessage(
+                appointmentId = appointmentId,
+                paymentAccountKey = paymentAccountKey,
+                amount = amount,
+                promisedPaymentDate = promisedPaymentDate
+            )
+            onResult(res)
+        }
+    }
+
     fun deleteAppointment(id: String) {
         viewModelScope.launch {
             repository.deleteAppointment(id)

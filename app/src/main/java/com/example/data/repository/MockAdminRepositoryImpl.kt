@@ -552,6 +552,16 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.failure(IllegalArgumentException("Randevu bulunamadı."))
     }
 
+    override suspend fun sendBankTransferMessage(
+        appointmentId: String,
+        paymentAccountKey: String,
+        amount: Double?,
+        promisedPaymentDate: String?
+    ): Result<String> {
+        delay(300)
+        return Result.success("whatsapp")
+    }
+
     override suspend fun deleteAppointment(id: String): Result<Unit> {
         delay(300)
         val newList = _appointments.value.toMutableList()

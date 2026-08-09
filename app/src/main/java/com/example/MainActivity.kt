@@ -143,12 +143,16 @@ class MainActivity : ComponentActivity() {
                                 "appointments", "randevular" -> {
                                     AppointmentsScreen(
                                         appointments = appointments,
+                                        bankAccounts = bankAccounts,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddAppointment = { appt -> viewModel.addAppointment(appt) },
                                         onUpdateAppointment = { appt -> viewModel.updateAppointment(appt) },
                                         onUpdateStatus = { id, st -> viewModel.updateAppointmentStatus(id, st) },
                                         onCompleteJob = { id, report -> viewModel.completeJob(id, report) },
-                                        onDeleteAppointment = { id -> viewModel.deleteAppointment(id) }
+                                        onDeleteAppointment = { id -> viewModel.deleteAppointment(id) },
+                                        onSendBankTransfer = { id, accKey, amt, date, callback ->
+                                            viewModel.sendBankTransferMessage(id, accKey, amt, date, callback)
+                                        }
                                     )
                                 }
                                 "customers", "musteriler" -> {

@@ -37,6 +37,12 @@ interface AdminRepository {
     suspend fun updateAppointment(appointment: Appointment): Result<Unit>
     suspend fun updateAppointmentStatus(id: String, status: AppointmentStatus): Result<Unit>
     suspend fun completeJob(appointmentId: String, jobReport: JobReport): Result<Unit>
+    suspend fun sendBankTransferMessage(
+        appointmentId: String,
+        paymentAccountKey: String,
+        amount: Double? = null,
+        promisedPaymentDate: String? = null
+    ): Result<String>
     suspend fun deleteAppointment(id: String): Result<Unit>
 
     // Customers CRUD
