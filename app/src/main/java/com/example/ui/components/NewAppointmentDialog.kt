@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -77,6 +78,7 @@ fun NewAppointmentDialog(
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     var customerName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
@@ -129,7 +131,7 @@ fun NewAppointmentDialog(
 
     val districts = IstanbulLocationData.districts
     val currentNeighborhoods = remember(district) { IstanbulLocationData.getNeighborhoods(district) }
-    val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(district, neighborhood) }
+    val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(context, district, neighborhood) }
 
     val timeSlots = listOf("09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00")
     val services = listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarım", "Gaz Kaçağı Tespiti")
@@ -386,7 +388,7 @@ fun NewAppointmentDialog(
                                         val nList = IstanbulLocationData.getNeighborhoods(item)
                                         if (nList.isNotEmpty()) {
                                             neighborhood = nList.first()
-                                            val sList = IstanbulLocationData.getStreets(item, nList.first())
+                                            val sList = IstanbulLocationData.getStreets(context, item, nList.first())
                                             streetDoorNo = if (sList.isNotEmpty()) "${sList.first()} No:12" else ""
                                         } else {
                                             neighborhood = ""
@@ -427,7 +429,7 @@ fun NewAppointmentDialog(
                                     onClick = {
                                         neighborhood = nItem
                                         expandedNeighborhood = false
-                                        val sList = IstanbulLocationData.getStreets(district, nItem)
+                                        val sList = IstanbulLocationData.getStreets(context, district, nItem)
                                         if (sList.isNotEmpty()) {
                                             streetDoorNo = "${sList.first()} No:12"
                                         }
