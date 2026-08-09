@@ -445,25 +445,26 @@ fun CustomersScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 6.dp)
-                                .clip(RoundedCornerShape(16.dp))
+                                .clip(RoundedCornerShape(18.dp))
                                 .clickable {
                                     selectedCustomer = if (isSelected) null else cust
                                 },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(18.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.22f) else MaterialTheme.colorScheme.surface
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
                             ),
                             border = BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
                         ) {
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp)
+                                    .padding(16.dp)
                             ) {
+                                // Top Header Row: Avatar, Name & Info, Detay Toggle
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
@@ -471,134 +472,222 @@ fun CustomersScreen(
                                     // Avatar Circle with Initials
                                     Box(
                                         modifier = Modifier
-                                            .size(46.dp)
+                                            .size(50.dp)
                                             .clip(CircleShape)
-                                            .background(avatarColor.copy(alpha = 0.15f)),
+                                            .background(
+                                                brush = Brush.linearGradient(
+                                                    colors = listOf(
+                                                        avatarColor.copy(alpha = 0.25f),
+                                                        avatarColor.copy(alpha = 0.10f)
+                                                    )
+                                                )
+                                            ),
                                         contentAlignment = Alignment.Center
                                     ) {
                                         Text(
                                             text = initials,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
+                                            fontSize = 17.sp,
                                             color = avatarColor
                                         )
                                     }
 
                                     Spacer(modifier = Modifier.width(14.dp))
 
-                                    // Customer Info
+                                    // Customer Info Column
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = cust.name,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 15.sp,
+                                            fontSize = 16.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
 
                                         Spacer(modifier = Modifier.height(4.dp))
 
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            // District Pill
                                             Surface(
                                                 shape = RoundedCornerShape(8.dp),
-                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)
                                             ) {
-                                                Text(
-                                                    text = cust.district,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                                )
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.LocationOn,
+                                                        contentDescription = null,
+                                                        tint = MaterialTheme.colorScheme.primary,
+                                                        modifier = Modifier.size(12.dp)
+                                                    )
+                                                    Text(
+                                                        text = cust.district,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
                                             }
 
-                                            Spacer(modifier = Modifier.width(8.dp))
-
+                                            // Phone Subtitle
                                             Text(
                                                 text = cust.phone,
                                                 fontSize = 13.sp,
+                                                fontWeight = FontWeight.Medium,
                                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                                             )
                                         }
                                     }
 
-                                    // Call / WhatsApp / Modern Detay Expand Toggle Buttons
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    Spacer(modifier = Modifier.width(8.dp))
+
+                                    // Modern Detay / Kapat Toggle Pill
+                                    Surface(
+                                        onClick = {
+                                            selectedCustomer = if (isSelected) null else cust
+                                        },
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        modifier = Modifier.height(36.dp)
                                     ) {
-                                        Surface(
-                                            onClick = {
-                                                val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
-                                                context.startActivity(intent)
-                                            },
-                                            shape = CircleShape,
-                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                            modifier = Modifier.size(40.dp)
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                                         ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Call,
-                                                    contentDescription = "Ara",
-                                                    tint = MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
+                                            Text(
+                                                text = if (isSelected) "Kapat" else "Detay",
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = if (isSelected) Color.White else MaterialTheme.colorScheme.primary
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.KeyboardArrowDown,
+                                                contentDescription = if (isSelected) "Kapat" else "Detay Göster",
+                                                tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier
+                                                    .size(18.dp)
+                                                    .rotate(rotationAngle)
+                                            )
                                         }
+                                    }
+                                }
 
-                                        Surface(
-                                            onClick = {
-                                                val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
-                                                val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
-                                                val waIntent = Intent(Intent.ACTION_VIEW, waUri)
-                                                try {
-                                                    context.startActivity(waIntent)
-                                                } catch (e: Exception) {
-                                                    Toast.makeText(context, "WhatsApp açılamadı", Toast.LENGTH_SHORT).show()
-                                                }
-                                            },
-                                            shape = CircleShape,
-                                            color = Color(0xFF10B981).copy(alpha = 0.15f),
-                                            modifier = Modifier.size(40.dp)
+                                Spacer(modifier = Modifier.height(12.dp))
+
+                                // Quick Action Bar (Ara, WhatsApp, Yol Tarifi)
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Call Button
+                                    Surface(
+                                        onClick = {
+                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
+                                            context.startActivity(intent)
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                        modifier = Modifier.weight(1f).height(38.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Send,
-                                                    contentDescription = "WhatsApp",
-                                                    tint = Color(0xFF25D366),
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
+                                            Icon(
+                                                imageVector = Icons.Default.Call,
+                                                contentDescription = "Ara",
+                                                tint = MaterialTheme.colorScheme.primary,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Ara",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.primary
+                                            )
                                         }
+                                    }
 
-                                        // Modern Animated Chevron Expand Button ("Detay" Pill)
-                                        Surface(
-                                            onClick = {
-                                                selectedCustomer = if (isSelected) null else cust
-                                            },
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                                            modifier = Modifier.height(40.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(2.dp)
-                                            ) {
-                                                Text(
-                                                    text = if (isSelected) "Kapat" else "Detay",
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.primary
-                                                )
-                                                Icon(
-                                                    imageVector = Icons.Default.KeyboardArrowDown,
-                                                    contentDescription = if (isSelected) "Kapat" else "Detay Göster",
-                                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
-                                                    modifier = Modifier
-                                                        .size(20.dp)
-                                                        .rotate(rotationAngle)
-                                                )
+                                    // WhatsApp Button
+                                    Surface(
+                                        onClick = {
+                                            val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
+                                            val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
+                                            val waIntent = Intent(Intent.ACTION_VIEW, waUri)
+                                            try {
+                                                context.startActivity(waIntent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "WhatsApp açılamadı", Toast.LENGTH_SHORT).show()
                                             }
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                        modifier = Modifier.weight(1f).height(38.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Send,
+                                                contentDescription = "WhatsApp",
+                                                tint = Color(0xFF25D366),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "WhatsApp",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = Color(0xFF059669)
+                                            )
+                                        }
+                                    }
+
+                                    // Yol Tarifi (Maps) Button
+                                    Surface(
+                                        onClick = {
+                                            val query = if (cust.address.isNotBlank()) "${cust.district} ${cust.address}" else cust.district
+                                            val mapUri = Uri.parse("geo:0,0?q=${Uri.encode(query)}")
+                                            val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+                                            try {
+                                                context.startActivity(mapIntent)
+                                            } catch (e: Exception) {
+                                                Toast.makeText(context, "Harita uygulaması açılamadı", Toast.LENGTH_SHORT).show()
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                        modifier = Modifier.weight(1f).height(38.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxSize(),
+                                            horizontalArrangement = Arrangement.Center,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Map,
+                                                contentDescription = "Yol Tarifi",
+                                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text(
+                                                text = "Yol Tarifi",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
                                 }
