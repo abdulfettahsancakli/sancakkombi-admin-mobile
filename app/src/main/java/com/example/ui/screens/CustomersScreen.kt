@@ -49,6 +49,7 @@ import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
@@ -438,15 +439,11 @@ fun CustomersScreen(
                                 .padding(vertical = 6.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .clickable {
-                                    selectedCustomer = cust
-                                    // Smooth scroll down to customer details
-                                    coroutineScope.launch {
-                                        scrollState.animateScrollTo(detailCardPositionY.coerceAtLeast(0))
-                                    }
+                                    selectedCustomer = if (isSelected) null else cust
                                 },
                             shape = RoundedCornerShape(16.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f) else MaterialTheme.colorScheme.surface
+                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
                             ),
                             border = BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
@@ -454,149 +451,19 @@ fun CustomersScreen(
                             ),
                             elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
                         ) {
-                            Row(
+                            Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically
+                                    .padding(14.dp)
                             ) {
-                                // Avatar Circle with Initials
-                                Box(
-                                    modifier = Modifier
-                                        .size(46.dp)
-                                        .clip(CircleShape)
-                                        .background(avatarColor.copy(alpha = 0.15f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = initials,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = avatarColor
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.width(14.dp))
-
-                                // Customer Info
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = cust.name,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
-                                    )
-
-                                    Spacer(modifier = Modifier.height(4.dp))
-
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Surface(
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
-                                        ) {
-                                            Text(
-                                                text = cust.district,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                                color = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                            )
-                                        }
-
-                                        Spacer(modifier = Modifier.width(8.dp))
-
-                                        Text(
-                                            text = cust.phone,
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-
-                                // Quick Call / WhatsApp Action Buttons with 44dp+ Touch Targets
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Surface(
-                                        onClick = {
-                                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
-                                            context.startActivity(intent)
-                                        },
-                                        shape = CircleShape,
-                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                        modifier = Modifier.size(44.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.Call,
-                                                contentDescription = "Ara",
-                                                tint = MaterialTheme.colorScheme.primary,
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-
-                                    Surface(
-                                        onClick = {
-                                            val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
-                                            val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
-                                            val waIntent = Intent(Intent.ACTION_VIEW, waUri)
-                                            try {
-                                                context.startActivity(waIntent)
-                                            } catch (e: Exception) {
-                                                Toast.makeText(context, "WhatsApp açılamadı", Toast.LENGTH_SHORT).show()
-                                            }
-                                        },
-                                        shape = CircleShape,
-                                        color = Color(0xFF10B981).copy(alpha = 0.15f),
-                                        modifier = Modifier.size(44.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Default.Send,
-                                                contentDescription = "WhatsApp",
-                                                tint = Color(0xFF25D366),
-                                                modifier = Modifier.size(20.dp)
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Selected Customer Profile & Edit Panel
-                selectedCustomer?.let { cust ->
-                    val avatarColor = remember(cust.id) { getAvatarColor(cust.name) }
-                    val initials = remember(cust.name) { getInitials(cust.name) }
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .onGloballyPositioned { coordinates ->
-                                detailCardPositionY = coordinates.positionInParent().y.toInt()
-                            }
-                    ) {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
-                        ) {
-                            Column(modifier = Modifier.padding(20.dp)) {
-                                // Customer Detail Header
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
+                                    // Avatar Circle with Initials
                                     Box(
                                         modifier = Modifier
-                                            .size(56.dp)
+                                            .size(46.dp)
                                             .clip(CircleShape)
                                             .background(avatarColor.copy(alpha = 0.15f)),
                                         contentAlignment = Alignment.Center
@@ -604,309 +471,391 @@ fun CustomersScreen(
                                         Text(
                                             text = initials,
                                             fontWeight = FontWeight.Bold,
-                                            fontSize = 20.sp,
+                                            fontSize = 15.sp,
                                             color = avatarColor
                                         )
                                     }
 
-                                    Spacer(modifier = Modifier.width(16.dp))
+                                    Spacer(modifier = Modifier.width(14.dp))
 
+                                    // Customer Info
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
                                             text = cust.name,
-                                            style = MaterialTheme.typography.titleLarge,
                                             fontWeight = FontWeight.Bold,
+                                            fontSize = 15.sp,
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "${cust.district} • ${cust.phone}",
-                                            fontSize = 13.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
 
-                                Spacer(modifier = Modifier.height(18.dp))
+                                        Spacer(modifier = Modifier.height(4.dp))
 
-                                // Modern Segmented Tab Bar
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
-                                        .padding(4.dp)
-                                ) {
-                                    TabOption(
-                                        title = "Bilgiler",
-                                        icon = Icons.Default.Info,
-                                        isSelected = activeTab == "bilgiler",
-                                        onClick = { activeTab = "bilgiler" },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    TabOption(
-                                        title = "Randevular",
-                                        icon = Icons.Default.History,
-                                        isSelected = activeTab == "randevular",
-                                        onClick = { activeTab = "randevular" },
-                                        modifier = Modifier.weight(1f)
-                                    )
-
-                                    TabOption(
-                                        title = "İşlemler",
-                                        icon = Icons.Default.Phone,
-                                        isSelected = activeTab == "islemler",
-                                        onClick = { activeTab = "islemler" },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                }
-
-                                Spacer(modifier = Modifier.height(18.dp))
-
-                                if (activeTab == "bilgiler") {
-                                    // Customer Details Form (Modern Outlined Floating Label Style)
-                                    OutlinedTextField(
-                                        value = editName,
-                                        onValueChange = { editName = it },
-                                        label = { Text("Müşteri Ad Soyad") },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true
-                                    )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    OutlinedTextField(
-                                        value = editPhone,
-                                        onValueChange = { editPhone = it },
-                                        label = { Text("Telefon Numarası") },
-                                        leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true
-                                    )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    OutlinedTextField(
-                                        value = editDistrict,
-                                        onValueChange = { editDistrict = it },
-                                        label = { Text("İlçe / Bölge") },
-                                        leadingIcon = { Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        singleLine = true
-                                    )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    OutlinedTextField(
-                                        value = editAddress,
-                                        onValueChange = { editAddress = it },
-                                        label = { Text("Açık Adres Detayı") },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        minLines = 2
-                                    )
-
-                                    Spacer(modifier = Modifier.height(12.dp))
-
-                                    OutlinedTextField(
-                                        value = editNotes,
-                                        onValueChange = { editNotes = it },
-                                        label = { Text("Özel Notlar / Kombi Markası") },
-                                        placeholder = { Text("Örn: Demirdöküm Nitromix kombi, 3. kat") },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = OutlinedTextFieldDefaults.colors(
-                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
-                                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f),
-                                            focusedTextColor = MaterialTheme.colorScheme.onSurface,
-                                            unfocusedTextColor = MaterialTheme.colorScheme.onSurface
-                                        ),
-                                        modifier = Modifier.fillMaxWidth(),
-                                        minLines = 2
-                                    )
-
-                                    Spacer(modifier = Modifier.height(20.dp))
-
-                                    // Full-Width Primary Green Gradient Save Button
-                                    Button(
-                                        onClick = {
-                                            val updated = cust.copy(
-                                                name = editName,
-                                                phone = editPhone,
-                                                district = editDistrict,
-                                                address = editAddress,
-                                                notes = editNotes
-                                            )
-                                            onUpdateCustomer(updated)
-                                            selectedCustomer = updated
-                                            Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
-                                        },
-                                        shape = RoundedCornerShape(24.dp),
-                                        colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                        contentPadding = androidx.compose.foundation.layout.PaddingValues(),
-                                        modifier = Modifier.fillMaxWidth().height(50.dp)
-                                    ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .fillMaxSize()
-                                                .background(
-                                                    brush = Brush.linearGradient(
-                                                        colors = listOf(
-                                                            Color(0xFF43A047),
-                                                            Color(0xFF1B5E20)
-                                                        )
-                                                    ),
-                                                    shape = RoundedCornerShape(24.dp)
-                                                ),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                                                Spacer(modifier = Modifier.width(8.dp))
-                                                Text("Müşteri Kaydını Güncelle", fontWeight = FontWeight.Bold, fontSize = 15.sp, color = Color.White)
-                                            }
-                                        }
-                                    }
-                                } else if (activeTab == "randevular") {
-                                    // Appointments Timeline Tab
-                                    val customerAppointments = appointments.filter {
-                                        it.customerId == cust.id || it.customerName.equals(cust.name, ignoreCase = true)
-                                    }
-
-                                    if (customerAppointments.isEmpty()) {
-                                        Surface(
-                                            shape = RoundedCornerShape(12.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                            modifier = Modifier.fillMaxWidth()
-                                        ) {
-                                            Column(
-                                                modifier = Modifier.padding(20.dp),
-                                                horizontalAlignment = Alignment.CenterHorizontally
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f)
                                             ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Event,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.size(32.dp)
-                                                )
-                                                Spacer(modifier = Modifier.height(8.dp))
                                                 Text(
-                                                    text = "Bu müşteriye ait kayıtlı randevu bulunmuyor.",
-                                                    fontSize = 13.sp,
-                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    text = cust.district,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                                 )
                                             }
-                                        }
-                                    } else {
-                                        customerAppointments.forEach { appt ->
-                                            Card(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(vertical = 4.dp),
-                                                shape = RoundedCornerShape(12.dp),
-                                                colors = CardDefaults.cardColors(
-                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
-                                                )
-                                            ) {
-                                                Column(modifier = Modifier.padding(12.dp)) {
-                                                    Row(
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Text(
-                                                            text = "${appt.date} • ${appt.timeSlot}",
-                                                            fontWeight = FontWeight.Bold,
-                                                            fontSize = 13.sp,
-                                                            color = MaterialTheme.colorScheme.onSurface
-                                                        )
-                                                        Spacer(modifier = Modifier.weight(1f))
-                                                        Surface(
-                                                            shape = RoundedCornerShape(6.dp),
-                                                            color = MaterialTheme.colorScheme.primaryContainer
-                                                        ) {
-                                                            Text(
-                                                                text = appt.status.label,
-                                                                fontSize = 11.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = MaterialTheme.colorScheme.primary,
-                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                                            )
-                                                        }
-                                                    }
-                                                    Spacer(modifier = Modifier.height(4.dp))
-                                                    Text(
-                                                        text = appt.serviceType,
-                                                        fontSize = 12.sp,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
-                                                }
-                                            }
+
+                                            Spacer(modifier = Modifier.width(8.dp))
+
+                                            Text(
+                                                text = cust.phone,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
                                         }
                                     }
-                                } else {
-                                    // Quick Actions Tab
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        QuickActionButton(
-                                            title = "Telefon ile Ara",
-                                            subtitle = cust.phone,
-                                            icon = Icons.Default.Call,
-                                            tint = Color(0xFF0288D1),
+
+                                    // Call / WhatsApp / Expand (+/-) Toggle Buttons
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
                                             onClick = {
                                                 val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
                                                 context.startActivity(intent)
+                                            },
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Call,
+                                                    contentDescription = "Ara",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(18.dp)
+                                                )
                                             }
-                                        )
+                                        }
 
-                                        QuickActionButton(
-                                            title = "WhatsApp Mesajı Gönder",
-                                            subtitle = "Direkt sohbet başlat",
-                                            icon = Icons.Default.Send,
-                                            tint = Color(0xFF25D366),
+                                        Surface(
                                             onClick = {
                                                 val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
                                                 val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, waUri))
+                                                val waIntent = Intent(Intent.ACTION_VIEW, waUri)
+                                                try {
+                                                    context.startActivity(waIntent)
+                                                } catch (e: Exception) {
+                                                    Toast.makeText(context, "WhatsApp açılamadı", Toast.LENGTH_SHORT).show()
+                                                }
+                                            },
+                                            shape = CircleShape,
+                                            color = Color(0xFF10B981).copy(alpha = 0.15f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Send,
+                                                    contentDescription = "WhatsApp",
+                                                    tint = Color(0xFF25D366),
+                                                    modifier = Modifier.size(18.dp)
+                                                )
                                             }
-                                        )
+                                        }
 
-                                        QuickActionButton(
-                                            title = "Harita ve Yol Tarifi",
-                                            subtitle = "${cust.district} / ${cust.address}",
-                                            icon = Icons.Default.Map,
-                                            tint = Color(0xFFF59E0B),
+                                        // + / - Toggle Button
+                                        Surface(
                                             onClick = {
-                                                val geoUri = Uri.parse("geo:0,0?q=${Uri.encode("${cust.district} ${cust.address}")}")
-                                                context.startActivity(Intent(Intent.ACTION_VIEW, geoUri))
+                                                selectedCustomer = if (isSelected) null else cust
+                                            },
+                                            shape = CircleShape,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = if (isSelected) Icons.Default.Remove else Icons.Default.Add,
+                                                    contentDescription = if (isSelected) "Kapat (-)" else "Aç (+)",
+                                                    tint = if (isSelected) Color.White else MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
                                             }
-                                        )
+                                        }
+                                    }
+                                }
+
+                                // Inline Expanded Content
+                                AnimatedVisibility(visible = isSelected) {
+                                    Column(modifier = Modifier.padding(top = 16.dp)) {
+                                        Divider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+
+                                        Spacer(modifier = Modifier.height(14.dp))
+
+                                        // Modern Segmented Tab Bar
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f))
+                                                .padding(4.dp)
+                                        ) {
+                                            TabOption(
+                                                title = "Bilgiler",
+                                                icon = Icons.Default.Info,
+                                                isSelected = activeTab == "bilgiler",
+                                                onClick = { activeTab = "bilgiler" },
+                                                modifier = Modifier.weight(1f)
+                                            )
+
+                                            TabOption(
+                                                title = "Randevular",
+                                                icon = Icons.Default.History,
+                                                isSelected = activeTab == "randevular",
+                                                onClick = { activeTab = "randevular" },
+                                                modifier = Modifier.weight(1f)
+                                            )
+
+                                            TabOption(
+                                                title = "İşlemler",
+                                                icon = Icons.Default.Phone,
+                                                isSelected = activeTab == "islemler",
+                                                onClick = { activeTab = "islemler" },
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.height(14.dp))
+
+                                        if (activeTab == "bilgiler") {
+                                            OutlinedTextField(
+                                                value = editName,
+                                                onValueChange = { editName = it },
+                                                label = { Text("Müşteri Ad Soyad") },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            OutlinedTextField(
+                                                value = editPhone,
+                                                onValueChange = { editPhone = it },
+                                                label = { Text("Telefon Numarası") },
+                                                leadingIcon = { Icon(imageVector = Icons.Default.Phone, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            OutlinedTextField(
+                                                value = editDistrict,
+                                                onValueChange = { editDistrict = it },
+                                                label = { Text("İlçe / Bölge") },
+                                                leadingIcon = { Icon(imageVector = Icons.Default.LocationOn, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                singleLine = true
+                                            )
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            OutlinedTextField(
+                                                value = editAddress,
+                                                onValueChange = { editAddress = it },
+                                                label = { Text("Açık Adres Detayı") },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                minLines = 2
+                                            )
+
+                                            Spacer(modifier = Modifier.height(10.dp))
+
+                                            OutlinedTextField(
+                                                value = editNotes,
+                                                onValueChange = { editNotes = it },
+                                                label = { Text("Özel Notlar / Kombi Markası") },
+                                                placeholder = { Text("Örn: Demirdöküm Nitromix kombi, 3. kat") },
+                                                shape = RoundedCornerShape(12.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                                    unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                                ),
+                                                modifier = Modifier.fillMaxWidth(),
+                                                minLines = 2
+                                            )
+
+                                            Spacer(modifier = Modifier.height(16.dp))
+
+                                            Button(
+                                                onClick = {
+                                                    val updated = cust.copy(
+                                                        name = editName,
+                                                        phone = editPhone,
+                                                        district = editDistrict,
+                                                        address = editAddress,
+                                                        notes = editNotes
+                                                    )
+                                                    onUpdateCustomer(updated)
+                                                    selectedCustomer = updated
+                                                    Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
+                                                },
+                                                shape = RoundedCornerShape(20.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(),
+                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .background(
+                                                            brush = Brush.linearGradient(
+                                                                colors = listOf(
+                                                                    Color(0xFF43A047),
+                                                                    Color(0xFF1B5E20)
+                                                                )
+                                                            ),
+                                                            shape = RoundedCornerShape(20.dp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text("Kaydı Güncelle", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                                                    }
+                                                }
+                                            }
+                                        } else if (activeTab == "randevular") {
+                                            val customerAppointments = appointments.filter {
+                                                it.customerId == cust.id || it.customerName.equals(cust.name, ignoreCase = true)
+                                            }
+
+                                            if (customerAppointments.isEmpty()) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.padding(16.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Event,
+                                                            contentDescription = null,
+                                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                            modifier = Modifier.size(28.dp)
+                                                        )
+                                                        Spacer(modifier = Modifier.height(6.dp))
+                                                        Text(
+                                                            text = "Kayıtlı randevu bulunmuyor.",
+                                                            fontSize = 12.sp,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            } else {
+                                                customerAppointments.forEach { appt ->
+                                                    Card(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 3.dp),
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                                        )
+                                                    ) {
+                                                        Column(modifier = Modifier.padding(10.dp)) {
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Text(
+                                                                    text = "${appt.date} • ${appt.timeSlot}",
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 12.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurface
+                                                                )
+                                                                Spacer(modifier = Modifier.weight(1f))
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(6.dp),
+                                                                    color = MaterialTheme.colorScheme.primaryContainer
+                                                                ) {
+                                                                    Text(
+                                                                        text = appt.status.label,
+                                                                        fontSize = 10.sp,
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        color = MaterialTheme.colorScheme.primary,
+                                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                                    )
+                                                                }
+                                                            }
+                                                            Spacer(modifier = Modifier.height(2.dp))
+                                                            Text(
+                                                                text = appt.serviceType,
+                                                                fontSize = 11.sp,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        } else {
+                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                QuickActionButton(
+                                                    title = "Telefon ile Ara",
+                                                    subtitle = cust.phone,
+                                                    icon = Icons.Default.Call,
+                                                    tint = Color(0xFF0288D1),
+                                                    onClick = {
+                                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
+                                                        context.startActivity(intent)
+                                                    }
+                                                )
+
+                                                QuickActionButton(
+                                                    title = "WhatsApp Mesajı Gönder",
+                                                    subtitle = "Direkt sohbet başlat",
+                                                    icon = Icons.Default.Send,
+                                                    tint = Color(0xFF25D366),
+                                                    onClick = {
+                                                        val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
+                                                        val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
+                                                        context.startActivity(Intent(Intent.ACTION_VIEW, waUri))
+                                                    }
+                                                )
+
+                                                QuickActionButton(
+                                                    title = "Harita ve Yol Tarifi",
+                                                    subtitle = "${cust.district} / ${cust.address}",
+                                                    icon = Icons.Default.Map,
+                                                    tint = Color(0xFFF59E0B),
+                                                    onClick = {
+                                                        val geoUri = Uri.parse("geo:0,0?q=${Uri.encode("${cust.district} ${cust.address}")}")
+                                                        context.startActivity(Intent(Intent.ACTION_VIEW, geoUri))
+                                                    }
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
