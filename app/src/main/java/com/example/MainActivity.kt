@@ -152,6 +152,9 @@ class MainActivity : ComponentActivity() {
                                         onDeleteAppointment = { id -> viewModel.deleteAppointment(id) },
                                         onSendBankTransfer = { id, accKey, amt, date, callback ->
                                             viewModel.sendBankTransferMessage(id, accKey, amt, date, callback)
+                                        },
+                                        onGetAvailableSlots = { dateIso, callback ->
+                                            viewModel.getAvailableSlots(dateIso, callback)
                                         }
                                     )
                                 }
@@ -166,6 +169,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 "finance", "finans" -> {
                                     FinanceScreen(
+                                        isDarkTheme = isDarkTheme,
                                         summary = financeSummary,
                                         financeRecords = financeRecords,
                                         bankAccounts = bankAccounts,
@@ -181,7 +185,8 @@ class MainActivity : ComponentActivity() {
                                 "service_receipt", "makbuz" -> {
                                     ServiceReceiptScreen(
                                         record = selectedRecordForReceipt,
-                                        onBackClick = { viewModel.navigateTo("finance") }
+                                        onBackClick = { viewModel.navigateTo("finance") },
+                                        onFetchReceiptDetail = { id -> viewModel.getReceiptDetail(id) }
                                     )
                                 }
                                 "quotes", "teklifler" -> {

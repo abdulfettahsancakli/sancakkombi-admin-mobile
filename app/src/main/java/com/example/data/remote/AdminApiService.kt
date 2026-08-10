@@ -71,6 +71,12 @@ interface AdminApiService {
         @Body body: SendBankTransferRequestDto
     ): Response<SuccessResponseDto>
 
+    @GET("api/admin/appointments/available-slots")
+    suspend fun getAvailableSlots(
+        @Header("Authorization") auth: String,
+        @Query("date") date: String
+    ): Response<List<String>>
+
     @DELETE("api/admin/appointments/{id}")
     suspend fun deleteAppointment(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
 
@@ -87,6 +93,12 @@ interface AdminApiService {
     // Finans
     @GET("api/admin/finance/records")
     suspend fun getFinanceRecords(@Header("Authorization") auth: String): Response<List<FinanceRecord>>
+
+    @GET("api/admin/finance/receipt/{entryId}")
+    suspend fun getReceiptDetail(
+        @Header("Authorization") auth: String,
+        @Path("entryId") entryId: String
+    ): Response<ReceiptDetailDto>
 
     @POST("api/admin/finance/records")
     suspend fun addFinanceRecord(@Header("Authorization") auth: String, @Body record: FinanceRecord): Response<FinanceRecordCreateResponseDto>

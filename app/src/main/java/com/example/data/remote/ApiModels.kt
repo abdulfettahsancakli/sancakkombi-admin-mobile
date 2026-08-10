@@ -80,3 +80,23 @@ data class UploadResponseDto(
     val url: String? = null,
     val error: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class ReceiptDetailDto(
+    val entryId: String = "",
+    val receiptNo: String = "",
+    val date: String = "",
+    val amount: Double = 0.0,
+    val paymentMethod: String = "",
+    val status: String = "",
+    val customerName: String = "",
+    val customerPhone: String = "",
+    val customerAddress: String = "",
+    val customerDistrict: String = "",
+    val deviceBrand: String = "",
+    val deviceModel: String = "",
+    val deviceTested: Boolean = false,
+    val workDescription: String = "",
+    val warrantyMonths: Int? = null,
+    val serviceTitle: String = ""
+)

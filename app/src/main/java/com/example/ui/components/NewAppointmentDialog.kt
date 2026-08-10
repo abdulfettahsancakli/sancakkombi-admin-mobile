@@ -67,14 +67,28 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.IstanbulLocationData
 import com.example.data.remote.GeminiVoiceAppointmentParser
+import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
 import java.util.UUID
+
+private fun convertToIsoDate(dateStr: String): String {
+    val trimmed = dateStr.trim()
+    val parts = trimmed.split(".")
+    if (parts.size == 3 && parts[0].length <= 2 && parts[1].length <= 2 && parts[2].length == 4) {
+        val day = parts[0].padStart(2, '0')
+        val month = parts[1].padStart(2, '0')
+        val year = parts[2]
+        return "$year-$month-$day"
+    }
+    return trimmed
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewAppointmentDialog(
     onDismiss: () -> Unit,
     onSave: (Appointment) -> Unit,
+    onGetAvailableSlots: (dateIso: String, onResult: (Result<List<String>>) -> Unit) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val coroutineScope = rememberCoroutineScope()
@@ -142,6 +156,30 @@ fun NewAppointmentDialog(
     var expandedTimeSlot by remember { mutableStateOf(false) }
     var expandedService by remember { mutableStateOf(false) }
     var expandedStatus by remember { mutableStateOf(false) }
+
+    var availableSlots by remember { mutableStateOf<List<String>?>(null) }
+    var isLoadingSlots by remember { mutableStateOf(false) }
+
+    LaunchedEffect(date) {
+        val isoDate = convertToIsoDate(date)
+        if (isoDate.isNotBlank()) {
+            isLoadingSlots = true
+            onGetAvailableSlots(isoDate) { result ->
+                isLoadingSlots = false
+                result.onSuccess { slots ->
+                    availableSlots = slots
+                    if (timeSlot.isNotBlank() && !slots.contains(timeSlot)) {
+                        timeSlot = ""
+                    }
+                }.onFailure {
+                    // Fail-safe: fallback to allowing all slots if request fails
+                    availableSlots = null
+                }
+            }
+        } else {
+            availableSlots = null
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -502,7 +540,17 @@ fun NewAppointmentDialog(
                             onValueChange = {},
                             readOnly = true,
                             label = { Text("Saat Aralığı *") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTimeSlot) },
+                            trailingIcon = {
+                                if (isLoadingSlots) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(16.dp),
+                                        strokeWidth = 2.dp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                } else {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTimeSlot)
+                                }
+                            },
                             modifier = Modifier.menuAnchor()
                         )
                         ExposedDropdownMenu(
@@ -510,8 +558,37 @@ fun NewAppointmentDialog(
                             onDismissRequest = { expandedTimeSlot = false }
                         ) {
                             timeSlots.forEach { slot ->
+                                val isAvailable = availableSlots == null || availableSlots!!.contains(slot)
                                 DropdownMenuItem(
-                                    text = { Text(slot) },
+                                    text = {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                text = slot,
+                                                fontSize = 13.sp,
+                                                color = if (isAvailable) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                                            )
+                                            if (!isAvailable) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(4.dp),
+                                                    color = MaterialTheme.colorScheme.errorContainer,
+                                                    modifier = Modifier.padding(start = 6.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "Dolu",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.error,
+                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    },
+                                    enabled = isAvailable,
                                     onClick = {
                                         timeSlot = slot
                                         expandedTimeSlot = false

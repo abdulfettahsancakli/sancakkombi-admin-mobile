@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.background
@@ -27,6 +28,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +36,11 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,8 +51,81 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.content.FileProvider
 import com.example.data.model.Proposal
 import com.example.data.model.ProposalStatus
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+
+suspend fun downloadAndShareQuotePdf(
+    context: Context,
+    quoteId: String,
+    quoteNumber: String,
+    onLoadingStateChange: (Boolean) -> Unit
+) {
+    withContext(Dispatchers.IO) {
+        try {
+            withContext(Dispatchers.Main) { onLoadingStateChange(true) }
+
+            val pdfUrl = "https://www.sancakkombi.com/api/quote/$quoteId"
+            val url = URL(pdfUrl)
+            val connection = url.openConnection() as HttpURLConnection
+            connection.requestMethod = "GET"
+            connection.connectTimeout = 15000
+            connection.readTimeout = 15000
+
+            val responseCode = connection.responseCode
+            if (responseCode == 200) {
+                val pdfDir = File(context.cacheDir, "pdf")
+                if (!pdfDir.exists()) {
+                    pdfDir.mkdirs()
+                }
+                val safeQuoteNumber = quoteNumber.ifBlank { quoteId }.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+                val pdfFile = File(pdfDir, "Teklif_${safeQuoteNumber}.pdf")
+
+                connection.inputStream.use { input ->
+                    pdfFile.outputStream().use { output ->
+                        input.copyTo(output)
+                    }
+                }
+
+                val contentUri = FileProvider.getUriForFile(
+                    context,
+                    "${context.packageName}.fileprovider",
+                    pdfFile
+                )
+
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, contentUri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+
+                val chooserIntent = Intent.createChooser(shareIntent, "Fiyat Teklifi PDF'ini Paylaş")
+                chooserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+
+                withContext(Dispatchers.Main) {
+                    onLoadingStateChange(false)
+                    context.startActivity(chooserIntent)
+                }
+            } else {
+                withContext(Dispatchers.Main) {
+                    onLoadingStateChange(false)
+                    Toast.makeText(context, "PDF indirilemedi (Hata koda: $responseCode)", Toast.LENGTH_LONG).show()
+                }
+            }
+        } catch (e: Exception) {
+            withContext(Dispatchers.Main) {
+                onLoadingStateChange(false)
+                Toast.makeText(context, "PDF indirilirken hata oluştu: ${e.localizedMessage ?: "Bağlantı hatası"}", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+}
 
 @Composable
 fun ProposalDetailScreen(
@@ -55,38 +135,14 @@ fun ProposalDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    var isDownloadingPdf by remember { mutableStateOf(false) }
+
     if (proposal == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Teklif bulunamadı.")
         }
         return
-    }
-
-    fun shareProposalPdf() {
-        val shareText = """
-            SANCAK KOMBİ TEKNİK SERVİS - FİYAT TEKLİFİ
-            Teklif No: ${proposal.quoteNumber.ifEmpty { proposal.id }}
-            Tarih: ${proposal.date}
-            Müşteri: ${proposal.customerName}
-            Cihaz: ${proposal.deviceBrand} ${proposal.deviceModel}
-            
-            KALEMLER:
-            ${proposal.items.joinToString("\n") { "- ${it.title}: ₺%.2f".format(it.totalPrice) }}
-            
-            Peşinat: ₺%.2f
-            Kalan: ₺%.2f (${proposal.remainingPaymentType})
-            GENEL TOPLAM: ₺%.2f (KDV Dahil)
-            
-            İletişim: 0212 581 75 74 • Sancak Kombi
-        """.trimIndent()
-
-        val sendIntent = Intent().apply {
-            action = Intent.ACTION_SEND
-            putExtra(Intent.EXTRA_TEXT, shareText)
-            type = "text/plain"
-        }
-        val shareIntent = Intent.createChooser(sendIntent, "Fiyat Teklifini Paylaş")
-        context.startActivity(shareIntent)
     }
 
     Surface(
@@ -121,13 +177,36 @@ fun ProposalDetailScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Button(
-                    onClick = { shareProposalPdf() },
+                    onClick = {
+                        if (!isDownloadingPdf) {
+                            coroutineScope.launch {
+                                downloadAndShareQuotePdf(
+                                    context = context,
+                                    quoteId = proposal.id,
+                                    quoteNumber = proposal.quoteNumber.ifEmpty { proposal.id },
+                                    onLoadingStateChange = { isDownloadingPdf = it }
+                                )
+                            }
+                        }
+                    },
+                    enabled = !isDownloadingPdf,
                     shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.testTag("share_proposal_pdf_button")
                 ) {
-                    Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Fiyat Teklifi PDF", fontSize = 12.sp)
+                    if (isDownloadingPdf) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("İndiriliyor...", fontSize = 12.sp)
+                    } else {
+                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Fiyat Teklifi PDF", fontSize = 12.sp)
+                    }
                 }
             }
 

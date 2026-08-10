@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Build
@@ -35,6 +36,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -75,19 +77,26 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
+import com.example.data.model.BankAccount
 import com.example.data.model.JobReport
 import com.example.data.model.UsedPart
+import com.example.ui.screens.SendBankTransferDialog
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun CompleteJobDialog(
     appointment: Appointment,
+    bankAccounts: List<BankAccount> = emptyList(),
     onDismiss: () -> Unit,
     onComplete: (JobReport) -> Unit,
+    onSendBankTransfer: (accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
     var currentStep by remember { mutableStateOf(1) } // 1: Finans, 2: İş Detayı, 3: Fotoğraf & İmza
+
+    // IBAN Sending Dialog State
+    var showIbanDialog by remember { mutableStateOf(false) }
 
     // Basic Form State
     var technicianName by remember { mutableStateOf("Ahmet Usta") }
@@ -233,7 +242,8 @@ fun CompleteJobDialog(
                             notifyCustomerMessage = notifyCustomerMessage,
                             onNotifyCustomerChange = { notifyCustomerMessage = it },
                             sendWhatsappPdf = sendWhatsappPdf,
-                            onSendWhatsappPdfChange = { sendWhatsappPdf = it }
+                            onSendWhatsappPdfChange = { sendWhatsappPdf = it },
+                            onOpenIbanDialog = { showIbanDialog = true }
                         )
 
                         2 -> Step2JobDetailsView(
@@ -358,6 +368,18 @@ fun CompleteJobDialog(
             }
         }
     }
+
+    if (showIbanDialog) {
+        SendBankTransferDialog(
+            appointment = appointment,
+            bankAccounts = bankAccounts,
+            initialAmount = collectedAmount,
+            onDismiss = { showIbanDialog = false },
+            onSend = { accountKey, amount, date, onResult ->
+                onSendBankTransfer(accountKey, amount, date, onResult)
+            }
+        )
+    }
 }
 
 @Composable
@@ -427,7 +449,8 @@ private fun Step1FinanceView(
     notifyCustomerMessage: Boolean,
     onNotifyCustomerChange: (Boolean) -> Unit,
     sendWhatsappPdf: Boolean,
-    onSendWhatsappPdfChange: (Boolean) -> Unit
+    onSendWhatsappPdfChange: (Boolean) -> Unit,
+    onOpenIbanDialog: () -> Unit = {}
 ) {
     Column {
         // Compact Summary
@@ -515,13 +538,65 @@ private fun Step1FinanceView(
             listOf("Nakit", "Kredi Kartı", "EFT / Havale").forEach { method ->
                 FilterChip(
                     selected = paymentMethod == method,
-                    onClick = { onPaymentMethodChange(method) },
+                    onClick = {
+                        onPaymentMethodChange(method)
+                        if (method == "EFT / Havale") {
+                            onOpenIbanDialog()
+                        }
+                    },
                     label = { Text(method, fontSize = 11.sp) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = MaterialTheme.colorScheme.primary,
                         selectedLabelColor = Color.White
                     )
                 )
+            }
+        }
+
+        if (paymentMethod == "EFT / Havale") {
+            Spacer(modifier = Modifier.height(8.dp))
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.AccountBalance,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Müşteriye IBAN / Ödeme Bilgisi Gönder",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "EFT / Havale seçildi. Müşteriye WhatsApp veya SMS ile şirket banka hesap bilgilerini iletebilirsiniz.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(
+                        onClick = onOpenIbanDialog,
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(36.dp)
+                            .testTag("open_iban_dialog_from_complete_job")
+                    ) {
+                        Icon(imageVector = Icons.Default.Send, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("IBAN Bilgilerini Gönder", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
             }
         }
 

@@ -288,6 +288,13 @@ class MainViewModel(
         }
     }
 
+    fun getAvailableSlots(dateIso: String, onResult: (Result<List<String>>) -> Unit) {
+        viewModelScope.launch {
+            val res = repository.getAvailableSlots(dateIso)
+            onResult(res)
+        }
+    }
+
     fun deleteAppointment(id: String) {
         viewModelScope.launch {
             repository.deleteAppointment(id)
@@ -322,6 +329,10 @@ class MainViewModel(
 
     fun selectFinanceRecordForReceipt(record: FinanceRecord?) {
         _selectedFinanceRecordForReceipt.value = record
+    }
+
+    suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> {
+        return repository.getReceiptDetail(entryId)
     }
 
     // Proposals Actions

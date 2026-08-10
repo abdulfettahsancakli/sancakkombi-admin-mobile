@@ -43,6 +43,7 @@ interface AdminRepository {
         amount: Double? = null,
         promisedPaymentDate: String? = null
     ): Result<String>
+    suspend fun getAvailableSlots(dateIso: String): Result<List<String>>
     suspend fun deleteAppointment(id: String): Result<Unit>
 
     // Customers CRUD
@@ -56,6 +57,7 @@ interface AdminRepository {
     fun getBankAccounts(): Flow<List<BankAccount>>
     suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit>
     suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit>
+    suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto>
 
     // Proposals
     fun getProposals(): Flow<List<Proposal>>

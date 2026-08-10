@@ -143,14 +143,17 @@ class RemoteAdminRepositoryImpl(
                         }
                         if (result != null) {
                             emit(result)
-                        } else {
-                            fallbackFlow.collect { emit(it) }
                         }
+                        // Gerçek API başarısız olursa artık mock veriye düşülmüyor.
+                        // Hiçbir şey emit edilmiyor, ekran son bilinen durumda kalır
+                        // (ilk açılışta bu, ViewModel'deki boş/varsayılan başlangıç
+                        // değeridir - asla sahte müşteri/randevu/teklif verisi
+                        // gerçekmiş gibi gösterilmez).
                     }
                 }
             }
 
-    private suspend inline fun <T> requireToken(crossinline onMissing: () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) }, block: (String) -> Result<T>): Result<T> {
+    private suspend fun <T> requireToken(onMissing: suspend () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) }, block: suspend (String) -> Result<T>): Result<T> {
         val token = currentToken() ?: return onMissing()
         return try {
             block(token)
@@ -297,6 +300,15 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun getAvailableSlots(dateIso: String): Result<List<String>> = requireToken { token ->
+        val response = api.getAvailableSlots(authHeader(token), dateIso)
+        if (response.isSuccessful && response.body() != null) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
     override suspend fun deleteAppointment(id: String): Result<Unit> = requireToken { token ->
         val response = api.deleteAppointment(authHeader(token), id)
         if (response.isSuccessful) {
@@ -372,6 +384,17 @@ class RemoteAdminRepositoryImpl(
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> = requireToken(
+        onMissing = { fallback.getReceiptDetail(entryId) }
+    ) { token ->
+        val response = api.getReceiptDetail(authHeader(token), entryId)
+        if (response.isSuccessful && response.body() != null) {
+            Result.success(response.body()!!)
+        } else {
+            fallback.getReceiptDetail(entryId)
         }
     }
 

@@ -100,6 +100,7 @@ fun AppointmentsScreen(
     onCompleteJob: (String, JobReport) -> Unit,
     onDeleteAppointment: (String) -> Unit,
     onSendBankTransfer: (appointmentId: String, accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _, _ -> },
+    onGetAvailableSlots: (dateIso: String, onResult: (Result<List<String>>) -> Unit) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -463,7 +464,8 @@ fun AppointmentsScreen(
             onSave = { newAppt ->
                 onAddAppointment(newAppt)
                 showNewDialog = false
-            }
+            },
+            onGetAvailableSlots = onGetAvailableSlots
         )
     }
 
@@ -485,10 +487,14 @@ fun AppointmentsScreen(
     completingAppointment?.let { appt ->
         CompleteJobDialog(
             appointment = appt,
+            bankAccounts = bankAccounts,
             onDismiss = { completingAppointment = null },
             onComplete = { report ->
                 onCompleteJob(appt.id, report)
                 completingAppointment = null
+            },
+            onSendBankTransfer = { accountKey, amount, date, onResult ->
+                onSendBankTransfer(appt.id, accountKey, amount, date, onResult)
             }
         )
     }
@@ -900,6 +906,7 @@ private fun WeeklyCalendarView(
 fun SendBankTransferDialog(
     appointment: Appointment,
     bankAccounts: List<BankAccount>,
+    initialAmount: String = "",
     onDismiss: () -> Unit,
     onSend: (accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit
 ) {
@@ -919,7 +926,7 @@ fun SendBankTransferDialog(
 
     var selectedAccountKey by remember { mutableStateOf(accountOptions.first().first) }
     var expandedAccountDropdown by remember { mutableStateOf(false) }
-    var amountText by remember { mutableStateOf("") }
+    var amountText by remember { mutableStateOf(initialAmount) }
     var promisedDateText by remember { mutableStateOf("") }
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }

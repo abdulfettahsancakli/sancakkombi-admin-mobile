@@ -562,6 +562,11 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.success("whatsapp")
     }
 
+    override suspend fun getAvailableSlots(dateIso: String): Result<List<String>> {
+        delay(200)
+        return Result.success(listOf("09:00 - 11:00", "13:00 - 15:00", "17:00 - 19:00"))
+    }
+
     override suspend fun deleteAppointment(id: String): Result<Unit> {
         delay(300)
         val newList = _appointments.value.toMutableList()
@@ -623,6 +628,30 @@ class MockAdminRepositoryImpl : AdminRepository {
         delay(300)
         _bankAccounts.value = accounts
         return Result.success(Unit)
+    }
+
+    override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> {
+        delay(200)
+        val rec = _financeRecords.value.find { it.id == entryId }
+        val detail = com.example.data.remote.ReceiptDetailDto(
+            entryId = entryId,
+            receiptNo = rec?.receiptNo ?: if (entryId.isNotBlank()) "SK-202608-${entryId.take(6).uppercase()}" else "SK-202608-6A6F7A",
+            date = rec?.date ?: "10.08.2026",
+            amount = rec?.amount ?: 1000.0,
+            paymentMethod = "Nakit",
+            status = if (rec?.status == "Ödendi") "paid" else "unpaid",
+            customerName = rec?.source ?: "Fettah Sancaklı",
+            customerPhone = "0537 691 73 61",
+            customerAddress = "Kocatepe Mah. 6. Sokak No: 19 D:1",
+            customerDistrict = "Bayrampaşa",
+            deviceBrand = "Demirdöküm",
+            deviceModel = "Nitromix P24",
+            deviceTested = true,
+            workDescription = if (rec?.note?.isNotBlank() == true) rec.note else "Kombi genleşme tankı hava basıncı kontrol edildi. Ateşleyici elektrot temizliği ve O-ring conta değişimi yapıldı. Sızdırmazlık testi başarıyla tamamlandı.",
+            warrantyMonths = 12,
+            serviceTitle = "Kombi Periyodik Bakım & Arıza Onarım Servis Fişi"
+        )
+        return Result.success(detail)
     }
 
     // Proposal Implementations
