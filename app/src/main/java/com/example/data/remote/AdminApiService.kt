@@ -90,6 +90,9 @@ interface AdminApiService {
     @PATCH("api/admin/customers/{id}")
     suspend fun updateCustomer(@Header("Authorization") auth: String, @Path("id") id: String, @Body customer: Customer): Response<SuccessResponseDto>
 
+    @GET("api/admin/customers/{id}/device-history")
+    suspend fun getDeviceHistory(@Header("Authorization") auth: String, @Path("id") id: String): Response<DeviceHistoryDto>
+
     // Finans
     @GET("api/admin/finance/records")
     suspend fun getFinanceRecords(@Header("Authorization") auth: String): Response<List<FinanceRecord>>

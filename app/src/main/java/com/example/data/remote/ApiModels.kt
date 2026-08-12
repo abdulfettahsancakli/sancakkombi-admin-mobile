@@ -100,3 +100,32 @@ data class ReceiptDetailDto(
     val warrantyMonths: Int? = null,
     val serviceTitle: String = ""
 )
+
+@JsonClass(generateAdapter = true)
+data class DeviceHistoryPartDto(
+    val name: String = "",
+    val quantity: Int = 0,
+    val unitPrice: Double? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceHistoryRecordDto(
+    val appointmentId: String = "",
+    val date: String = "",
+    val serviceTitle: String = "",
+    val deviceBrand: String = "",
+    val deviceModel: String = "",
+    val workDescription: String = "",
+    val parts: List<DeviceHistoryPartDto> = emptyList(),
+    val warrantyMonths: Int? = null,
+    val warrantyUntil: String? = null,
+    val isUnderWarranty: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
+data class DeviceHistoryDto(
+    val deviceBrand: String = "",
+    val deviceModel: String = "",
+    val deviceNotes: String = "",
+    val records: List<DeviceHistoryRecordDto> = emptyList()
+)

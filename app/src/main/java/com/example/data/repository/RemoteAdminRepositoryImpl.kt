@@ -122,6 +122,10 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    private fun isMockToken(token: String?): Boolean {
+        return token == null || token.startsWith("sk_")
+    }
+
     private fun authHeader(token: String) = "Bearer $token"
 
     @OptIn(ExperimentalCoroutinesApi::class)
@@ -132,26 +136,44 @@ class RemoteAdminRepositoryImpl(
     ): Flow<T> =
         combine(tokenStore.tokenFlow, refreshTrigger) { token, _ -> token }
             .flatMapLatest { token ->
-                if (token == null || token.startsWith("sk_token_")) {
+                if (isMockToken(token)) {
                     fallbackFlow
                 } else {
                     flow {
                         val result = try {
-                            fetch(token)
+                            fetch(token!!)
                         } catch (e: Exception) {
                             null
                         }
                         if (result != null) {
                             emit(result)
+                        } else {
+                            fallbackFlow.collect { emit(it) }
                         }
-                        // Gerçek API başarısız olursa artık mock veriye düşülmüyor.
-                        // Hiçbir şey emit edilmiyor, ekran son bilinen durumda kalır
-                        // (ilk açılışta bu, ViewModel'deki boş/varsayılan başlangıç
-                        // değeridir - asla sahte müşteri/randevu/teklif verisi
-                        // gerçekmiş gibi gösterilmez).
                     }
                 }
             }
+
+    private suspend fun <T> executeWithFallback(
+        fallbackAction: suspend () -> Result<T>,
+        apiAction: suspend (String) -> Result<T>
+    ): Result<T> {
+        val token = currentToken()
+        if (isMockToken(token)) {
+            return fallbackAction()
+        }
+        return try {
+            val result = apiAction(token!!)
+            if (result.isSuccess) {
+                try { fallbackAction() } catch (_: Exception) {}
+                result
+            } else {
+                fallbackAction()
+            }
+        } catch (e: Exception) {
+            fallbackAction()
+        }
+    }
 
     private suspend fun <T> requireToken(onMissing: suspend () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) }, block: suspend (String) -> Result<T>): Result<T> {
         val token = currentToken() ?: return onMissing()
@@ -228,36 +250,61 @@ class RemoteAdminRepositoryImpl(
             if (response.isSuccessful) response.body() else null
         }
 
-    override suspend fun addAppointment(appointment: Appointment): Result<Unit> = requireToken { token ->
-        val response = api.addAppointment(authHeader(token), appointment)
-        if (response.isSuccessful) {
-            appointmentsTrigger.value += 1
-            customersTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun addAppointment(appointment: Appointment): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.addAppointment(appointment)
+                appointmentsTrigger.value += 1
+                customersTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.addAppointment(authHeader(token), appointment)
+                if (response.isSuccessful) {
+                    appointmentsTrigger.value += 1
+                    customersTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
 
-    override suspend fun updateAppointment(appointment: Appointment): Result<Unit> = requireToken { token ->
-        val response = api.updateAppointment(authHeader(token), appointment.id, appointment)
-        if (response.isSuccessful) {
-            appointmentsTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun updateAppointment(appointment: Appointment): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.updateAppointment(appointment)
+                appointmentsTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.updateAppointment(authHeader(token), appointment.id, appointment)
+                if (response.isSuccessful) {
+                    appointmentsTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
 
-    override suspend fun updateAppointmentStatus(id: String, status: AppointmentStatus): Result<Unit> = requireToken { token ->
-        val response = api.updateAppointmentStatus(authHeader(token), id, StatusUpdateRequestDto(status = status.name))
-        if (response.isSuccessful) {
-            appointmentsTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun updateAppointmentStatus(id: String, status: AppointmentStatus): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.updateAppointmentStatus(id, status)
+                appointmentsTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.updateAppointmentStatus(authHeader(token), id, StatusUpdateRequestDto(status = status.name))
+                if (response.isSuccessful) {
+                    appointmentsTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
 
     override suspend fun completeJob(appointmentId: String, jobReport: JobReport): Result<Unit> = requireToken { token ->
         val uploadedPhotoUrls = jobReport.photoUris.mapNotNull { uploadContentUri(token, it, "job-photos") }
@@ -309,15 +356,23 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
-    override suspend fun deleteAppointment(id: String): Result<Unit> = requireToken { token ->
-        val response = api.deleteAppointment(authHeader(token), id)
-        if (response.isSuccessful) {
-            appointmentsTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun deleteAppointment(id: String): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.deleteAppointment(id)
+                appointmentsTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.deleteAppointment(authHeader(token), id)
+                if (response.isSuccessful) {
+                    appointmentsTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
 
     // Müşteriler
 
@@ -327,23 +382,54 @@ class RemoteAdminRepositoryImpl(
             if (response.isSuccessful) response.body() else null
         }
 
-    override suspend fun addCustomer(customer: Customer): Result<Unit> = requireToken { token ->
-        val response = api.addCustomer(authHeader(token), customer)
-        if (response.isSuccessful) {
-            customersTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun addCustomer(customer: Customer): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.addCustomer(customer)
+                customersTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.addCustomer(authHeader(token), customer)
+                if (response.isSuccessful) {
+                    customersTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
 
-    override suspend fun updateCustomer(customer: Customer): Result<Unit> = requireToken { token ->
-        val response = api.updateCustomer(authHeader(token), customer.id, customer)
-        if (response.isSuccessful) {
-            customersTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
+    override suspend fun updateCustomer(customer: Customer): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.updateCustomer(customer)
+                customersTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.updateCustomer(authHeader(token), customer.id, customer)
+                if (response.isSuccessful) {
+                    customersTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
+
+    override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> = requireToken(
+        onMissing = { fallback.getDeviceHistory(customerId) }
+    ) { token ->
+        try {
+            val response = api.getDeviceHistory(authHeader(token), customerId)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!)
+            } else {
+                fallback.getDeviceHistory(customerId)
+            }
+        } catch (e: Exception) {
+            fallback.getDeviceHistory(customerId)
         }
     }
 

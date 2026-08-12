@@ -314,6 +314,10 @@ class MainViewModel(
         }
     }
 
+    suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> {
+        return repository.getDeviceHistory(customerId)
+    }
+
     // Finance Actions
     fun addFinanceRecord(record: FinanceRecord) {
         viewModelScope.launch {

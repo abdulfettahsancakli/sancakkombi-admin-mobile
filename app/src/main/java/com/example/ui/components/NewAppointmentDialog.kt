@@ -1,6 +1,19 @@
 package com.example.ui.components
 
+import android.app.Activity
+import android.content.Intent
+import android.speech.RecognizerIntent
+import android.speech.tts.TextToSpeech
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
@@ -25,11 +38,20 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SmartToy
+import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -67,9 +89,55 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.IstanbulLocationData
 import com.example.data.remote.GeminiVoiceAppointmentParser
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.UUID
+
+enum class InterviewStep(
+    val stepIndex: Int,
+    val title: String,
+    val questionPrompt: String,
+    val hintText: String,
+    val sampleAnswers: List<String>
+) {
+    NAME(
+        stepIndex = 1,
+        title = "1. Müşteri Adı",
+        questionPrompt = "Müşterinin adı ve soyadı nedir?",
+        hintText = "Sözlü yanıt verin (Örn: 'Ahmet Yılmaz')",
+        sampleAnswers = listOf("Ahmet Yılmaz", "Mehmet Demir", "Mustafa Kaya")
+    ),
+    PHONE(
+        stepIndex = 2,
+        title = "2. Telefon",
+        questionPrompt = "Müşterinin cep telefon numarası nedir?",
+        hintText = "Örn: '0532 111 22 33'",
+        sampleAnswers = listOf("0532 111 22 33", "0535 444 33 22", "0542 000 11 22")
+    ),
+    ADDRESS(
+        stepIndex = 3,
+        title = "3. İlçe & Adres",
+        questionPrompt = "Servis hangi ilçe ve mahallede verilecek?",
+        hintText = "Örn: 'Esenler Menderes Mahallesi Kamil Sokak No 12'",
+        sampleAnswers = listOf("Esenler Menderes Mah.", "Bayrampaşa Muratpaşa Mah.", "Gaziosmanpaşa Merkez")
+    ),
+    SERVICE_DATE(
+        stepIndex = 4,
+        title = "4. Hizmet & Zaman",
+        questionPrompt = "Hangi hizmet verilecek ve randevu hangi gün/saatte olsun?",
+        hintText = "Örn: 'Kombi bakımı yarın saat 14:00'te'",
+        sampleAnswers = listOf("Kombi bakımı yarın 14:00", "Petek temizliği pazartesi 10:00", "Arıza servisi bugün 16:00")
+    ),
+    NOTE(
+        stepIndex = 5,
+        title = "5. Arıza Notu",
+        questionPrompt = "Arıza detayları veya eklemek istediğiniz özel bir not var mı?",
+        hintText = "Örn: 'Kombi su sızdırıyor' veya 'Ek not yok'",
+        sampleAnswers = listOf("Kombi su sızdırıyor", "Petekler ısınmıyor", "Ek not yok")
+    )
+}
 
 private fun convertToIsoDate(dateStr: String): String {
     val trimmed = dateStr.trim()
@@ -105,11 +173,47 @@ fun NewAppointmentDialog(
     var status by remember { mutableStateOf(AppointmentStatus.ONAYLANDI) }
     var problemNote by remember { mutableStateOf("") }
 
-    // Voice AI States
+    // Voice AI States & Modes
+    var voiceMode by remember { mutableStateOf("STEP_BY_STEP") } // "STEP_BY_STEP" or "FREE_FORM"
+    var currentStep by remember { mutableStateOf(InterviewStep.NAME) }
     var voiceInputText by remember { mutableStateOf("") }
     var isAiAnalyzing by remember { mutableStateOf(false) }
     var aiStatusMessage by remember { mutableStateOf<String?>(null) }
     var aiSuccessState by remember { mutableStateOf<Boolean?>(null) }
+    var isVoiceExpanded by remember { mutableStateOf(false) }
+    var isListening by remember { mutableStateOf(false) }
+
+    var ttsInstance by remember { mutableStateOf<TextToSpeech?>(null) }
+
+    DisposableEffect(context) {
+        var tts: TextToSpeech? = null
+        try {
+            tts = TextToSpeech(context) { status ->
+                if (status == TextToSpeech.SUCCESS) {
+                    tts?.language = Locale("tr", "TR")
+                    ttsInstance = tts
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        onDispose {
+            try {
+                tts?.stop()
+                tts?.shutdown()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    val speakText: (String) -> Unit = { textToSpeak ->
+        try {
+            ttsInstance?.speak(textToSpeak, TextToSpeech.QUEUE_FLUSH, null, "gemini_voice_interview")
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 
     val sampleVoicePrompts = remember {
         listOf(
@@ -117,6 +221,59 @@ fun NewAppointmentDialog(
             "Pazartesi Bayrampaşa Muratpaşa Mahallesinde Mehmet Demir kombi su sızdırıyor arıza servisi 05321112233",
             "Gaziosmanpaşa Barbaros Hayrettin Paşa Mahallesinde Mustafa Bey petek temizliği"
         )
+    }
+
+    val processStepAnswer: (String) -> Unit = { spoken ->
+        if (spoken.isNotBlank()) {
+            when (currentStep) {
+                InterviewStep.NAME -> {
+                    customerName = spoken.trim().replaceFirstChar { if (it.isLowerCase()) it.titlecase(Locale("tr", "TR")) else it.toString() }
+                    aiStatusMessage = "✅ Müşteri Adı: '$customerName' kaydedildi."
+                    aiSuccessState = true
+                    currentStep = InterviewStep.PHONE
+                    speakText("Müşterinin iletişim telefon numarası nedir?")
+                }
+                InterviewStep.PHONE -> {
+                    val digits = spoken.filter { it.isDigit() }
+                    phone = if (digits.length >= 10) digits else spoken
+                    aiStatusMessage = "✅ Telefon: '$phone' kaydedildi."
+                    aiSuccessState = true
+                    currentStep = InterviewStep.ADDRESS
+                    speakText("Servis hangi ilçe ve mahallede verilecek?")
+                }
+                InterviewStep.ADDRESS -> {
+                    coroutineScope.launch {
+                        val parsed = GeminiVoiceAppointmentParser.parseVoiceText(spoken)
+                        if (parsed.district.isNotBlank()) district = parsed.district
+                        if (parsed.neighborhood.isNotBlank()) neighborhood = parsed.neighborhood
+                        if (parsed.streetDoorNo.isNotBlank()) streetDoorNo = parsed.streetDoorNo
+                        aiStatusMessage = "✅ Adres: '$district / $neighborhood $streetDoorNo' kaydedildi."
+                        aiSuccessState = true
+                        currentStep = InterviewStep.SERVICE_DATE
+                        speakText("Hangi hizmet verilecek ve randevu ne zaman yapılmalı?")
+                    }
+                }
+                InterviewStep.SERVICE_DATE -> {
+                    coroutineScope.launch {
+                        val parsed = GeminiVoiceAppointmentParser.parseVoiceText(spoken)
+                        if (parsed.serviceType.isNotBlank()) serviceType = parsed.serviceType
+                        if (parsed.date.isNotBlank()) date = parsed.date
+                        if (parsed.timeSlot.isNotBlank()) timeSlot = parsed.timeSlot
+                        aiStatusMessage = "✅ Hizmet: '$serviceType', Tarih: '$date $timeSlot' kaydedildi."
+                        aiSuccessState = true
+                        currentStep = InterviewStep.NOTE
+                        speakText("Arıza detayları veya eklemek istediğiniz bir not var mı?")
+                    }
+                }
+                InterviewStep.NOTE -> {
+                    problemNote = spoken.trim()
+                    aiStatusMessage = "🎉 Harika! Tüm 5 adım tamamlandı. Randevunuz kaydedilmeye hazır."
+                    aiSuccessState = true
+                    speakText("Tüm bilgiler alındı, randevunuzu kaydedebilirsiniz.")
+                }
+            }
+            voiceInputText = ""
+        }
     }
 
     val processVoiceWithGemini: (String) -> Unit = { rawPrompt ->
@@ -140,6 +297,45 @@ fun NewAppointmentDialog(
                 aiStatusMessage = parsed.aiSummaryMessage
                 aiSuccessState = parsed.missingFields.isEmpty()
             }
+        }
+    }
+
+    val speechLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        isListening = false
+        if (result.resultCode == Activity.RESULT_OK) {
+            val spokenText = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.firstOrNull()
+            if (!spokenText.isNullOrBlank()) {
+                voiceInputText = spokenText
+                if (voiceMode == "STEP_BY_STEP") {
+                    processStepAnswer(spokenText)
+                } else {
+                    processVoiceWithGemini(spokenText)
+                }
+            }
+        }
+    }
+
+    val startVoiceListening: (String?) -> Unit = { promptOverride ->
+        isVoiceExpanded = true
+        try {
+            val promptText = promptOverride ?: if (voiceMode == "STEP_BY_STEP") {
+                currentStep.questionPrompt
+            } else {
+                "Randevu bilgilerini konuşun (Örn: Yarın 14:00 Esenler Ahmet Yılmaz kombi bakımı)"
+            }
+
+            val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, "tr-TR")
+                putExtra(RecognizerIntent.EXTRA_PROMPT, promptText)
+            }
+            speechLauncher.launch(intent)
+            isListening = true
+        } catch (e: Exception) {
+            Toast.makeText(context, "Ses tanıma servisi açılamadı.", Toast.LENGTH_SHORT).show()
+            isListening = false
         }
     }
 
@@ -198,7 +394,7 @@ fun NewAppointmentDialog(
                     .padding(20.dp)
                     .verticalScroll(rememberScrollState())
             ) {
-                // Title Header
+                // Title Header & Sesli Ekle Button
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -216,145 +412,562 @@ fun NewAppointmentDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat")
+
+                    // "Sesli Ekle" Button that expands microphone area and triggers speech recognition
+                    Surface(
+                        onClick = {
+                            if (!isVoiceExpanded) {
+                                startVoiceListening(null)
+                            } else {
+                                isVoiceExpanded = false
+                            }
+                        },
+                        shape = RoundedCornerShape(20.dp),
+                        color = if (isVoiceExpanded) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.testTag("voice_add_toggle_button")
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Mic,
+                                contentDescription = "Sesli Ekle",
+                                tint = if (isVoiceExpanded) Color.White else MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Sesli Ekle",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isVoiceExpanded) Color.White else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(6.dp))
+
+                    IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat", modifier = Modifier.size(18.dp))
                     }
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ==================== GEMINI VOICE AI SECTION ====================
+                // ==================== EXPANDABLE GEMINI VOICE AI SECTION ====================
                 Surface(
                     shape = RoundedCornerShape(16.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f)),
-                    modifier = Modifier.fillMaxWidth()
+                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = if (isVoiceExpanded) 0.45f else 0.2f),
+                    border = BorderStroke(
+                        width = if (isVoiceExpanded) 1.5.dp else 1.dp,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = if (isVoiceExpanded) 0.8f else 0.3f)
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .animateContentSize()
+                        .clickable { if (!isVoiceExpanded) isVoiceExpanded = true }
                 ) {
                     Column(modifier = Modifier.padding(14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(28.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.AutoAwesome,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(16.dp)
-                                )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(30.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primary),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Mic,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        text = "Gemini Sesli Asistan",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = if (isVoiceExpanded) "Mikrofona konuşun veya metin yazın" else "Dokun veya 'Sesli Ekle' butonuna bas",
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Gemini Sesli / Metin AI Asistanı",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.primary
+
+                            Icon(
+                                imageVector = if (isVoiceExpanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(6.dp))
-                        Text(
-                            text = "Randevu detaylarını serbest cümlelerle söyleyin veya yazın, AI tüm alanları anında doldursun.",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-
-                        Spacer(modifier = Modifier.height(10.dp))
-
-                        OutlinedTextField(
-                            value = voiceInputText,
-                            onValueChange = { voiceInputText = it },
-                            placeholder = { Text("Örn: 'Yarın 14:00 Esenler Ahmet Yılmaz kombi bakımı 05321112233'") },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.Mic,
-                                    contentDescription = "Mikrofon",
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            trailingIcon = {
-                                if (isAiAnalyzing) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(20.dp),
-                                        strokeWidth = 2.dp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                } else {
-                                    IconButton(
-                                        onClick = { processVoiceWithGemini(voiceInputText) },
-                                        enabled = voiceInputText.isNotBlank()
+                        AnimatedVisibility(visible = isVoiceExpanded) {
+                            Column(modifier = Modifier.padding(top = 12.dp)) {
+                                // Mode Toggle Bar
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Surface(
+                                        onClick = { voiceMode = "STEP_BY_STEP" },
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (voiceMode == "STEP_BY_STEP") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                        modifier = Modifier.weight(1f)
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Default.Send,
-                                            contentDescription = "Gönder",
-                                            tint = if (voiceInputText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                                        Text(
+                                            text = "🤖 Adım Adım Soru-Cevap",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (voiceMode == "STEP_BY_STEP") Color.White else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp)
+                                        )
+                                    }
+
+                                    Surface(
+                                        onClick = { voiceMode = "FREE_FORM" },
+                                        shape = RoundedCornerShape(20.dp),
+                                        color = if (voiceMode == "FREE_FORM") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Text(
+                                            text = "⚡ Tek Cümle Hızlı",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (voiceMode == "FREE_FORM") Color.White else MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp)
                                         )
                                     }
                                 }
-                            },
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { processVoiceWithGemini(voiceInputText) }),
-                            singleLine = true,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp)
-                        )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                                if (voiceMode == "STEP_BY_STEP") {
+                                    // Step Indicator Bar
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.padding(bottom = 10.dp)
+                                    ) {
+                                        items(InterviewStep.values()) { step ->
+                                            val isSelected = step == currentStep
+                                            Surface(
+                                                onClick = {
+                                                    currentStep = step
+                                                    speakText("Adım ${step.stepIndex}: ${step.questionPrompt}")
+                                                },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f))
+                                            ) {
+                                                Text(
+                                                    text = step.title,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
 
-                        // Quick Sample Voice Chips
-                        Text(
-                            text = "Hızlı Doldurma Cümleleri:",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                                    // Gemini Question Card
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(14.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(MaterialTheme.colorScheme.primary),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.SmartToy,
+                                                    contentDescription = "Gemini",
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
 
-                        Spacer(modifier = Modifier.height(4.dp))
+                                            Spacer(modifier = Modifier.width(10.dp))
 
-                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            items(sampleVoicePrompts) { prompt ->
-                                Surface(
-                                    onClick = {
-                                        voiceInputText = prompt
-                                        processVoiceWithGemini(prompt)
-                                    },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = MaterialTheme.colorScheme.surface,
-                                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
-                                ) {
-                                    Text(
-                                        text = "💬 " + prompt.take(32) + "...",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Medium,
-                                        color = MaterialTheme.colorScheme.onSurface,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    text = "Adım ${currentStep.stepIndex} / 5: ${currentStep.title}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                                Text(
+                                                    text = currentStep.questionPrompt,
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+
+                                            IconButton(
+                                                onClick = { speakText("Adım ${currentStep.stepIndex}: ${currentStep.questionPrompt}") },
+                                                modifier = Modifier.size(32.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.VolumeUp,
+                                                    contentDescription = "Soruyu Okut",
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // Primary Voice Button & Input Field for Current Step
+                                    val infiniteTransition = rememberInfiniteTransition(label = "mic_pulse")
+                                    val pulseScale by infiniteTransition.animateFloat(
+                                        initialValue = 0.95f,
+                                        targetValue = 1.12f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(700),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = "scale"
                                     )
-                                }
-                            }
-                        }
 
-                        // AI Feedback Banner
-                        AnimatedVisibility(visible = aiStatusMessage != null) {
-                            val msg = aiStatusMessage ?: ""
-                            val isSuccess = aiSuccessState == true
-                            Surface(
-                                shape = RoundedCornerShape(10.dp),
-                                color = if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f),
-                                border = BorderStroke(1.dp, if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 10.dp)
-                            ) {
-                                Text(
-                                    text = msg,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = if (isSuccess) Color(0xFF2E7D32) else Color(0xFFB45309),
-                                    modifier = Modifier.padding(8.dp)
-                                )
+                                    Button(
+                                        onClick = { startVoiceListening(currentStep.questionPrompt) },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (isListening) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary
+                                        )
+                                    ) {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Mic,
+                                                contentDescription = null,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(if (isListening) (20 * pulseScale).dp else 18.dp)
+                                            )
+                                            Spacer(modifier = Modifier.width(8.dp))
+                                            Text(
+                                                text = if (isListening) "🎙️ Dinleniyor... Konuşun!" else "🎙️ Konuşarak Cevapla",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    OutlinedTextField(
+                                        value = voiceInputText,
+                                        onValueChange = { voiceInputText = it },
+                                        placeholder = { Text(currentStep.hintText, fontSize = 12.sp) },
+                                        trailingIcon = {
+                                            IconButton(
+                                                onClick = { processStepAnswer(voiceInputText) },
+                                                enabled = voiceInputText.isNotBlank()
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Send,
+                                                    contentDescription = "Onayla",
+                                                    tint = if (voiceInputText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                                                )
+                                            }
+                                        },
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                        keyboardActions = KeyboardActions(onDone = { processStepAnswer(voiceInputText) }),
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    // Sample Quick Chips for Current Step
+                                    Text(
+                                        text = "Dokun-Doldur Örnek Yanıtlar:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        items(currentStep.sampleAnswers) { sample ->
+                                            Surface(
+                                                onClick = {
+                                                    voiceInputText = sample
+                                                    processStepAnswer(sample)
+                                                },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                            ) {
+                                                Text(
+                                                    text = "💬 $sample",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    // Step Controls (Previous / Skip / Next)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        OutlinedButton(
+                                            onClick = {
+                                                val prevIndex = currentStep.stepIndex - 1
+                                                if (prevIndex >= 1) {
+                                                    currentStep = InterviewStep.values().first { it.stepIndex == prevIndex }
+                                                    speakText("Adım ${currentStep.stepIndex}: ${currentStep.questionPrompt}")
+                                                }
+                                            },
+                                            enabled = currentStep.stepIndex > 1,
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(imageVector = Icons.Default.ArrowBack, contentDescription = null, modifier = Modifier.size(14.dp))
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Text("Önceki", fontSize = 11.sp)
+                                        }
+
+                                        Spacer(modifier = Modifier.width(6.dp))
+
+                                        OutlinedButton(
+                                            onClick = {
+                                                val nextIndex = currentStep.stepIndex + 1
+                                                if (nextIndex <= 5) {
+                                                    currentStep = InterviewStep.values().first { it.stepIndex == nextIndex }
+                                                    speakText("Adım ${currentStep.stepIndex}: ${currentStep.questionPrompt}")
+                                                }
+                                            },
+                                            enabled = currentStep.stepIndex < 5,
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Atla", fontSize = 11.sp)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(imageVector = Icons.Default.SkipNext, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        }
+
+                                        Spacer(modifier = Modifier.width(6.dp))
+
+                                        Button(
+                                            onClick = {
+                                                if (voiceInputText.isNotBlank()) {
+                                                    processStepAnswer(voiceInputText)
+                                                } else {
+                                                    val nextIndex = currentStep.stepIndex + 1
+                                                    if (nextIndex <= 5) {
+                                                        currentStep = InterviewStep.values().first { it.stepIndex == nextIndex }
+                                                        speakText("Adım ${currentStep.stepIndex}: ${currentStep.questionPrompt}")
+                                                    }
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text("Sonraki", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Spacer(modifier = Modifier.width(4.dp))
+                                            Icon(imageVector = Icons.Default.ArrowForward, contentDescription = null, modifier = Modifier.size(14.dp))
+                                        }
+                                    }
+
+                                } else {
+                                    // FREE FORM MODE UI
+                                    // Pulsing Mic Action Banner
+                                    val infiniteTransition = rememberInfiniteTransition(label = "mic_pulse")
+                                    val pulseScale by infiniteTransition.animateFloat(
+                                        initialValue = 0.95f,
+                                        targetValue = 1.12f,
+                                        animationSpec = infiniteRepeatable(
+                                            animation = tween(700),
+                                            repeatMode = RepeatMode.Reverse
+                                        ),
+                                        label = "scale"
+                                    )
+
+                                    Surface(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(bottom = 10.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        color = if (isListening) Color(0xFFD32F2F).copy(alpha = 0.12f) else MaterialTheme.colorScheme.surface,
+                                        border = BorderStroke(1.dp, if (isListening) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary.copy(alpha = 0.3f))
+                                    ) {
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(40.dp)
+                                                        .clip(CircleShape)
+                                                        .background(if (isListening) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Mic,
+                                                        contentDescription = "Dinleniyor",
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(if (isListening) (22 * pulseScale).dp else 22.dp)
+                                                    )
+                                                }
+                                                Spacer(modifier = Modifier.width(10.dp))
+                                                Column {
+                                                    Text(
+                                                        text = if (isListening) "🎙️ Dinleniyor... Konuşun!" else "Sesle Doldurmak İçin Başlatın",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isListening) Color(0xFFD32F2F) else MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = if (isListening) "Cümleniz otomatik Türkçe ses tanımasıyla alınacak." else "Örn: 'Yarın 14:00 Esenler Ahmet Yılmaz kombi bakımı'",
+                                                        fontSize = 11.sp,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                            }
+
+                                            Button(
+                                                onClick = { startVoiceListening(null) },
+                                                shape = RoundedCornerShape(20.dp),
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = if (isListening) Color(0xFFD32F2F) else MaterialTheme.colorScheme.primary
+                                                )
+                                            ) {
+                                                Text(if (isListening) "Yeniden Dinle" else "Başlat", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+
+                                    OutlinedTextField(
+                                        value = voiceInputText,
+                                        onValueChange = { voiceInputText = it },
+                                        placeholder = { Text("Konuşulan ses burada görünecektir...", fontSize = 12.sp) },
+                                        leadingIcon = {
+                                            Icon(
+                                                imageVector = Icons.Default.Mic,
+                                                contentDescription = "Mikrofon",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        },
+                                        trailingIcon = {
+                                            if (isAiAnalyzing) {
+                                                CircularProgressIndicator(
+                                                    modifier = Modifier.size(20.dp),
+                                                    strokeWidth = 2.dp,
+                                                    color = MaterialTheme.colorScheme.primary
+                                                )
+                                            } else {
+                                                IconButton(
+                                                    onClick = { processVoiceWithGemini(voiceInputText) },
+                                                    enabled = voiceInputText.isNotBlank()
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Send,
+                                                        contentDescription = "Gönder",
+                                                        tint = if (voiceInputText.isNotBlank()) MaterialTheme.colorScheme.primary else Color.Gray
+                                                    )
+                                                }
+                                            }
+                                        },
+                                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                                        keyboardActions = KeyboardActions(onDone = { processVoiceWithGemini(voiceInputText) }),
+                                        singleLine = false,
+                                        maxLines = 3,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = "veya Hazır Cümleye Tıklayın:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+
+                                    Spacer(modifier = Modifier.height(4.dp))
+
+                                    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        items(sampleVoicePrompts) { prompt ->
+                                            Surface(
+                                                onClick = {
+                                                    voiceInputText = prompt
+                                                    processVoiceWithGemini(prompt)
+                                                },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = MaterialTheme.colorScheme.surface,
+                                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                                            ) {
+                                                Text(
+                                                    text = "💬 " + prompt.take(32) + "...",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurface,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // AI Feedback Banner
+                                AnimatedVisibility(visible = aiStatusMessage != null) {
+                                    val msg = aiStatusMessage ?: ""
+                                    val isSuccess = aiSuccessState == true
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.15f) else Color(0xFFF59E0B).copy(alpha = 0.15f),
+                                        border = BorderStroke(1.dp, if (isSuccess) Color(0xFF2E7D32).copy(alpha = 0.4f) else Color(0xFFF59E0B).copy(alpha = 0.4f)),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(top = 10.dp)
+                                    ) {
+                                        Text(
+                                            text = msg,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = if (isSuccess) Color(0xFF2E7D32) else Color(0xFFB45309),
+                                            modifier = Modifier.padding(8.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -713,6 +1326,12 @@ fun NewAppointmentDialog(
                                     problemNote = problemNote
                                 )
                                 onSave(newAppt)
+                                try {
+                                    com.example.utils.ReminderManager.scheduleAppointmentReminder(context, newAppt, 30)
+                                    Toast.makeText(context, "⏰ Randevu oluşturuldu ve 30 dk öncesine hatırlatıcı kuruldu!", Toast.LENGTH_SHORT).show()
+                                } catch (e: Exception) {
+                                    e.printStackTrace()
+                                }
                             }
                         },
                         enabled = customerName.isNotBlank() && phone.isNotBlank(),

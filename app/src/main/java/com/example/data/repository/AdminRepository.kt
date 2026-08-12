@@ -50,6 +50,7 @@ interface AdminRepository {
     fun getCustomers(): Flow<List<Customer>>
     suspend fun addCustomer(customer: Customer): Result<Unit>
     suspend fun updateCustomer(customer: Customer): Result<Unit>
+    suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto>
 
     // Finance
     fun getFinanceRecords(): Flow<List<FinanceRecord>>

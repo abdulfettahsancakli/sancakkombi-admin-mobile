@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.example.utils.ReminderManager.createNotificationChannel(applicationContext)
         enableEdgeToEdge()
         setContent {
             val isLoggedIn by viewModel.isLoggedIn.collectAsState()
@@ -164,7 +165,8 @@ class MainActivity : ComponentActivity() {
                                         appointments = appointments,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddCustomer = { cust -> viewModel.addCustomer(cust) },
-                                        onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) }
+                                        onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) },
+                                        onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) }
                                     )
                                 }
                                 "finance", "finans" -> {

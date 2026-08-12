@@ -38,6 +38,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -55,7 +56,9 @@ import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Send
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -93,6 +96,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -114,6 +119,7 @@ fun CustomersScreen(
     onBackClick: () -> Unit,
     onAddCustomer: (Customer) -> Unit,
     onUpdateCustomer: (Customer) -> Unit,
+    onFetchDeviceHistory: (suspend (String) -> Result<com.example.data.remote.DeviceHistoryDto>)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -121,11 +127,31 @@ fun CustomersScreen(
     val scrollState = rememberScrollState()
 
     var searchQuery by remember { mutableStateOf("") }
-    var selectedCustomer by remember { mutableStateOf(customers.firstOrNull()) }
-    var activeTab by remember { mutableStateOf("bilgiler") } // "bilgiler", "randevular", "islemler"
+    var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    var activeTab by remember { mutableStateOf("bilgiler") } // "bilgiler", "cihaz_gecmisi", "randevular", "islemler"
     var showNewCustomerDialog by remember { mutableStateOf(false) }
     var showBulkImportDialog by remember { mutableStateOf(false) }
     var filterOnlyActiveAppointments by remember { mutableStateOf(false) }
+
+    var deviceHistoryState by remember { mutableStateOf<com.example.data.remote.DeviceHistoryDto?>(null) }
+    var isDeviceHistoryLoading by remember { mutableStateOf(false) }
+
+    LaunchedEffect(selectedCustomer?.id) {
+        val custId = selectedCustomer?.id
+        if (custId != null && onFetchDeviceHistory != null) {
+            isDeviceHistoryLoading = true
+            val res = onFetchDeviceHistory(custId)
+            if (res.isSuccess) {
+                deviceHistoryState = res.getOrNull()
+            } else {
+                deviceHistoryState = null
+            }
+            isDeviceHistoryLoading = false
+        } else {
+            deviceHistoryState = null
+            isDeviceHistoryLoading = false
+        }
+    }
 
     // Position Y for details card smooth scroll
     var detailCardPositionY by remember { mutableStateOf(0) }
@@ -649,17 +675,18 @@ fun CustomersScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Icon(
-                                                imageVector = Icons.Default.Send,
+                                                painter = painterResource(id = R.drawable.ic_whatsapp),
                                                 contentDescription = "WhatsApp",
-                                                tint = Color(0xFF25D366),
-                                                modifier = Modifier.size(16.dp)
+                                                tint = Color.Unspecified,
+                                                modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(modifier = Modifier.width(6.dp))
                                             Text(
                                                 text = "WhatsApp",
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 13.sp,
-                                                color = Color(0xFF059669)
+                                                fontSize = 12.sp,
+                                                color = Color(0xFF059669),
+                                                maxLines = 1
                                             )
                                         }
                                     }
@@ -726,18 +753,18 @@ fun CustomersScreen(
                                             )
 
                                             TabOption(
-                                                title = "Randevular",
-                                                icon = Icons.Default.History,
-                                                isSelected = activeTab == "randevular",
-                                                onClick = { activeTab = "randevular" },
+                                                title = "Cihaz",
+                                                icon = Icons.Default.Build,
+                                                isSelected = activeTab == "cihaz_gecmisi",
+                                                onClick = { activeTab = "cihaz_gecmisi" },
                                                 modifier = Modifier.weight(1f)
                                             )
 
                                             TabOption(
-                                                title = "İşlemler",
-                                                icon = Icons.Default.Phone,
-                                                isSelected = activeTab == "islemler",
-                                                onClick = { activeTab = "islemler" },
+                                                title = "Randevular",
+                                                icon = Icons.Default.History,
+                                                isSelected = activeTab == "randevular",
+                                                onClick = { activeTab = "randevular" },
                                                 modifier = Modifier.weight(1f)
                                             )
                                         }
@@ -863,6 +890,172 @@ fun CustomersScreen(
                                                     }
                                                 }
                                             }
+                                        } else if (activeTab == "cihaz_gecmisi") {
+                                            if (isDeviceHistoryLoading) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(24.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    CircularProgressIndicator(modifier = Modifier.size(28.dp))
+                                                }
+                                            } else {
+                                                val history = deviceHistoryState
+                                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                    Card(
+                                                        modifier = Modifier.fillMaxWidth(),
+                                                        shape = RoundedCornerShape(12.dp),
+                                                        colors = CardDefaults.cardColors(
+                                                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                                                        )
+                                                    ) {
+                                                        Column(modifier = Modifier.padding(12.dp)) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Build,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.primary,
+                                                                    modifier = Modifier.size(18.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.width(8.dp))
+                                                                Text(
+                                                                    text = "Cihaz & Garanti Sicil Kartı",
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 13.sp,
+                                                                    color = MaterialTheme.colorScheme.primary
+                                                                )
+                                                            }
+                                                            Spacer(modifier = Modifier.height(6.dp))
+                                                            val bName = history?.deviceBrand?.takeIf { it.isNotBlank() } ?: cust.notes.takeIf { it.isNotBlank() } ?: "Kombi"
+                                                            val mName = history?.deviceModel?.takeIf { it.isNotBlank() } ?: ""
+                                                            Text(
+                                                                text = "Cihaz: $bName $mName".trim(),
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 13.sp,
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            )
+                                                            if (!history?.deviceNotes.isNullOrBlank()) {
+                                                                Spacer(modifier = Modifier.height(4.dp))
+                                                                Text(
+                                                                    text = "Notlar: ${history?.deviceNotes}",
+                                                                    fontSize = 11.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+
+                                                    val records = history?.records ?: emptyList()
+                                                    if (records.isEmpty()) {
+                                                        Surface(
+                                                            shape = RoundedCornerShape(12.dp),
+                                                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Column(
+                                                                modifier = Modifier.padding(16.dp),
+                                                                horizontalAlignment = Alignment.CenterHorizontally
+                                                            ) {
+                                                                Icon(
+                                                                    imageVector = Icons.Default.Info,
+                                                                    contentDescription = null,
+                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                    modifier = Modifier.size(26.dp)
+                                                                )
+                                                                Spacer(modifier = Modifier.height(6.dp))
+                                                                Text(
+                                                                    text = "Bu müşteri için henüz tamamlanmış servis kaydı yok.",
+                                                                    fontSize = 12.sp,
+                                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                )
+                                                            }
+                                                        }
+                                                    } else {
+                                                        records.forEach { record ->
+                                                            Card(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                shape = RoundedCornerShape(12.dp),
+                                                                colors = CardDefaults.cardColors(
+                                                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                                                                )
+                                                            ) {
+                                                                Column(modifier = Modifier.padding(12.dp)) {
+                                                                    Row(
+                                                                        modifier = Modifier.fillMaxWidth(),
+                                                                        verticalAlignment = Alignment.CenterVertically
+                                                                    ) {
+                                                                        Text(
+                                                                            text = "${record.date} — ${record.serviceTitle}",
+                                                                            fontWeight = FontWeight.Bold,
+                                                                            fontSize = 12.sp,
+                                                                            color = MaterialTheme.colorScheme.onSurface
+                                                                        )
+                                                                    }
+
+                                                                    if (record.workDescription.isNotBlank()) {
+                                                                        Spacer(modifier = Modifier.height(4.dp))
+                                                                        Text(
+                                                                            text = record.workDescription,
+                                                                            fontSize = 11.sp,
+                                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                        )
+                                                                    }
+
+                                                                    if (record.parts.isNotEmpty()) {
+                                                                        Spacer(modifier = Modifier.height(6.dp))
+                                                                        Text(
+                                                                            text = "Kullanılan Parçalar:",
+                                                                            fontWeight = FontWeight.SemiBold,
+                                                                            fontSize = 11.sp,
+                                                                            color = MaterialTheme.colorScheme.onSurface
+                                                                        )
+                                                                        record.parts.forEach { p ->
+                                                                            Text(
+                                                                                text = "• ${p.name} x${p.quantity}",
+                                                                                fontSize = 11.sp,
+                                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                                modifier = Modifier.padding(start = 6.dp, top = 1.dp)
+                                                                            )
+                                                                        }
+                                                                    }
+
+                                                                    if (record.warrantyMonths != null) {
+                                                                        Spacer(modifier = Modifier.height(8.dp))
+                                                                        Surface(
+                                                                            shape = RoundedCornerShape(6.dp),
+                                                                            color = if (record.isUnderWarranty) Color(0xFFE8F5E9) else Color(0xFFF5F5F5)
+                                                                        ) {
+                                                                            Row(
+                                                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                                                verticalAlignment = Alignment.CenterVertically
+                                                                            ) {
+                                                                                Icon(
+                                                                                    imageVector = if (record.isUnderWarranty) Icons.Default.Verified else Icons.Default.Shield,
+                                                                                    contentDescription = null,
+                                                                                    tint = if (record.isUnderWarranty) Color(0xFF2E7D32) else Color(0xFF757575),
+                                                                                    modifier = Modifier.size(14.dp)
+                                                                                )
+                                                                                Spacer(modifier = Modifier.width(6.dp))
+                                                                                Text(
+                                                                                    text = if (record.isUnderWarranty) {
+                                                                                        "Garantili — ${record.warrantyUntil ?: ""} tarihine kadar"
+                                                                                    } else {
+                                                                                        "Garanti sona erdi — ${record.warrantyUntil ?: ""}"
+                                                                                    },
+                                                                                    fontSize = 10.sp,
+                                                                                    fontWeight = FontWeight.Bold,
+                                                                                    color = if (record.isUnderWarranty) Color(0xFF2E7D32) else Color(0xFF757575)
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         } else if (activeTab == "randevular") {
                                             val customerAppointments = appointments.filter {
                                                 it.customerId == cust.id || it.customerName.equals(cust.name, ignoreCase = true)
@@ -937,42 +1130,6 @@ fun CustomersScreen(
                                                         }
                                                     }
                                                 }
-                                            }
-                                        } else {
-                                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                QuickActionButton(
-                                                    title = "Telefon ile Ara",
-                                                    subtitle = cust.phone,
-                                                    icon = Icons.Default.Call,
-                                                    tint = Color(0xFF0288D1),
-                                                    onClick = {
-                                                        val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${cust.phone}"))
-                                                        context.startActivity(intent)
-                                                    }
-                                                )
-
-                                                QuickActionButton(
-                                                    title = "WhatsApp Mesajı Gönder",
-                                                    subtitle = "Direkt sohbet başlat",
-                                                    icon = Icons.Default.Send,
-                                                    tint = Color(0xFF25D366),
-                                                    onClick = {
-                                                        val formattedPhone = cust.phone.replace("[^0-9]".toRegex(), "")
-                                                        val waUri = Uri.parse("https://api.whatsapp.com/send?phone=90$formattedPhone")
-                                                        context.startActivity(Intent(Intent.ACTION_VIEW, waUri))
-                                                    }
-                                                )
-
-                                                QuickActionButton(
-                                                    title = "Harita ve Yol Tarifi",
-                                                    subtitle = "${cust.district} / ${cust.address}",
-                                                    icon = Icons.Default.Map,
-                                                    tint = Color(0xFFF59E0B),
-                                                    onClick = {
-                                                        val geoUri = Uri.parse("geo:0,0?q=${Uri.encode("${cust.district} ${cust.address}")}")
-                                                        context.startActivity(Intent(Intent.ACTION_VIEW, geoUri))
-                                                    }
-                                                )
                                             }
                                         }
                                     }
