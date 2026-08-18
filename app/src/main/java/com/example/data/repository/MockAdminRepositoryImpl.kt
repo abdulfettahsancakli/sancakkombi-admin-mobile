@@ -697,8 +697,8 @@ class MockAdminRepositoryImpl : AdminRepository {
     }
 
     override suspend fun deleteFinanceRecord(id: String): Result<Unit> {
-        delay(200)
-        val newList = _financeRecords.value.filterNot { it.id == id }
+        delay(100)
+        val newList = _financeRecords.value.filterNot { it.id == id || it.id.trim() == id.trim() }
         _financeRecords.value = newList
         recalculateStats()
         return Result.success(Unit)

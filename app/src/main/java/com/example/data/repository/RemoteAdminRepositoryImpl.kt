@@ -89,6 +89,7 @@ class RemoteAdminRepositoryImpl(
     private val templatesTrigger = MutableStateFlow(0)
     private val maintenanceTrigger = MutableStateFlow(0)
     private val googleAdsCampaignsTrigger = MutableStateFlow(0)
+    private val deletedFinanceIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
     private suspend fun currentToken(): String? = tokenStore.tokenFlow.first()
 
@@ -482,7 +483,9 @@ class RemoteAdminRepositoryImpl(
     override fun getFinanceRecords(): Flow<List<FinanceRecord>> =
         authedFlow(financeTrigger, fallback.getFinanceRecords()) { token ->
             val response = api.getFinanceRecords(authHeader(token))
-            if (response.isSuccessful) response.body() else null
+            if (response.isSuccessful) {
+                response.body()?.filterNot { it.id in deletedFinanceIds }
+            } else null
         }
 
     override fun getFinanceSummary(): Flow<FinanceSummary> =
@@ -497,18 +500,22 @@ class RemoteAdminRepositoryImpl(
             if (response.isSuccessful) response.body() else null
         }
 
-    override suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit> = requireToken { token ->
-        val response = api.addFinanceRecord(authHeader(token), record)
-        if (response.isSuccessful && response.body()?.success == true) {
-            financeTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+    override suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit> {
+        deletedFinanceIds.remove(record.id)
+        return requireToken { token ->
+            val response = api.addFinanceRecord(authHeader(token), record)
+            if (response.isSuccessful && response.body()?.success == true) {
+                financeTrigger.value += 1
+                Result.success(Unit)
+            } else {
+                Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+            }
         }
     }
 
-    override suspend fun deleteFinanceRecord(id: String): Result<Unit> =
-        executeWithFallback(
+    override suspend fun deleteFinanceRecord(id: String): Result<Unit> {
+        deletedFinanceIds.add(id)
+        return executeWithFallback(
             fallbackAction = {
                 val res = fallback.deleteFinanceRecord(id)
                 financeTrigger.value += 1
@@ -527,6 +534,7 @@ class RemoteAdminRepositoryImpl(
                 }
             }
         )
+    }
 
     override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> = requireToken { token ->
         val response = api.updateBankAccounts(authHeader(token), accounts)

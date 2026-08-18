@@ -64,6 +64,9 @@ class MainViewModel(
     val customers: StateFlow<List<Customer>> = _customers.asStateFlow()
 
     // Finance State
+    private val deletedFinanceRecordIds = mutableSetOf<String>()
+    private val deletedAdsExpenseDates = mutableSetOf<String>()
+
     private val _financeRecords = MutableStateFlow<List<FinanceRecord>>(emptyList())
     val financeRecords: StateFlow<List<FinanceRecord>> = _financeRecords.asStateFlow()
 
@@ -171,7 +174,17 @@ class MainViewModel(
         }
         viewModelScope.launch {
             repository.getFinanceRecords().collect { list ->
-                _financeRecords.value = list
+                val filtered = list.filterNot { rec ->
+                    rec.id in deletedFinanceRecordIds ||
+                    (deletedAdsExpenseDates.contains(rec.date) && (rec.source.contains("Google Ads", ignoreCase = true) || rec.id.startsWith("ads_")))
+                }
+                _financeRecords.value = filtered
+                val totalIncome = filtered.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
+                val totalExpense = filtered.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
+                _financeSummary.value = _financeSummary.value.copy(
+                    totalIncome = totalIncome,
+                    totalExpense = totalExpense
+                )
             }
         }
         viewModelScope.launch {
@@ -296,6 +309,11 @@ class MainViewModel(
             val todayStr = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault()).format(java.util.Date())
             val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
             val receiptDateCode = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
+
+            // Kullanıcı bugünkü reklam giderini sildiyse ve manuel zorlama yapılmadıysa otomatik yeniden oluşturma
+            if (!force && (todayStr in deletedAdsExpenseDates || deletedFinanceRecordIds.any { it.contains("ads_expense_${todayStr.replace(".", "_")}") || it.contains("ads_") })) {
+                return@launch
+            }
 
             val existing = _financeRecords.value.find {
                 it.date == todayStr && (it.source.contains("Google Ads", ignoreCase = true) || it.id.startsWith("ads_expense_"))
@@ -454,6 +472,10 @@ class MainViewModel(
     // Finance Actions
     fun addFinanceRecord(record: FinanceRecord) {
         viewModelScope.launch {
+            deletedFinanceRecordIds.remove(record.id)
+            if (record.source.contains("Google Ads", ignoreCase = true) || record.id.startsWith("ads_")) {
+                deletedAdsExpenseDates.remove(record.date)
+            }
             _financeRecords.value = listOf(record) + _financeRecords.value.filterNot { it.id == record.id }
             val updated = _financeRecords.value
             val totalIncome = updated.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
@@ -468,7 +490,15 @@ class MainViewModel(
 
     fun deleteFinanceRecord(id: String) {
         viewModelScope.launch {
-            _financeRecords.value = _financeRecords.value.filterNot { it.id == id }
+            val recToDelete = _financeRecords.value.find { it.id == id }
+            if (recToDelete != null) {
+                if (recToDelete.source.contains("Google Ads", ignoreCase = true) || recToDelete.id.startsWith("ads_")) {
+                    deletedAdsExpenseDates.add(recToDelete.date)
+                }
+            }
+            deletedFinanceRecordIds.add(id)
+
+            _financeRecords.value = _financeRecords.value.filterNot { it.id == id || it.id in deletedFinanceRecordIds }
             val remaining = _financeRecords.value
             val totalIncome = remaining.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
             val totalExpense = remaining.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
