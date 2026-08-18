@@ -674,9 +674,9 @@ class MockAdminRepositoryImpl : AdminRepository {
         val totalExp = list.filter { it.type == FinanceType.GIDER }.sumOf { it.amount }
         val outstanding = list.filter { it.status == "Kısmi" || it.status == "Bekliyor" }.sumOf { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) }
         FinanceSummary(
-            totalIncome = if (totalInc == 0.0) 8870.0 else totalInc,
-            totalExpense = if (totalExp == 0.0) 500.0 else totalExp,
-            outstandingReceivable = if (outstanding == 0.0) 500.0 else outstanding
+            totalIncome = totalInc,
+            totalExpense = totalExp,
+            outstandingReceivable = outstanding
         )
     }
 

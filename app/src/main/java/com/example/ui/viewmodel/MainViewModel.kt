@@ -145,6 +145,17 @@ class MainViewModel(
     private val _whatsAppStatus = MutableStateFlow(com.example.data.model.WhatsAppStatus())
     val whatsAppStatus: StateFlow<com.example.data.model.WhatsAppStatus> = _whatsAppStatus.asStateFlow()
 
+    private fun recalculateFinanceSummary(records: List<FinanceRecord>) {
+        val totalIncome = records.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
+        val totalExpense = records.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
+        val outstanding = records.filter { it.status == "Kısmi" || it.status == "Bekliyor" }.sumOf { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) }
+        _financeSummary.value = FinanceSummary(
+            totalIncome = totalIncome,
+            totalExpense = totalExpense,
+            outstandingReceivable = outstanding
+        )
+    }
+
     init {
         viewModelScope.launch {
             repository.getAuthToken().collect { token ->
@@ -179,17 +190,16 @@ class MainViewModel(
                     (deletedAdsExpenseDates.contains(rec.date) && (rec.source.contains("Google Ads", ignoreCase = true) || rec.id.startsWith("ads_")))
                 }
                 _financeRecords.value = filtered
-                val totalIncome = filtered.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
-                val totalExpense = filtered.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
-                _financeSummary.value = _financeSummary.value.copy(
-                    totalIncome = totalIncome,
-                    totalExpense = totalExpense
-                )
+                recalculateFinanceSummary(filtered)
             }
         }
         viewModelScope.launch {
             repository.getFinanceSummary().collect { sum ->
-                _financeSummary.value = sum
+                if (_financeRecords.value.isNotEmpty()) {
+                    recalculateFinanceSummary(_financeRecords.value)
+                } else {
+                    _financeSummary.value = sum
+                }
             }
         }
         viewModelScope.launch {
@@ -355,11 +365,6 @@ class MainViewModel(
                 _adsStats.value = statsDto
                 _adsCampaigns.value = campList
                 _adsError.value = null
-
-                // Günlük Google Ads harcamasını Finans modülüne otomatik Gider olarak işle / güncelle
-                val spendToSync = if (statsDto.totalSpend > 0.0) statsDto.totalSpend else campList.sumOf { it.spend }
-                syncGoogleAdsSpendToFinance(if (spendToSync > 0.0) spendToSync else null)
-
                 onComplete?.invoke(true)
             } else {
                 val err = statsResult.exceptionOrNull()?.message
@@ -477,13 +482,7 @@ class MainViewModel(
                 deletedAdsExpenseDates.remove(record.date)
             }
             _financeRecords.value = listOf(record) + _financeRecords.value.filterNot { it.id == record.id }
-            val updated = _financeRecords.value
-            val totalIncome = updated.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
-            val totalExpense = updated.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
-            _financeSummary.value = _financeSummary.value.copy(
-                totalIncome = totalIncome,
-                totalExpense = totalExpense
-            )
+            recalculateFinanceSummary(_financeRecords.value)
             repository.addFinanceRecord(record)
         }
     }
@@ -499,13 +498,7 @@ class MainViewModel(
             deletedFinanceRecordIds.add(id)
 
             _financeRecords.value = _financeRecords.value.filterNot { it.id == id || it.id in deletedFinanceRecordIds }
-            val remaining = _financeRecords.value
-            val totalIncome = remaining.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
-            val totalExpense = remaining.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
-            _financeSummary.value = _financeSummary.value.copy(
-                totalIncome = totalIncome,
-                totalExpense = totalExpense
-            )
+            recalculateFinanceSummary(_financeRecords.value)
             repository.deleteFinanceRecord(id)
         }
     }
