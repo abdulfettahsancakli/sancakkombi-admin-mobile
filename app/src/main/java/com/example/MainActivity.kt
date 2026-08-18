@@ -33,6 +33,7 @@ import com.example.ui.screens.ModulesGridScreen
 import com.example.ui.screens.NewProposalScreen
 import com.example.ui.screens.ProposalDetailScreen
 import com.example.ui.screens.ProposalsScreen
+import com.example.ui.screens.QuickIbanScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.ServiceReceiptScreen
 import com.example.ui.theme.SancakKombiTheme
@@ -273,6 +274,15 @@ class MainActivity : ComponentActivity() {
                                             }
                                         },
                                         onBackClick = { viewModel.navigateTo("dashboard") }
+                                    )
+                                }
+                                "quick_iban", "hizli_iban", "iban_gonder", "usta_iban" -> {
+                                    QuickIbanScreen(
+                                        appointments = appointments,
+                                        customers = customers,
+                                        bankAccounts = bankAccounts,
+                                        onBackClick = { viewModel.navigateTo("dashboard") },
+                                        onAddFinanceRecord = { record -> viewModel.addFinanceRecord(record) }
                                     )
                                 }
                                 "modules" -> {

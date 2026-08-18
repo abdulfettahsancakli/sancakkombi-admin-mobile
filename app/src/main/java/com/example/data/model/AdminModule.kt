@@ -4,6 +4,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.DateRange
@@ -74,6 +75,13 @@ enum class AdminModule(
         title = "Google Ads",
         description = "Kampanya yönetimi, anahtar kelime optimizasyonu ve performans analizi.",
         icon = Icons.Default.Campaign,
+        isPrimaryBottomNav = false
+    ),
+    HIZLI_IBAN(
+        id = "quick_iban",
+        title = "Hızlı IBAN At",
+        description = "Serviste müşteriye tek tıkla WhatsApp'tan IBAN ve hesap bilgilerini gönderin.",
+        icon = Icons.Default.Bolt,
         isPrimaryBottomNav = false
     )
 }
