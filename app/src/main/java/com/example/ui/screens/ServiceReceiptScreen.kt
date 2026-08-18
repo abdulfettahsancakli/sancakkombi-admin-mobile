@@ -381,12 +381,18 @@ fun ServiceReceiptScreen(
                         modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        androidx.compose.foundation.Image(
+                            painter = androidx.compose.ui.res.painterResource(id = com.example.R.drawable.logo_sancakkombi),
+                            contentDescription = "Sancak Kombi Logo",
+                            modifier = Modifier.size(46.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "SANCAK KOMBİ",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 18.sp,
-                                color = Color(0xFFDC2626)
+                                color = Color(0xFF003580)
                             )
                             Text(
                                 text = if (isExpense) "FİNANS & MUHASEBE BİRİMİ" else "TEKNİK SERVİS",
@@ -395,7 +401,7 @@ fun ServiceReceiptScreen(
                                 color = Color.DarkGray
                             )
                             Text(
-                                text = "GÜVENLİK • KALİTE • HİZMET",
+                                text = "BAKIM • ONARIM • MONTAJ",
                                 fontSize = 9.sp,
                                 color = Color.Gray
                             )
