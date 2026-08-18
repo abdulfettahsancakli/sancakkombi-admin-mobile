@@ -52,7 +52,7 @@ fun ModulesGridScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Sancak Kombi operasyon paneline ait 11 çekirdek modül listesi.",
+                        text = "Sancak Kombi operasyon paneline ait çekirdek modül listesi.",
                         fontSize = 13.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

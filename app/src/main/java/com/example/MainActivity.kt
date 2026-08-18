@@ -1,6 +1,7 @@
 package com.example
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -34,7 +35,6 @@ import com.example.ui.screens.ProposalDetailScreen
 import com.example.ui.screens.ProposalsScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.ServiceReceiptScreen
-import com.example.ui.screens.WhatsAppStatusScreen
 import com.example.ui.theme.SancakKombiTheme
 import com.example.ui.viewmodel.MainViewModel
 
@@ -92,32 +92,32 @@ class MainActivity : ComponentActivity() {
             val reportData by viewModel.reportData.collectAsState()
             val selectedReportRange by viewModel.selectedReportRange.collectAsState()
 
-            val googleAdsStats by viewModel.googleAdsStats.collectAsState()
-            val googleAdsCampaigns by viewModel.googleAdsCampaigns.collectAsState()
-
-            val whatsAppStatus by viewModel.whatsAppStatus.collectAsState()
+            val adsStats by viewModel.adsStats.collectAsState()
+            val adsCampaigns by viewModel.adsCampaigns.collectAsState()
+            val isAdsLoading by viewModel.isAdsLoading.collectAsState()
+            val adsError by viewModel.adsError.collectAsState()
+            val togglingCampaignId by viewModel.togglingCampaignId.collectAsState()
 
             SancakKombiTheme(darkTheme = isDarkTheme) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
-                        if (isLoggedIn) {
-                            TopHeaderBar(
-                                isDarkTheme = isDarkTheme,
-                                onToggleTheme = { viewModel.toggleTheme() },
-                                onLogout = { viewModel.logout() }
-                            )
-                        }
+                        TopHeaderBar(
+                            isDarkTheme = isDarkTheme,
+                            onToggleTheme = { viewModel.toggleTheme() },
+                            onLogout = {
+                                viewModel.logout()
+                                Toast.makeText(applicationContext, "Yönetici oturumu yenilendi", Toast.LENGTH_SHORT).show()
+                            }
+                        )
                     },
                     bottomBar = {
-                        if (isLoggedIn) {
-                            BottomNavBar(
-                                currentRoute = currentRoute,
-                                onNavigate = { route, module ->
-                                    viewModel.navigateTo(route, module)
-                                }
-                            )
-                        }
+                        BottomNavBar(
+                            currentRoute = currentRoute,
+                            onNavigate = { route, module ->
+                                viewModel.navigateTo(route, module)
+                            }
+                        )
                     }
                 ) { innerPadding ->
                     Box(
@@ -125,15 +125,8 @@ class MainActivity : ComponentActivity() {
                             .fillMaxSize()
                             .padding(innerPadding)
                     ) {
-                        if (!isLoggedIn) {
-                            LoginScreen(
-                                isLoading = isLoading,
-                                errorMessage = loginError,
-                                onLogin = { password -> viewModel.login(password) }
-                            )
-                        } else {
-                            when (currentRoute) {
-                                "dashboard" -> {
+                        when (currentRoute) {
+                            "dashboard" -> {
                                     DashboardScreen(
                                         stats = stats,
                                         onNavigateToModule = { module ->
@@ -165,6 +158,7 @@ class MainActivity : ComponentActivity() {
                                         appointments = appointments,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddCustomer = { cust -> viewModel.addCustomer(cust) },
+                                        onAddCustomers = { list -> viewModel.addCustomers(list) },
                                         onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) },
                                         onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) }
                                     )
@@ -177,6 +171,7 @@ class MainActivity : ComponentActivity() {
                                         bankAccounts = bankAccounts,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddFinanceRecord = { record -> viewModel.addFinanceRecord(record) },
+                                        onDeleteFinanceRecord = { id -> viewModel.deleteFinanceRecord(id) },
                                         onUpdateBankAccounts = { accs -> viewModel.updateBankAccounts(accs) },
                                         onViewReceipt = { record ->
                                             viewModel.selectFinanceRecordForReceipt(record)
@@ -260,15 +255,23 @@ class MainActivity : ComponentActivity() {
                                 }
                                 "ads", "google_ads", "googleads", "reklamlar" -> {
                                     GoogleAdsScreen(
-                                        stats = googleAdsStats,
-                                        campaigns = googleAdsCampaigns,
-                                        onToggleCampaignStatus = { id -> viewModel.toggleCampaignStatus(id) },
-                                        onBackClick = { viewModel.navigateTo("dashboard") }
-                                    )
-                                }
-                                "whatsapp", "whatsapp_connect", "whatsapp_baglantisi" -> {
-                                    WhatsAppStatusScreen(
-                                        status = whatsAppStatus,
+                                        stats = adsStats,
+                                        campaigns = adsCampaigns,
+                                        isLoading = isAdsLoading,
+                                        error = adsError,
+                                        togglingCampaignId = togglingCampaignId,
+                                        onToggleCampaignStatus = { id, onResult ->
+                                            viewModel.toggleAdsCampaign(id, onResult)
+                                        },
+                                        onRefresh = {
+                                            viewModel.fetchAdsData { success ->
+                                                if (success) {
+                                                    Toast.makeText(applicationContext, "Google Ads verileri güncellendi", Toast.LENGTH_SHORT).show()
+                                                } else {
+                                                    Toast.makeText(applicationContext, "Google Ads verileri yenilenemedi", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        },
                                         onBackClick = { viewModel.navigateTo("dashboard") }
                                     )
                                 }
@@ -294,4 +297,3 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
-}

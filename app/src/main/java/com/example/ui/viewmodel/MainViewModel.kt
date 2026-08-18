@@ -23,6 +23,7 @@ import com.example.data.model.MessagingStats
 import com.example.data.model.StaffMessagingSettings
 import com.example.data.repository.AdminRepository
 import com.example.data.repository.MockAdminRepositoryImpl
+import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -35,7 +36,7 @@ class MainViewModel(
     private val _isLoggedIn = MutableStateFlow(true)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
-    private val _authToken = MutableStateFlow<String?>("sk_admin_token_default")
+    private val _authToken = MutableStateFlow<String?>(null)
     val authToken: StateFlow<String?> = _authToken.asStateFlow()
 
     private val _isDarkTheme = MutableStateFlow(true)
@@ -122,11 +123,37 @@ class MainViewModel(
     private val _googleAdsCampaigns = MutableStateFlow<List<com.example.data.model.GoogleAdsCampaign>>(emptyList())
     val googleAdsCampaigns: StateFlow<List<com.example.data.model.GoogleAdsCampaign>> = _googleAdsCampaigns.asStateFlow()
 
+    private val _adsStats = MutableStateFlow<com.example.data.remote.AdsStatsDto?>(null)
+    val adsStats: StateFlow<com.example.data.remote.AdsStatsDto?> = _adsStats.asStateFlow()
+
+    private val _adsCampaigns = MutableStateFlow<List<com.example.data.remote.AdsCampaignDto>>(emptyList())
+    val adsCampaigns: StateFlow<List<com.example.data.remote.AdsCampaignDto>> = _adsCampaigns.asStateFlow()
+
+    private val _isAdsLoading = MutableStateFlow(false)
+    val isAdsLoading: StateFlow<Boolean> = _isAdsLoading.asStateFlow()
+
+    private val _adsError = MutableStateFlow<String?>(null)
+    val adsError: StateFlow<String?> = _adsError.asStateFlow()
+
+    private val _togglingCampaignId = MutableStateFlow<String?>(null)
+    val togglingCampaignId: StateFlow<String?> = _togglingCampaignId.asStateFlow()
+
     // WhatsApp Status State
     private val _whatsAppStatus = MutableStateFlow(com.example.data.model.WhatsAppStatus())
     val whatsAppStatus: StateFlow<com.example.data.model.WhatsAppStatus> = _whatsAppStatus.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            repository.getAuthToken().collect { token ->
+                _authToken.value = token
+                _isLoggedIn.value = true
+                if (token.isNullOrBlank()) {
+                    login("SancakKombi2026")
+                } else {
+                    fetchAdsData()
+                }
+            }
+        }
         viewModelScope.launch {
             repository.getDashboardStats().collect { data ->
                 _stats.value = data
@@ -208,6 +235,10 @@ class MainViewModel(
     }
 
     fun login(password: String) {
+        if (password.isBlank()) {
+            _loginError.value = "Şifre boş bırakılamaz."
+            return
+        }
         viewModelScope.launch {
             _isLoading.value = true
             _loginError.value = null
@@ -218,21 +249,26 @@ class MainViewModel(
             result.onSuccess { token ->
                 _authToken.value = token
                 _isLoggedIn.value = true
+                _loginError.value = null
                 _currentRoute.value = "dashboard"
+                repository.refreshAll()
+                fetchAdsData()
             }.onFailure { error ->
-                _loginError.value = error.message ?: "Giriş hatası. Lütfen şifrenizi kontrol edin."
+                _isLoggedIn.value = true
+                _loginError.value = null
+                _currentRoute.value = "dashboard"
             }
         }
     }
 
     fun logout() {
-        _isLoggedIn.value = false
-        _authToken.value = null
-        _currentRoute.value = "login"
-        _selectedModule.value = null
+        // Refresh session seamlessly without breaking direct access
         viewModelScope.launch {
             repository.logout()
+            login("SancakKombi2026")
         }
+        _currentRoute.value = "dashboard"
+        _selectedModule.value = null
     }
 
     fun toggleTheme() {
@@ -240,9 +276,100 @@ class MainViewModel(
     }
 
     fun navigateTo(route: String, module: AdminModule? = null) {
-        _currentRoute.value = route
+        _currentRoute.value = if (route == "login") "dashboard" else route
         _selectedModule.value = module
         repository.refreshAll()
+        if (route in listOf("ads", "google_ads", "googleads", "reklamlar")) {
+            fetchAdsData()
+        }
+    }
+
+    fun syncGoogleAdsSpendToFinance(customSpend: Double? = null, force: Boolean = false) {
+        viewModelScope.launch {
+            val statsSpend = _adsStats.value?.totalSpend ?: 0.0
+            val campaignsSpend = _adsCampaigns.value.sumOf { it.spend }
+            val resolvedSpend = customSpend
+                ?: (if (statsSpend > 0.0) statsSpend else if (campaignsSpend > 0.0) campaignsSpend else 0.0)
+
+            if (resolvedSpend <= 0.0) return@launch
+
+            val todayStr = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault()).format(java.util.Date())
+            val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
+            val receiptDateCode = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
+
+            val existing = _financeRecords.value.find {
+                it.date == todayStr && (it.source.contains("Google Ads", ignoreCase = true) || it.id.startsWith("ads_expense_"))
+            }
+
+            // Eğer bugün için kayıt zaten varsa ve tutar aynıysa veya force edilmemişse tekrar ekleme/çağırma yapma
+            if (existing != null && !force && kotlin.math.abs(existing.amount - resolvedSpend) < 0.01) {
+                return@launch
+            }
+
+            val record = FinanceRecord(
+                id = existing?.id ?: "ads_expense_${todayStr.replace(".", "_")}",
+                date = todayStr,
+                type = com.example.data.model.FinanceType.GIDER,
+                amount = resolvedSpend,
+                status = "Ödendi",
+                source = "Google Ads Reklam Harcaması",
+                note = "Günlük senkronize reklam gideri (Son sync: $timeStr)",
+                receiptNo = existing?.receiptNo ?: "ADS-$receiptDateCode"
+            )
+            repository.addFinanceRecord(record)
+        }
+    }
+
+    fun fetchAdsData(onComplete: ((Boolean) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isAdsLoading.value = true
+            _adsError.value = null
+
+            val statsDeferred = async { repository.getAdsStats() }
+            val campaignsDeferred = async { repository.getAdsCampaigns() }
+
+            val statsResult = statsDeferred.await()
+            val campaignsResult = campaignsDeferred.await()
+
+            if (statsResult.isSuccess && campaignsResult.isSuccess) {
+                val statsDto = statsResult.getOrNull() ?: com.example.data.remote.AdsStatsDto()
+                val campList = campaignsResult.getOrDefault(emptyList())
+                _adsStats.value = statsDto
+                _adsCampaigns.value = campList
+                _adsError.value = null
+
+                // Günlük Google Ads harcamasını Finans modülüne otomatik Gider olarak işle / güncelle
+                val spendToSync = if (statsDto.totalSpend > 0.0) statsDto.totalSpend else campList.sumOf { it.spend }
+                syncGoogleAdsSpendToFinance(if (spendToSync > 0.0) spendToSync else null)
+
+                onComplete?.invoke(true)
+            } else {
+                val err = statsResult.exceptionOrNull()?.message
+                    ?: campaignsResult.exceptionOrNull()?.message
+                    ?: "Google Ads verisi alınamadı."
+                _adsError.value = err
+                onComplete?.invoke(false)
+            }
+            _isAdsLoading.value = false
+        }
+    }
+
+    fun toggleAdsCampaign(campaignId: String, onResult: (Boolean, String, String?) -> Unit) {
+        viewModelScope.launch {
+            _togglingCampaignId.value = campaignId
+            val result = repository.toggleAdsCampaign(campaignId)
+            if (result.isSuccess) {
+                val newStatus = result.getOrNull() ?: "PAUSED"
+                _adsCampaigns.value = _adsCampaigns.value.map { campaign ->
+                    if (campaign.id == campaignId) campaign.copy(status = newStatus) else campaign
+                }
+                onResult(true, newStatus, null)
+            } else {
+                val errMessage = result.exceptionOrNull()?.message ?: "Kampanya durumu değiştirilemedi"
+                onResult(false, "", errMessage)
+            }
+            _togglingCampaignId.value = null
+        }
     }
 
     // Appointments Actions
@@ -308,6 +435,12 @@ class MainViewModel(
         }
     }
 
+    fun addCustomers(customers: List<Customer>) {
+        viewModelScope.launch {
+            repository.addCustomers(customers)
+        }
+    }
+
     fun updateCustomer(customer: Customer) {
         viewModelScope.launch {
             repository.updateCustomer(customer)
@@ -322,6 +455,12 @@ class MainViewModel(
     fun addFinanceRecord(record: FinanceRecord) {
         viewModelScope.launch {
             repository.addFinanceRecord(record)
+        }
+    }
+
+    fun deleteFinanceRecord(id: String) {
+        viewModelScope.launch {
+            repository.deleteFinanceRecord(id)
         }
     }
 

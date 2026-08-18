@@ -129,3 +129,44 @@ data class DeviceHistoryDto(
     val deviceNotes: String = "",
     val records: List<DeviceHistoryRecordDto> = emptyList()
 )
+
+@JsonClass(generateAdapter = true)
+data class AdsStatsDto(
+    val totalSpend: Double = 0.0,
+    val totalClicks: Int = 0,
+    val totalConversions: Int = 0,
+    val totalImpressions: Int = 0,
+    val impressions: Int = 0,
+    val avgCpa: Double = 0.0,
+    val costPerConversion: Double = 0.0,
+    val conversionRate: Double = 0.0,
+    val avgCpc: Double = 0.0,
+    val cpc: Double = 0.0,
+    val ctr: Double = 0.0,
+    val activeCampaignsCount: Int = 0,
+    val servingCampaignsCount: Int = 0,
+    val totalCampaignsCount: Int = 0
+)
+
+@JsonClass(generateAdapter = true)
+data class AdsCampaignDto(
+    val id: String = "",
+    val name: String = "",
+    val status: String = "PAUSED",          // "ACTIVE" | "PAUSED"
+    val servingStatus: String = "UNKNOWN",  // SERVING | NONE | ENDED | PENDING | SUSPENDED | UNKNOWN
+    val dailyBudget: Double = 0.0,
+    val spend: Double = 0.0,
+    val clicks: Int = 0,
+    val conversions: Int = 0,
+    val impressions: Int = 0,
+    val cpa: Double = 0.0,
+    val cpc: Double = 0.0,
+    val ctr: Double = 0.0
+)
+
+@JsonClass(generateAdapter = true)
+data class AdsToggleResponseDto(
+    val success: Boolean = false,
+    val status: String = "PAUSED"
+)
+

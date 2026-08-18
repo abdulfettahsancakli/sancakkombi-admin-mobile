@@ -49,9 +49,7 @@ android {
     }
     debug {
       signingConfig = signingConfigs.getByName("debugConfig")
-      // 10.0.2.2 = Android emulator'dan geliştirme makinesinin localhost'una erişim adresi.
-      // Fiziksel cihazda test için bunu makinenin yerel ağ IP'siyle değiştirin.
-      buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+      buildConfigField("String", "API_BASE_URL", "\"https://www.sancakkombi.com/\"")
     }
   }
   compileOptions {

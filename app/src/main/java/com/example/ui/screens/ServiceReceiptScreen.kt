@@ -54,6 +54,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.example.data.model.FinanceRecord
+import com.example.data.model.FinanceType
 import com.example.data.remote.ReceiptDetailDto
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -156,38 +157,58 @@ fun ServiceReceiptScreen(
         }
     }
 
+    val isExpense = record?.type == FinanceType.GIDER || record?.source?.contains("Google Ads", ignoreCase = true) == true || receiptDetail?.serviceTitle?.contains("GİDER", ignoreCase = true) == true
+    val isGoogleAds = record?.source?.contains("Google Ads", ignoreCase = true) == true || receiptDetail?.customerName?.contains("Google", ignoreCase = true) == true
+    val hasDevice = (!receiptDetail?.deviceBrand.isNullOrBlank() || !receiptDetail?.deviceModel.isNullOrBlank()) && !isExpense
+
     val entryId = record?.id ?: receiptDetail?.entryId ?: ""
-    val receiptNo = receiptDetail?.receiptNo?.ifBlank { null } ?: record?.receiptNo?.ifBlank { null } ?: "SK-202608-6A6F7A"
-    val customerName = receiptDetail?.customerName?.ifBlank { null } ?: record?.source?.ifBlank { null } ?: "Müşteri"
-    val customerPhone = receiptDetail?.customerPhone?.ifBlank { null } ?: "0537 691 73 61"
+    val receiptNo = receiptDetail?.receiptNo?.ifBlank { null } ?: record?.receiptNo?.ifBlank { null } ?: (if (isGoogleAds) "ADS-${java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())}" else "SK-202608-6A6F7A")
+    
+    val customerName = if (isGoogleAds) {
+        "Google Ads (Google Ireland Ltd.)"
+    } else {
+        receiptDetail?.customerName?.ifBlank { null } ?: record?.source?.ifBlank { null } ?: if (isExpense) "Tedarikçi / Kurum" else "Müşteri"
+    }
+    val customerPhone = if (isGoogleAds) "0850 390 20 60" else (receiptDetail?.customerPhone?.ifBlank { null } ?: if (isExpense) "-" else "0537 691 73 61")
 
     val district = receiptDetail?.customerDistrict?.trim() ?: ""
     val address = receiptDetail?.customerAddress?.trim() ?: ""
     val customerAddressStr = when {
+        isGoogleAds -> "Gordon House, Barrow St, Dublin 4, İrlanda"
         district.isNotBlank() && address.isNotBlank() -> "$district / $address"
         district.isNotBlank() -> district
         address.isNotBlank() -> address
+        isExpense -> "İşletme Gideri"
         else -> "Bayrampaşa / İstanbul"
     }
 
-    val dateStr = receiptDetail?.date?.ifBlank { null } ?: record?.date?.ifBlank { null } ?: "10.08.2026"
-    val amountVal = if ((receiptDetail?.amount ?: 0.0) > 0.0) receiptDetail!!.amount else (record?.amount ?: 1000.0)
+    val dateStr = receiptDetail?.date?.ifBlank { null } ?: record?.date?.ifBlank { null } ?: "17.08.2026"
+    val amountVal = if ((receiptDetail?.amount ?: 0.0) > 0.0) receiptDetail!!.amount else (record?.amount ?: 0.0)
     val amountStr = "₺%.2f".format(amountVal).replace(".", ",")
 
-    val deviceBrand = receiptDetail?.deviceBrand?.ifBlank { null } ?: "Demirdöküm"
-    val deviceModel = receiptDetail?.deviceModel?.ifBlank { null } ?: "Nitromix"
+    val deviceBrand = receiptDetail?.deviceBrand?.ifBlank { null } ?: ""
+    val deviceModel = receiptDetail?.deviceModel?.ifBlank { null } ?: ""
     val workDescription = receiptDetail?.workDescription?.ifBlank { null }
-        ?: if (record?.note?.isNotBlank() == true) record.note else "Kombi genleşme tankı hava basıncı kontrol edildi. Ateşleyici elektrot temizliği ve O-ring conta değişimi yapıldı. Sızdırmazlık testi başarıyla tamamlandı."
+        ?: if (record?.note?.isNotBlank() == true) record.note
+        else if (isGoogleAds) "Google Ads arama ağı ve harita reklam harcaması (Günlük Senkronize Gider)"
+        else if (isExpense) "İşletme gider ödemesi kaydı."
+        else "Teknik servis ve tahsilat işlemi."
 
-    val paymentMethod = receiptDetail?.paymentMethod?.ifBlank { null } ?: "Nakit"
+    val paymentMethod = if (isGoogleAds) "Otomatik Çekim (Kredi Kartı)" else (receiptDetail?.paymentMethod?.ifBlank { null } ?: "Banka / Kasa")
     val statusRaw = receiptDetail?.status?.ifBlank { null } ?: record?.status ?: "Ödendi"
     val statusText = when (statusRaw.lowercase()) {
-        "paid", "ödendi" -> "İşlem Tamamlandı (Ödendi)"
+        "paid", "ödendi" -> if (isExpense) "Muhasebeleştirildi (Ödendi)" else "İşlem Tamamlandı (Ödendi)"
         "partial", "kısmi" -> "Kısmi Ödendi"
         else -> "Ödeme Bekliyor"
     }
     val warrantyMonths = receiptDetail?.warrantyMonths ?: 12
-    val serviceTitle = receiptDetail?.serviceTitle?.ifBlank { null } ?: "SERVİS FİŞİ"
+    val serviceTitle = if (isGoogleAds) {
+        "GOOGLE ADS REKLAM GİDER DEKONTU"
+    } else if (isExpense) {
+        "FİNANSAL GİDER / HARCAMA DEKONTU"
+    } else {
+        receiptDetail?.serviceTitle?.ifBlank { null } ?: "SERVİS & TAHSİLAT MAKBUZU"
+    }
 
     fun sharePdf(type: String) { // "receipt" or "guarantee"
         val targetId = if (entryId.isNotBlank()) entryId else "default"
@@ -244,7 +265,7 @@ fun ServiceReceiptScreen(
                 Spacer(modifier = Modifier.weight(1f))
 
                 Text(
-                    text = "Makbuz / Servis Fişi",
+                    text = if (isGoogleAds) "Google Ads Gider Dekontu" else if (isExpense) "Gider / Harcama Dekontu" else "Makbuz / Servis Fişi",
                     fontWeight = FontWeight.Bold,
                     fontSize = 16.sp,
                     color = MaterialTheme.colorScheme.onBackground
@@ -278,7 +299,9 @@ fun ServiceReceiptScreen(
                                 .weight(1f)
                                 .testTag("share_receipt_pdf_button"),
                             shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (isGoogleAds) Color(0xFF2563EB) else MaterialTheme.colorScheme.primary
+                            )
                         ) {
                             if (isPdfDownloading && activePdfType == "receipt") {
                                 CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
@@ -286,25 +309,31 @@ fun ServiceReceiptScreen(
                                 Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
                             }
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Servis Fişi PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (isGoogleAds) "Google Ads Dekontu PDF" else if (isExpense) "Gider Dekontu PDF" else "Servis Fişi PDF",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
 
-                        Button(
-                            onClick = { sharePdf("guarantee") },
-                            enabled = !isPdfDownloading,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("share_guarantee_pdf_button"),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
-                        ) {
-                            if (isPdfDownloading && activePdfType == "guarantee") {
-                                CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
-                            } else {
-                                Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                        if (!isExpense && hasDevice) {
+                            Button(
+                                onClick = { sharePdf("guarantee") },
+                                enabled = !isPdfDownloading,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("share_guarantee_pdf_button"),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF059669))
+                            ) {
+                                if (isPdfDownloading && activePdfType == "guarantee") {
+                                    CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
+                                } else {
+                                    Icon(imageVector = Icons.Default.PictureAsPdf, contentDescription = null, modifier = Modifier.size(16.dp))
+                                }
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text("Garanti Belgesi PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Garanti Belgesi PDF", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -326,7 +355,7 @@ fun ServiceReceiptScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Servis ve müşteri detayları yükleniyor...",
+                        text = "Detaylar yükleniyor...",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -360,7 +389,7 @@ fun ServiceReceiptScreen(
                                 color = Color(0xFFDC2626)
                             )
                             Text(
-                                text = "TEKNİK SERVİS",
+                                text = if (isExpense) "FİNANS & MUHASEBE BİRİMİ" else "TEKNİK SERVİS",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp,
                                 color = Color.DarkGray
@@ -376,11 +405,11 @@ fun ServiceReceiptScreen(
                             Text(
                                 text = serviceTitle,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = Color.Black
+                                fontSize = 14.sp,
+                                color = if (isGoogleAds) Color(0xFF2563EB) else Color.Black
                             )
                             Text(
-                                text = "SERVİS FİŞİ NO",
+                                text = if (isExpense) "DEKONT / REF NO" else "SERVİS FİŞİ NO",
                                 fontSize = 9.sp,
                                 color = Color.Gray
                             )
@@ -388,7 +417,7 @@ fun ServiceReceiptScreen(
                                 text = receiptNo,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
-                                color = Color(0xFFDC2626)
+                                color = if (isGoogleAds) Color(0xFF2563EB) else Color(0xFFDC2626)
                             )
                             Text(
                                 text = dateStr,
@@ -400,52 +429,116 @@ fun ServiceReceiptScreen(
 
                     HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray)
 
-                    // Customer & Device Info
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        // Customer info block
-                        Card(
-                            modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(6.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                    // Details Section
+                    if (isExpense) {
+                        // Expense Details Block
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("MÜŞTERİ BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(customerName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                                Text(customerPhone, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2563EB))
-                                Text(customerAddressStr, fontSize = 11.sp, color = Color.Gray)
+                            // Payee info
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("GİDER KALEMİ / ALACAKLI", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(customerName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text(district.ifBlank { "İşletme Gideri" }, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = if (isGoogleAds) Color(0xFF2563EB) else Color.DarkGray)
+                                    Text(customerAddressStr, fontSize = 10.sp, color = Color.Gray)
+                                }
+                            }
+
+                            // Payment method & reference
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("ÖDEME DETAYI", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(paymentMethod, fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text("Tür: İşletme Gideri", fontSize = 11.sp, color = Color.DarkGray)
+                                    Text("Tarih: $dateStr", fontSize = 10.sp, color = Color.Gray)
+                                }
                             }
                         }
+                    } else if (hasDevice) {
+                        // Service + Device Info Block
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Customer info block
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("MÜŞTERİ BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(customerName, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text(customerPhone, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2563EB))
+                                    Text(customerAddressStr, fontSize = 11.sp, color = Color.Gray)
+                                }
+                            }
 
-                        // Device info block
+                            // Device info block
+                            Card(
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(6.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                            ) {
+                                Column(modifier = Modifier.padding(10.dp)) {
+                                    Text("CİHAZ BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text("$deviceBrand $deviceModel", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    Text("Kombi Bakım & Onarım", fontSize = 11.sp, color = Color.DarkGray)
+                                    Text("Garanti Süresi: $warrantyMonths Ay", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                }
+                            }
+                        }
+                    } else {
+                        // General Income / Customer block (Full Width)
                         Card(
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(6.dp),
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
                             border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
                         ) {
-                            Column(modifier = Modifier.padding(10.dp)) {
-                                Text("CİHAZ BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("MÜŞTERİ & İŞLEM BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
                                 Spacer(modifier = Modifier.height(4.dp))
-                                Text("$deviceBrand $deviceModel", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                                Text("Kombi Bakım & Onarım", fontSize = 11.sp, color = Color.DarkGray)
-                                Text("Garanti Süresi: $warrantyMonths Ay", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                Text(customerName, fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                if (customerPhone != "-") {
+                                    Text(customerPhone, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = Color(0xFF2563EB))
+                                }
+                                Text(customerAddressStr, fontSize = 11.sp, color = Color.Gray)
                             }
                         }
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
-                    // Servis Durumu Badge
+                    // Durum Badge
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFECFDF5)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFA7F3D0))
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isExpense) Color(0xFFEFF6FF) else Color(0xFFECFDF5)
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (isExpense) Color(0xFFBFDBFE) else Color(0xFFA7F3D0)
+                        )
                     ) {
                         Row(
                             modifier = Modifier
@@ -453,15 +546,25 @@ fun ServiceReceiptScreen(
                                 .padding(10.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color(0xFF10B981), modifier = Modifier.size(20.dp))
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = if (isExpense) Color(0xFF2563EB) else Color(0xFF10B981),
+                                modifier = Modifier.size(20.dp)
+                            )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("SERVİS DURUMU: $statusText", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF065F46))
+                            Text(
+                                text = if (isExpense) "MUHASEBE DURUMU: $statusText" else "SERVİS DURUMU: $statusText",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isExpense) Color(0xFF1E40AF) else Color(0xFF065F46)
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Yapılan İşlem / Technician Report
+                    // Açıklama / Rapor
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
@@ -469,7 +572,12 @@ fun ServiceReceiptScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
-                            Text("YAPILAN İŞLEM / TEKNİSYEN RAPORU", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            Text(
+                                text = if (isExpense) "GİDER AÇIKLAMASI & MUHASEBE NOTU" else "YAPILAN İŞLEM / TEKNİSYEN RAPORU",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray
+                            )
                             Spacer(modifier = Modifier.height(4.dp))
                             Text(
                                 text = workDescription,
@@ -481,7 +589,7 @@ fun ServiceReceiptScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Ödeme Bilgileri
+                    // Ödeme / Harcama Bilgileri
                     Card(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(6.dp),
@@ -489,12 +597,22 @@ fun ServiceReceiptScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
-                            Text("ÖDEME BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                            Text(
+                                text = if (isExpense) "HARCAMA VE ÖDEME ÖZETİ" else "ÖDEME BİLGİLERİ",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Gray
+                            )
                             Spacer(modifier = Modifier.height(6.dp))
                             Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Genel Toplam", fontSize = 12.sp, color = Color.Black)
+                                Text(if (isExpense) "Toplam Gider Tutarı" else "Genel Toplam", fontSize = 12.sp, color = Color.Black)
                                 Spacer(modifier = Modifier.weight(1f))
-                                Text(amountStr, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                Text(
+                                    text = amountStr,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isExpense) Color(0xFFDC2626) else Color(0xFF059669)
+                                )
                             }
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Text("Ödeme Yöntemi", fontSize = 11.sp, color = Color.Gray)
@@ -502,9 +620,14 @@ fun ServiceReceiptScreen(
                                 Text(paymentMethod, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                             }
                             Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Ödeme Durumu", fontSize = 11.sp, color = Color.Gray)
+                                Text("Kayıt Durumu", fontSize = 11.sp, color = Color.Gray)
                                 Spacer(modifier = Modifier.weight(1f))
-                                Text(statusText, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
+                                Text(
+                                    text = statusText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isExpense) Color(0xFF2563EB) else Color(0xFF10B981)
+                                )
                             }
                         }
                     }
@@ -527,15 +650,25 @@ fun ServiceReceiptScreen(
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
-                            Text("SERVİS FİŞİ DOĞRULAMA", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            Text("Doğrulama Kodu: $receiptNo", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
+                            Text(
+                                text = if (isExpense) "GİDER DEKONTU DOĞRULAMA" else "SERVİS FİŞİ DOĞRULAMA",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = "Doğrulama Kodu: $receiptNo",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isGoogleAds) Color(0xFF2563EB) else Color(0xFFDC2626)
+                            )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = "Sancak Kombi Isıtma Sistemleri • Bayrampaşa, İstanbul • 0212 581 75 74 • www.sancakkombi.com.tr\nBu servis fişi elektronik ortamda düzenlenmiştir.",
+                        text = "Sancak Kombi Isıtma Sistemleri • Bayrampaşa, İstanbul • 0212 581 75 74 • www.sancakkombi.com.tr\nBu belge elektronik ortamda düzenlenmiştir.",
                         fontSize = 9.sp,
                         color = Color.Gray,
                         textAlign = TextAlign.Center,

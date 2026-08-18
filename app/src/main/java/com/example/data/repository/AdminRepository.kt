@@ -21,6 +21,7 @@ import com.example.data.model.StaffMessagingSettings
 import kotlinx.coroutines.flow.Flow
 
 interface AdminRepository {
+    fun getAuthToken(): Flow<String?>
     suspend fun login(password: String): Result<String>
     suspend fun logout()
 
@@ -49,6 +50,7 @@ interface AdminRepository {
     // Customers CRUD
     fun getCustomers(): Flow<List<Customer>>
     suspend fun addCustomer(customer: Customer): Result<Unit>
+    suspend fun addCustomers(customers: List<Customer>): Result<Unit>
     suspend fun updateCustomer(customer: Customer): Result<Unit>
     suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto>
 
@@ -57,6 +59,7 @@ interface AdminRepository {
     fun getFinanceSummary(): Flow<FinanceSummary>
     fun getBankAccounts(): Flow<List<BankAccount>>
     suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit>
+    suspend fun deleteFinanceRecord(id: String): Result<Unit>
     suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit>
     suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto>
 
@@ -90,6 +93,9 @@ interface AdminRepository {
     fun getReportData(timeRange: com.example.data.model.ReportTimeRange): Flow<com.example.data.model.ReportData>
 
     // Google Ads
+    suspend fun getAdsStats(): Result<com.example.data.remote.AdsStatsDto>
+    suspend fun getAdsCampaigns(): Result<List<com.example.data.remote.AdsCampaignDto>>
+    suspend fun toggleAdsCampaign(campaignId: String): Result<String>
     fun getGoogleAdsStats(): Flow<com.example.data.model.GoogleAdsStats>
     fun getGoogleAdsCampaigns(): Flow<List<com.example.data.model.GoogleAdsCampaign>>
     suspend fun toggleCampaignStatus(campaignId: String): Result<Unit>

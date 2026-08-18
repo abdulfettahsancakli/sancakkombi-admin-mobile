@@ -181,20 +181,6 @@ fun AppointmentsScreen(
 
                 Spacer(modifier = Modifier.weight(1f))
 
-                OutlinedButton(
-                    onClick = {
-                        com.example.utils.ReminderManager.scheduleTestReminder(context, 5)
-                    },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary)
-                ) {
-                    Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("⏰ Test Bildirimi (5sn)", fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.width(8.dp))
-
                 Button(
                     onClick = { showNewDialog = true },
                     shape = RoundedCornerShape(8.dp),
@@ -1565,6 +1551,31 @@ fun SendBankTransferDialog(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    fun openDatePicker() {
+        val cal = java.util.Calendar.getInstance()
+        val parts = promisedDateText.trim().split(".")
+        if (parts.size == 3) {
+            val d = parts[0].toIntOrNull()
+            val m = parts[1].toIntOrNull()
+            val y = parts[2].toIntOrNull()
+            if (d != null && m != null && y != null) {
+                cal.set(y, m - 1, d)
+            }
+        }
+
+        android.app.DatePickerDialog(
+            context,
+            { _, year, monthOfYear, dayOfMonth ->
+                val formattedDay = String.format("%02d", dayOfMonth)
+                val formattedMonth = String.format("%02d", monthOfYear + 1)
+                promisedDateText = "$formattedDay.$formattedMonth.$year"
+            },
+            cal.get(java.util.Calendar.YEAR),
+            cal.get(java.util.Calendar.MONTH),
+            cal.get(java.util.Calendar.DAY_OF_MONTH)
+        ).show()
+    }
+
     Dialog(
         onDismissRequest = { if (!isLoading) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -1712,20 +1723,57 @@ fun SendBankTransferDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 4.dp)
                 )
-                OutlinedTextField(
-                    value = promisedDateText,
-                    onValueChange = { promisedDateText = it },
-                    placeholder = { Text("GG.AA.YYYY (Örn: 15.08.2026)", fontSize = 13.sp) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(10.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                        focusedContainerColor = MaterialTheme.colorScheme.surface
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("promised_date_input")
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedTextField(
+                            value = promisedDateText,
+                            onValueChange = {},
+                            readOnly = true,
+                            placeholder = { Text("Takvimden tarih seçin", fontSize = 13.sp) },
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            trailingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.CalendarMonth,
+                                    contentDescription = "Takvimden Seç",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                                focusedContainerColor = MaterialTheme.colorScheme.surface
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("promised_date_input")
+                        )
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { openDatePicker() }
+                        )
+                    }
+                    if (promisedDateText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        IconButton(
+                            onClick = { promisedDateText = "" },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Tarihi Temizle",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
 
                 if (errorMessage != null) {
                     Spacer(modifier = Modifier.height(8.dp))

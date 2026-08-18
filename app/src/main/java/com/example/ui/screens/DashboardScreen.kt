@@ -49,6 +49,8 @@ import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Wallet
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
@@ -63,6 +65,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -478,6 +481,8 @@ private fun RevenueHeroBentoCard(
     growthPercentage: String,
     onCardClick: () -> Unit
 ) {
+    var isRevenueVisible by rememberSaveable { mutableStateOf(true) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -521,6 +526,22 @@ private fun RevenueHeroBentoCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         letterSpacing = 0.4.sp
                     )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .clickable { isRevenueVisible = !isRevenueVisible }
+                            .testTag("toggle_revenue_visibility"),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = if (isRevenueVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
+                            contentDescription = if (isRevenueVisible) "Geliri Gizle" else "Geliri Göster",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
 
                 // Green Trend Badge
@@ -559,15 +580,15 @@ private fun RevenueHeroBentoCard(
             ) {
                 Column {
                     Text(
-                        text = revenueText,
+                        text = if (isRevenueVisible) revenueText else "₺ ••••••",
                         fontSize = 26.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.onSurface,
-                        letterSpacing = (-0.5).sp
+                        letterSpacing = if (isRevenueVisible) (-0.5).sp else 1.sp
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "Geçen aya kıyasla +%12 artış",
+                        text = if (isRevenueVisible) "Geçen aya kıyasla +%12 artış" else "Tutar gizlendi",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -834,7 +855,6 @@ private fun CompactBentoModuleCard(
         AdminModule.TEKLIFLER -> Color(0xFF6366F1) to "3 Aktif"
         AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899) to "2 Yaklaşan"
         AdminModule.GOOGLE_ADS -> Color(0xFFEA4335) to "%98 Performans"
-        AdminModule.WHATSAPP_CONNECT -> Color(0xFF25D366) to "Bağlı"
     }
 
     Card(

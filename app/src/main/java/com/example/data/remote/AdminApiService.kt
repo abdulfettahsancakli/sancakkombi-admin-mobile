@@ -106,6 +106,9 @@ interface AdminApiService {
     @POST("api/admin/finance/records")
     suspend fun addFinanceRecord(@Header("Authorization") auth: String, @Body record: FinanceRecord): Response<FinanceRecordCreateResponseDto>
 
+    @DELETE("api/admin/finance/records/{id}")
+    suspend fun deleteFinanceRecord(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
+
     @GET("api/admin/finance/summary")
     suspend fun getFinanceSummary(@Header("Authorization") auth: String): Response<FinanceSummary>
 
@@ -183,6 +186,15 @@ interface AdminApiService {
     suspend fun getReportData(@Header("Authorization") auth: String, @Query("range") range: String): Response<ReportData>
 
     // Google Ads
+    @GET("api/admin/ads/stats")
+    suspend fun getAdsStats(@Header("Authorization") auth: String): Response<AdsStatsDto>
+
+    @GET("api/admin/ads/campaigns")
+    suspend fun getAdsCampaigns(@Header("Authorization") auth: String): Response<List<AdsCampaignDto>>
+
+    @POST("api/admin/ads/campaigns/{id}/toggle")
+    suspend fun toggleAdsCampaign(@Header("Authorization") auth: String, @Path("id") campaignId: String): Response<AdsToggleResponseDto>
+
     @GET("api/admin/ads/stats")
     suspend fun getGoogleAdsStats(@Header("Authorization") auth: String): Response<GoogleAdsStats>
 

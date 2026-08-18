@@ -43,11 +43,13 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -158,6 +160,7 @@ fun FinanceScreen(
     bankAccounts: List<BankAccount>,
     onBackClick: () -> Unit,
     onAddFinanceRecord: (FinanceRecord) -> Unit,
+    onDeleteFinanceRecord: (String) -> Unit = {},
     onUpdateBankAccounts: (List<BankAccount>) -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
     modifier: Modifier = Modifier
@@ -169,6 +172,7 @@ fun FinanceScreen(
     // BottomSheet states
     var showReceivableSheet by remember { mutableStateOf(false) }
     var showIbanEditSheet by remember { mutableStateOf(false) }
+    var recordToDelete by remember { mutableStateOf<FinanceRecord?>(null) }
 
     val currentDateStr = remember {
         SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date())
@@ -300,6 +304,7 @@ fun FinanceScreen(
                         financeRecords = financeRecords,
                         onReceivableClick = { showReceivableSheet = true },
                         onViewReceipt = onViewReceipt,
+                        onDeleteRecord = { rec -> recordToDelete = rec },
                         onGoToQuickEntry = { selectedTab = 2 }
                     )
                     1 -> IbanManagementTab(
@@ -313,6 +318,7 @@ fun FinanceScreen(
                         financeRecords = financeRecords,
                         onAddFinanceRecord = onAddFinanceRecord,
                         onViewReceipt = onViewReceipt,
+                        onDeleteRecord = { rec -> recordToDelete = rec },
                         onOpenAnalytics = { selectedTab = 3 }
                     )
                     3 -> FinanceAnalyticsTab(
@@ -349,6 +355,46 @@ fun FinanceScreen(
         )
     }
 
+    // Delete Record Confirmation Dialog
+    if (recordToDelete != null) {
+        val rec = recordToDelete!!
+        AlertDialog(
+            onDismissRequest = { recordToDelete = null },
+            title = {
+                Text(
+                    text = "Finans Kaydını Sil",
+                    fontWeight = FontWeight.Bold,
+                    color = colors.textPrimary
+                )
+            },
+            text = {
+                Text(
+                    text = "\"${rec.source}\" (${rec.date} • ₺%.2f) kaydını silmek istediğinize emin misiniz?".format(rec.amount).replace(".", ","),
+                    color = colors.textSecondary,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteFinanceRecord(rec.id)
+                        recordToDelete = null
+                        Toast.makeText(context, "Finans kaydı başarıyla silindi.", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = colors.dangerColor)
+                ) {
+                    Text("Evet, Sil", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { recordToDelete = null }) {
+                    Text("Vazgeç", color = colors.textPrimary)
+                }
+            },
+            containerColor = colors.cardSurface
+        )
+    }
+
     // Modal BottomSheet for IBAN Management
     if (showIbanEditSheet) {
         IbanEditBottomSheet(
@@ -373,6 +419,7 @@ private fun SummaryAndReceivablesTab(
     financeRecords: List<FinanceRecord>,
     onReceivableClick: () -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
+    onDeleteRecord: (FinanceRecord) -> Unit,
     onGoToQuickEntry: () -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -649,7 +696,7 @@ private fun SummaryAndReceivablesTab(
         Spacer(modifier = Modifier.height(10.dp))
 
         financeRecords.take(4).forEach { rec ->
-            TransactionRow(colors = colors, record = rec, onViewReceipt = onViewReceipt)
+            TransactionRow(colors = colors, record = rec, onViewReceipt = onViewReceipt, onDeleteRecord = onDeleteRecord)
             Spacer(modifier = Modifier.height(8.dp))
         }
     }
@@ -862,6 +909,7 @@ private fun QuickEntryAndHistoryTab(
     financeRecords: List<FinanceRecord>,
     onAddFinanceRecord: (FinanceRecord) -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
+    onDeleteRecord: (FinanceRecord) -> Unit,
     onOpenAnalytics: () -> Unit
 ) {
     val context = LocalContext.current
@@ -874,7 +922,7 @@ private fun QuickEntryAndHistoryTab(
     val categories = if (isGelir) {
         listOf("Servis Tahsilatı", "Yedek Parça", "Kombi Bakımı", "Montaj", "Diğer")
     } else {
-        listOf("Malzeme Alımı", "Yedek Parça Tedarik", "Yakıt / Ulaşım", "Dükkan Gideri", "Personel / Diğer")
+        listOf("Google Ads Reklam", "Malzeme Alımı", "Yedek Parça Tedarik", "Yakıt / Ulaşım", "Dükkan Gideri", "Personel / Diğer")
     }
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -1126,7 +1174,7 @@ private fun QuickEntryAndHistoryTab(
             }
         } else {
             financeRecords.forEach { rec ->
-                TransactionRow(colors = colors, record = rec, onViewReceipt = onViewReceipt)
+                TransactionRow(colors = colors, record = rec, onViewReceipt = onViewReceipt, onDeleteRecord = onDeleteRecord)
                 Spacer(modifier = Modifier.height(8.dp))
             }
         }
@@ -1138,11 +1186,17 @@ private fun QuickEntryAndHistoryTab(
 private fun TransactionRow(
     colors: FinanceThemeColors,
     record: FinanceRecord,
-    onViewReceipt: (FinanceRecord) -> Unit
+    onViewReceipt: (FinanceRecord) -> Unit,
+    onDeleteRecord: (FinanceRecord) -> Unit
 ) {
     val isIncome = record.type == FinanceType.GELIR
+    val isAds = record.source.contains("Google Ads", ignoreCase = true) || record.id.startsWith("ads_")
 
-    OledCard(colors = colors, modifier = Modifier.fillMaxWidth()) {
+    OledCard(
+        colors = colors,
+        borderColor = if (isAds) Color(0xFF4285F4).copy(alpha = 0.4f) else colors.cardBorder,
+        modifier = Modifier.fillMaxWidth()
+    ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1154,13 +1208,17 @@ private fun TransactionRow(
                 modifier = Modifier
                     .size(36.dp)
                     .clip(CircleShape)
-                    .background(if (isIncome) colors.successColor.copy(alpha = 0.15f) else colors.dangerColor.copy(alpha = 0.15f)),
+                    .background(
+                        if (isAds) Color(0xFF4285F4).copy(alpha = 0.15f)
+                        else if (isIncome) colors.successColor.copy(alpha = 0.15f)
+                        else colors.dangerColor.copy(alpha = 0.15f)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = if (isIncome) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
+                    imageVector = if (isAds) Icons.Default.Analytics else if (isIncome) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward,
                     contentDescription = null,
-                    tint = if (isIncome) colors.successColor else colors.dangerColor,
+                    tint = if (isAds) Color(0xFF4285F4) else if (isIncome) colors.successColor else colors.dangerColor,
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -1168,14 +1226,33 @@ private fun TransactionRow(
             Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = record.source,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = record.source,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                    if (isAds) {
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFF4285F4).copy(alpha = 0.15f))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                text = "GÜNLÜK ADS",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF4285F4)
+                            )
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = record.date, fontSize = 11.sp, color = colors.textSecondary)
                     if (record.note.isNotBlank()) {
@@ -1196,17 +1273,36 @@ private fun TransactionRow(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(colors.tabSelectedBg)
-                        .clickable { onViewReceipt(record) }
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(12.dp), tint = colors.textSecondary)
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Makbuz", fontSize = 10.sp, color = colors.textPrimary, fontWeight = FontWeight.Bold)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(colors.tabSelectedBg)
+                            .clickable { onViewReceipt(record) }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(12.dp), tint = colors.textSecondary)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text("Makbuz", fontSize = 10.sp, color = colors.textPrimary, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.width(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(colors.dangerColor.copy(alpha = 0.12f))
+                            .clickable { onDeleteRecord(record) }
+                            .padding(horizontal = 6.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = "Kaydı Sil",
+                            tint = colors.dangerColor,
+                            modifier = Modifier.size(13.dp)
+                        )
                     }
                 }
             }

@@ -75,12 +75,5 @@ enum class AdminModule(
         description = "Kampanya yönetimi, anahtar kelime optimizasyonu ve performans analizi.",
         icon = Icons.Default.Campaign,
         isPrimaryBottomNav = false
-    ),
-    WHATSAPP_CONNECT(
-        id = "whatsapp",
-        title = "WhatsApp Bağlantısı",
-        description = "Meta Embedded Signup WhatsApp Business numara durumu ve bağlantısı.",
-        icon = Icons.Default.PhonelinkSetup,
-        isPrimaryBottomNav = false
     )
 }

@@ -16,6 +16,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 import com.example.data.model.CustomerMessagingSettings
@@ -146,7 +148,7 @@ class MockAdminRepositoryImpl : AdminRepository {
             type = FinanceType.GELIR,
             amount = 1370.0,
             status = "Ödendi",
-            source = "-",
+            source = "Fettah Sancaklı",
             note = "Ateşleyici elektrodu + O-Ring takımı + Servis Bedeli",
             receiptNo = "SK-202605-28A6F1"
         ),
@@ -160,33 +162,6 @@ class MockAdminRepositoryImpl : AdminRepository {
             receiptNo = "SK-202605-25B3C2"
         ),
         FinanceRecord(
-            id = "f4",
-            date = "18.05.2026",
-            type = FinanceType.GELIR,
-            amount = 1000.0,
-            status = "Ödendi",
-            source = "Fettah Sancaklı (Servis)",
-            receiptNo = "SK-202605-18D4E5"
-        ),
-        FinanceRecord(
-            id = "f5",
-            date = "18.05.2026",
-            type = FinanceType.GELIR,
-            amount = 1000.0,
-            status = "Ödendi",
-            source = "Fettah Sancaklı (Servis)",
-            receiptNo = "SK-202605-18F6G7"
-        ),
-        FinanceRecord(
-            id = "f6",
-            date = "18.05.2026",
-            type = FinanceType.GELIR,
-            amount = 500.0,
-            status = "Ödendi",
-            source = "Fettah Sancaklı (Servis)",
-            receiptNo = "SK-202605-18H8I9"
-        ),
-        FinanceRecord(
             id = "f7",
             date = "18.05.2026",
             type = FinanceType.GIDER,
@@ -194,15 +169,6 @@ class MockAdminRepositoryImpl : AdminRepository {
             status = "Ödendi",
             source = "Fettah Sancaklı (Servis Malzeme Alımı)",
             receiptNo = "SK-202605-18J0K1"
-        ),
-        FinanceRecord(
-            id = "f8",
-            date = "18.05.2026",
-            type = FinanceType.GELIR,
-            amount = 1000.0,
-            status = "Ödendi",
-            source = "Fettah Sancaklı (Servis)",
-            receiptNo = "SK-202605-18L2M3"
         ),
         FinanceRecord(
             id = "f9",
@@ -447,10 +413,11 @@ class MockAdminRepositoryImpl : AdminRepository {
         )
     }
 
+    override fun getAuthToken(): Flow<String?> = flowOf(null)
+
     override suspend fun login(password: String): Result<String> {
         delay(300)
-        val mockToken = "sk_token_" + UUID.randomUUID().toString().take(16)
-        return Result.success(mockToken)
+        return Result.failure(IllegalStateException("Mock login devre dışı bırakıldı. Gerçek sunucuya bağlanın."))
     }
 
     override suspend fun logout() {}
@@ -586,6 +553,14 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun addCustomers(customers: List<Customer>): Result<Unit> {
+        delay(300)
+        val newList = _customers.value.toMutableList()
+        newList.addAll(0, customers)
+        _customers.value = newList
+        return Result.success(Unit)
+    }
+
     override suspend fun updateCustomer(customer: Customer): Result<Unit> {
         delay(300)
         val newList = _customers.value.toMutableList()
@@ -694,16 +669,15 @@ class MockAdminRepositoryImpl : AdminRepository {
     // Finance Implementations
     override fun getFinanceRecords(): Flow<List<FinanceRecord>> = _financeRecords.asStateFlow()
 
-    override fun getFinanceSummary(): Flow<FinanceSummary> {
-        val totalInc = _financeRecords.value.filter { it.type == FinanceType.GELIR }.sumOf { it.amount }
-        val totalExp = _financeRecords.value.filter { it.type == FinanceType.GIDER }.sumOf { it.amount }
-        return MutableStateFlow(
-            FinanceSummary(
-                totalIncome = if (totalInc == 0.0) 8870.0 else totalInc,
-                totalExpense = if (totalExp == 0.0) 500.0 else totalExp,
-                outstandingReceivable = 500.0
-            )
-        ).asStateFlow()
+    override fun getFinanceSummary(): Flow<FinanceSummary> = _financeRecords.map { list ->
+        val totalInc = list.filter { it.type == FinanceType.GELIR }.sumOf { it.amount }
+        val totalExp = list.filter { it.type == FinanceType.GIDER }.sumOf { it.amount }
+        val outstanding = list.filter { it.status == "Kısmi" || it.status == "Bekliyor" }.sumOf { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) }
+        FinanceSummary(
+            totalIncome = if (totalInc == 0.0) 8870.0 else totalInc,
+            totalExpense = if (totalExp == 0.0) 500.0 else totalExp,
+            outstandingReceivable = if (outstanding == 0.0) 500.0 else outstanding
+        )
     }
 
     override fun getBankAccounts(): Flow<List<BankAccount>> = _bankAccounts.asStateFlow()
@@ -711,7 +685,20 @@ class MockAdminRepositoryImpl : AdminRepository {
     override suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit> {
         delay(300)
         val newList = _financeRecords.value.toMutableList()
-        newList.add(0, record)
+        val existingIndex = newList.indexOfFirst { it.id == record.id || (it.source == record.source && it.date == record.date) }
+        if (existingIndex != -1) {
+            newList[existingIndex] = record
+        } else {
+            newList.add(0, record)
+        }
+        _financeRecords.value = newList
+        recalculateStats()
+        return Result.success(Unit)
+    }
+
+    override suspend fun deleteFinanceRecord(id: String): Result<Unit> {
+        delay(200)
+        val newList = _financeRecords.value.filterNot { it.id == id }
         _financeRecords.value = newList
         recalculateStats()
         return Result.success(Unit)
@@ -726,24 +713,49 @@ class MockAdminRepositoryImpl : AdminRepository {
     override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> {
         delay(200)
         val rec = _financeRecords.value.find { it.id == entryId }
-        val detail = com.example.data.remote.ReceiptDetailDto(
-            entryId = entryId,
-            receiptNo = rec?.receiptNo ?: if (entryId.isNotBlank()) "SK-202608-${entryId.take(6).uppercase()}" else "SK-202608-6A6F7A",
-            date = rec?.date ?: "10.08.2026",
-            amount = rec?.amount ?: 1000.0,
-            paymentMethod = "Nakit",
-            status = if (rec?.status == "Ödendi") "paid" else "unpaid",
-            customerName = rec?.source ?: "Fettah Sancaklı",
-            customerPhone = "0537 691 73 61",
-            customerAddress = "Kocatepe Mah. 6. Sokak No: 19 D:1",
-            customerDistrict = "Bayrampaşa",
-            deviceBrand = "Demirdöküm",
-            deviceModel = "Nitromix P24",
-            deviceTested = true,
-            workDescription = if (rec?.note?.isNotBlank() == true) rec.note else "Kombi genleşme tankı hava basıncı kontrol edildi. Ateşleyici elektrot temizliği ve O-ring conta değişimi yapıldı. Sızdırmazlık testi başarıyla tamamlandı.",
-            warrantyMonths = 12,
-            serviceTitle = "Kombi Periyodik Bakım & Arıza Onarım Servis Fişi"
-        )
+        val isExpense = rec?.type == FinanceType.GIDER || rec?.source?.contains("Google Ads", ignoreCase = true) == true || rec?.source?.contains("Malzeme", ignoreCase = true) == true
+        val isGoogleAds = rec?.source?.contains("Google Ads", ignoreCase = true) == true
+
+        val detail = if (isExpense) {
+            com.example.data.remote.ReceiptDetailDto(
+                entryId = entryId,
+                receiptNo = rec?.receiptNo ?: "ADS-${java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())}",
+                date = rec?.date ?: "17.08.2026",
+                amount = rec?.amount ?: 0.0,
+                paymentMethod = "Otomatik Kart / Banka",
+                status = "paid",
+                customerName = if (isGoogleAds) "Google Ireland Limited / Google Ads" else (rec?.source ?: "Tedarikçi / Kurum"),
+                customerPhone = if (isGoogleAds) "0850 390 20 60" else "-",
+                customerAddress = if (isGoogleAds) "Gordon House, Barrow St, Dublin 4, İrlanda" else "İstanbul",
+                customerDistrict = if (isGoogleAds) "Google Ads Reklam Hesabı" else "İşletme Gideri",
+                deviceBrand = "",
+                deviceModel = "",
+                deviceTested = false,
+                workDescription = rec?.note?.ifBlank { null } ?: if (isGoogleAds) "Google Ads arama ağı ve harita reklam harcaması (Günlük Gider)" else "İşletme gider ödemesi",
+                warrantyMonths = null,
+                serviceTitle = if (isGoogleAds) "GOOGLE ADS REKLAM GİDER DEKONTU" else "FİNANSAL GİDER / HARCAMA DEKONTU"
+            )
+        } else {
+            val isCustomerService = rec?.source?.contains("Servis", ignoreCase = true) == true
+            com.example.data.remote.ReceiptDetailDto(
+                entryId = entryId,
+                receiptNo = rec?.receiptNo ?: if (entryId.isNotBlank()) "SK-202608-${entryId.take(6).uppercase()}" else "SK-202608-6A6F7A",
+                date = rec?.date ?: "10.08.2026",
+                amount = rec?.amount ?: 1000.0,
+                paymentMethod = "Nakit",
+                status = if (rec?.status == "Ödendi") "paid" else "unpaid",
+                customerName = rec?.source ?: "Müşteri",
+                customerPhone = "0537 691 73 61",
+                customerAddress = "Bayrampaşa / İstanbul",
+                customerDistrict = "Bayrampaşa",
+                deviceBrand = if (isCustomerService) "Demirdöküm" else "",
+                deviceModel = if (isCustomerService) "Nitromix" else "",
+                deviceTested = isCustomerService,
+                workDescription = if (rec?.note?.isNotBlank() == true) rec.note else "Kombi bakım ve teknik servis tahsilat işlemi.",
+                warrantyMonths = if (isCustomerService) 12 else null,
+                serviceTitle = if (isCustomerService) "SERVİS & TAHSİLAT MAKBUZU" else "GELİR / TAHSİLAT MAKBUZU"
+            )
+        }
         return Result.success(detail)
     }
 
@@ -981,6 +993,15 @@ class MockAdminRepositoryImpl : AdminRepository {
             )
         )
     )
+
+    override suspend fun getAdsStats(): Result<com.example.data.remote.AdsStatsDto> =
+        Result.success(com.example.data.remote.AdsStatsDto())
+
+    override suspend fun getAdsCampaigns(): Result<List<com.example.data.remote.AdsCampaignDto>> =
+        Result.success(emptyList())
+
+    override suspend fun toggleAdsCampaign(campaignId: String): Result<String> =
+        Result.success("PAUSED")
 
     override fun getGoogleAdsStats(): Flow<com.example.data.model.GoogleAdsStats> = _googleAdsStats.asStateFlow()
 

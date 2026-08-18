@@ -2,6 +2,7 @@ package com.example.data.repository
 
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import com.example.data.local.TokenStore
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
@@ -26,11 +27,14 @@ import com.example.data.model.ReportData
 import com.example.data.model.ReportTimeRange
 import com.example.data.model.StaffMessagingSettings
 import com.example.data.model.WhatsAppStatus
+import com.example.data.remote.AdsCampaignDto
+import com.example.data.remote.AdsStatsDto
 import com.example.data.remote.AdminApiService
 import com.example.data.remote.CompleteJobRequestDto
 import com.example.data.remote.DashboardStatsDto
 import com.example.data.remote.LoginRequestDto
 import com.example.data.remote.StatusUpdateRequestDto
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -122,9 +126,7 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
-    private fun isMockToken(token: String?): Boolean {
-        return token == null || token.startsWith("sk_")
-    }
+    override fun getAuthToken(): Flow<String?> = tokenStore.tokenFlow
 
     private fun authHeader(token: String) = "Bearer $token"
 
@@ -136,19 +138,20 @@ class RemoteAdminRepositoryImpl(
     ): Flow<T> =
         combine(tokenStore.tokenFlow, refreshTrigger) { token, _ -> token }
             .flatMapLatest { token ->
-                if (isMockToken(token)) {
+                if (token.isNullOrBlank()) {
                     fallbackFlow
                 } else {
                     flow {
                         val result = try {
-                            fetch(token!!)
+                            fetch(token)
+                        } catch (e: CancellationException) {
+                            throw e
                         } catch (e: Exception) {
+                            Log.e("RemoteAdminRepo", "authedFlow API error: ${e.message}", e)
                             null
                         }
                         if (result != null) {
                             emit(result)
-                        } else {
-                            fallbackFlow.collect { emit(it) }
                         }
                     }
                 }
@@ -159,27 +162,39 @@ class RemoteAdminRepositoryImpl(
         apiAction: suspend (String) -> Result<T>
     ): Result<T> {
         val token = currentToken()
-        if (isMockToken(token)) {
+        if (token.isNullOrBlank()) {
             return fallbackAction()
         }
         return try {
-            val result = apiAction(token!!)
+            val result = apiAction(token)
             if (result.isSuccess) {
                 try { fallbackAction() } catch (_: Exception) {}
                 result
             } else {
                 fallbackAction()
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             fallbackAction()
         }
     }
 
-    private suspend fun <T> requireToken(onMissing: suspend () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) }, block: suspend (String) -> Result<T>): Result<T> {
-        val token = currentToken() ?: return onMissing()
+    private suspend fun <T> requireToken(
+        onMissing: suspend () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) },
+        block: suspend (String) -> Result<T>
+    ): Result<T> {
+        val token = currentToken()
+        if (token.isNullOrBlank()) {
+            Log.w("RemoteAdminRepo", "requireToken: No token found in TokenStore (session missing)")
+            return onMissing()
+        }
         return try {
             block(token)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
+            Log.e("RemoteAdminRepo", "requireToken API error: ${e.message}", e)
             Result.failure(IllegalStateException("Sunucuya bağlanılamadı: ${e.message}"))
         }
     }
@@ -187,37 +202,44 @@ class RemoteAdminRepositoryImpl(
     // Auth
 
     override suspend fun login(password: String): Result<String> {
+        if (password.isBlank()) {
+            Log.w("Auth", "login: Password is empty/blank")
+            return Result.failure(IllegalArgumentException("Şifre boş bırakılamaz."))
+        }
         return try {
-            val response = api.login(LoginRequestDto(password))
+            Log.d("Auth", "login: Sending POST api/admin/auth/login...")
+            val response = api.login(LoginRequestDto(password.trim()))
+            Log.d("Auth", "login: HTTP Status Code = ${response.code()}")
             if (response.isSuccessful) {
                 val token = response.body()?.token
-                if (token != null) {
+                if (!token.isNullOrBlank()) {
+                    val preview = if (token.length >= 8) token.take(8) else token
+                    Log.d("Auth", "login: SUCCESS (200 OK), tokenStore write: $preview... (len=${token.length})")
                     tokenStore.saveToken(token)
                     Result.success(token)
                 } else {
-                    fallbackLogin(password)
+                    Log.e("Auth", "login: 200 OK returned but token is null or blank!")
+                    Result.failure(IllegalStateException("Sunucudan geçerli bir oturum anahtarı alınamadı."))
                 }
             } else {
-                if (response.code() == 401) {
-                    Result.failure(IllegalStateException("Şifre hatalı."))
-                } else {
-                    fallbackLogin(password)
+                val errorMsg = when (response.code()) {
+                    401 -> "Şifre hatalı."
+                    400 -> "Şifre boş bırakılamaz."
+                    else -> errorMessage(response)
                 }
+                Log.w("Auth", "login: FAILED (HTTP ${response.code()}): $errorMsg")
+                Result.failure(IllegalStateException(errorMsg))
             }
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
-            fallbackLogin(password)
+            Log.e("Auth", "login: Network exception: ${e.message}", e)
+            Result.failure(IllegalStateException("Sunucuya bağlanılamadı: ${e.message}"))
         }
-    }
-
-    private suspend fun fallbackLogin(password: String): Result<String> {
-        val mockRes = fallback.login(password)
-        if (mockRes.isSuccess) {
-            tokenStore.saveToken(mockRes.getOrNull()!!)
-        }
-        return mockRes
     }
 
     override suspend fun logout() {
+        Log.d("Auth", "logout: Clearing token from TokenStore")
         tokenStore.clearToken()
     }
 
@@ -400,6 +422,28 @@ class RemoteAdminRepositoryImpl(
             }
         )
 
+    override suspend fun addCustomers(customers: List<Customer>): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.addCustomers(customers)
+                customersTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                customers.chunked(50).forEach { chunk ->
+                    chunk.forEach { cust ->
+                        try {
+                            api.addCustomer(authHeader(token), cust)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+                    }
+                }
+                customersTrigger.value += 1
+                Result.success(Unit)
+            }
+        )
+
     override suspend fun updateCustomer(customer: Customer): Result<Unit> =
         executeWithFallback(
             fallbackAction = {
@@ -462,6 +506,24 @@ class RemoteAdminRepositoryImpl(
             Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
         }
     }
+
+    override suspend fun deleteFinanceRecord(id: String): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.deleteFinanceRecord(id)
+                financeTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.deleteFinanceRecord(authHeader(token), id)
+                if (response.isSuccessful) {
+                    financeTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    fallback.deleteFinanceRecord(id).also { financeTrigger.value += 1 }
+                }
+            }
+        )
 
     override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> = requireToken { token ->
         val response = api.updateBankAccounts(authHeader(token), accounts)
@@ -666,6 +728,8 @@ class RemoteAdminRepositoryImpl(
                     try {
                         val response = api.getReportData(authHeader(token), timeRange.name)
                         emit(if (response.isSuccessful) response.body() ?: ReportData() else ReportData())
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         emit(ReportData())
                     }
@@ -674,6 +738,34 @@ class RemoteAdminRepositoryImpl(
         }
 
     // Google Ads
+
+    override suspend fun getAdsStats(): Result<AdsStatsDto> = requireToken { token ->
+        val response = api.getAdsStats(authHeader(token))
+        if (response.isSuccessful && response.body() != null) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun getAdsCampaigns(): Result<List<AdsCampaignDto>> = requireToken { token ->
+        val response = api.getAdsCampaigns(authHeader(token))
+        if (response.isSuccessful && response.body() != null) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun toggleAdsCampaign(campaignId: String): Result<String> = requireToken { token ->
+        val response = api.toggleAdsCampaign(authHeader(token), campaignId)
+        if (response.isSuccessful && response.body() != null) {
+            val newStatus = response.body()?.status ?: "PAUSED"
+            Result.success(newStatus)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
 
     override fun getGoogleAdsStats(): Flow<GoogleAdsStats> =
         authedFlow(googleAdsCampaignsTrigger, fallback.getGoogleAdsStats()) { token ->
@@ -709,6 +801,8 @@ class RemoteAdminRepositoryImpl(
                     try {
                         val response = api.getWhatsAppStatus(authHeader(token))
                         emit(if (response.isSuccessful) response.body() ?: WhatsAppStatus() else WhatsAppStatus())
+                    } catch (e: CancellationException) {
+                        throw e
                     } catch (e: Exception) {
                         emit(WhatsAppStatus())
                     }
