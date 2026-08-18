@@ -613,17 +613,50 @@ data class RenderedTemplatePreview(
 )
 
 /**
+ * Metin karşılaştırması için Türkçe karakterleri normalize eder
+ */
+private fun normalizeForMatch(str: String): String {
+    return str.lowercase()
+        .replace("ğ", "g")
+        .replace("ü", "u")
+        .replace("ş", "s")
+        .replace("ı", "i")
+        .replace("ö", "o")
+        .replace("ç", "c")
+}
+
+/**
  * Sunucudan gelen ham şablon parametrelerini ({{customer_name}}, {{service_line}}, vb.)
  * gerçekçi örnek verilerle doldurarak müşteriye gidecek nihai bitmiş haline dönüştürür.
  */
 fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePreview {
-    val id = template.id.lowercase()
-    val title = template.title.lowercase()
-    val tag = template.tag.lowercase()
+    val normId = normalizeForMatch(template.id)
+    val normTitle = normalizeForMatch(template.title)
+    val normTag = normalizeForMatch(template.tag)
+    val normRaw = normalizeForMatch(template.templateText)
     val rawText = template.templateText
 
-    // 1. Randevu Onay Mesajı
-    if (id == "t1" || id.contains("created") || id.contains("confirmed") || title.contains("onay") || tag.contains("onay") || rawText.contains("Randevu Onay", true)) {
+    // 1. Değerlendirme Mesajı / Deneyiminizi Paylaşın (Google Yorumu)
+    if (normId == "t9" || normId.contains("feedback") || normId.contains("degerlendir") || normId.contains("review") ||
+        normTitle.contains("degerlendir") || normTitle.contains("deneyim") || normTitle.contains("yorum") || normTitle.contains("review") || normTitle.contains("feedback") || normTitle.contains("google") ||
+        normTag.contains("degerlendir") || normTag.contains("google") || normTag.contains("yorum") ||
+        normRaw.contains("degerlendir") || normRaw.contains("deneyim") || normRaw.contains("review_url") || normRaw.contains("memnun kaldiniz")
+    ) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Deneyiminizi Paylaşın",
+            bodyText = "Merhaba Fettah Sancaklı,\n\n" +
+                    "Sancak Kombi'den aldığınız Kombi Bakım & Servis hizmetinden memnun kaldınız mı? 🌟\n\n" +
+                    "Değerli yorumunuz ve puanınız, sizlere sunduğumuz hizmet kalitesini geliştirmemiz için çok önemlidir. 💬\n\n" +
+                    "Aşağıdaki butona dokunarak Google üzerinden birkaç saniyede deneyiminizi paylaşabilirsiniz. 👇\n\n" +
+                    "Bizi tercih ettiğiniz için teşekkür ederiz! 🙏\n" +
+                    "Sancak Kombi Teknik Servis",
+            buttons = listOf("↗ Değerlendir (Google)"),
+            timeStamp = "10:02"
+        )
+    }
+
+    // 2. Randevu Onay Mesajı
+    if (normId == "t1" || normId.contains("created") || normId.contains("confirmed") || normTitle.contains("onay") || normTag.contains("onay") || normRaw.contains("randevu onay")) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Randevu Onayı",
             bodyText = "Merhaba Fettah Sancaklı, servis randevunuz başarıyla oluşturulmuştur.\n\n" +
@@ -637,8 +670,8 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
         )
     }
 
-    // 2. Randevu Güncelleme Mesajı
-    if (id == "t2" || id.contains("updated") || title.contains("güncelle") || tag.contains("güncelle") || rawText.contains("Güncelleme", true)) {
+    // 3. Randevu Güncelleme Mesajı
+    if (normId == "t2" || normId.contains("updated") || normTitle.contains("guncelle") || normTag.contains("guncelle") || normRaw.contains("guncelle")) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Randevu Güncelleme",
             bodyText = "Merhaba Fettah Sancaklı, randevu bilgileriniz başarıyla güncellenmiştir.\n\n" +
@@ -653,23 +686,8 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
         )
     }
 
-    // 3. Randevu Hatırlatma
-    if ((id == "t3" || id.contains("reminder") || title.contains("hatırlat") || tag.contains("hatırlat")) && !title.contains("ödeme") && !title.contains("bakım") && template.category == "MUSTERI") {
-        return RenderedTemplatePreview(
-            headerTitle = "Sancak Kombi - Randevu Hatırlatma",
-            bodyText = "Merhaba Fettah Sancaklı, servis randevunuzu hatırlatmak isteriz.\n\n" +
-                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
-                    "🗓️ Tarih: 14.08.2026 Cuma\n" +
-                    "⏰ Saat: 09:00 - 11:00\n" +
-                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\n" +
-                    "Randevu saatinde belirtilen adreste bulunmanızı rica ederiz. Değişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
-            buttons = listOf("📞 Hemen Ara"),
-            timeStamp = "10:00"
-        )
-    }
-
     // 4. Randevu İptali
-    if (id == "t4" || id.contains("cancel") || title.contains("iptal") || tag.contains("iptal") || rawText.contains("İptali", true)) {
+    if (normId == "t4" || normId.contains("cancel") || normTitle.contains("iptal") || normTag.contains("iptal") || normRaw.contains("iptal")) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Randevu İptali",
             bodyText = "Merhaba Fettah Sancaklı, randevunuz talebiniz doğrultusunda iptal edilmiştir.\n\n" +
@@ -683,22 +701,22 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
         )
     }
 
-    // 5. Servis Bilgilendirmesi / Servis Fişi
-    if (id == "t5" || id.contains("completed") || id.contains("receipt") || title.contains("servis") || tag.contains("fiş") || rawText.contains("Servis Bilgilendirmesi", true)) {
+    // 5. Ödeme Hatırlatması (Ödeme Bilgilerinden önce kontrol edilir)
+    if (normId == "t7" || normId.contains("payment_reminder") || (normTitle.contains("odeme") && normTitle.contains("hatirlat")) || normTag.contains("bakiye") || normRaw.contains("odeme taahhudunuz") || normRaw.contains("kalan tutar")) {
         return RenderedTemplatePreview(
-            headerTitle = "Sancak Kombi - Servis Bilgilendirmesi",
-            bodyText = "Merhaba Fettah Sancaklı, servis işleminiz başarıyla tamamlanmıştır. Bizi tercih ettiğiniz için teşekkür ederiz.\n\n" +
+            headerTitle = "Sancak Kombi - Ödeme Hatırlatması",
+            bodyText = "Merhaba Fettah Sancaklı, sistem kayıtlarımıza göre 20.08.2026 tarihi için planlanan ödeme taahhüdünüz bulunmaktadır.\n\n" +
                     "🗓️ Hizmet: Kombi Bakım & Servis\n" +
-                    "🗓️ Tarih: 13.08.2026 Perşembe\n" +
-                    "⏰ Saat: 13:00 - 15:00\n\n" +
-                    "Servis fişinizi aşağıdaki butondan görüntüleyebilir, herhangi bir sorunuzda bizi arayabilirsiniz.",
-            buttons = listOf("↗ Servis Fişini Gör", "📞 Destek Hattı"),
-            timeStamp = "09:59"
+                    "💰 Kalan Tutar: 2.500,00 TL\n\n" +
+                    "Ödemenizi tamamlamanızı rica ederiz. Ödemeyi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız.\n" +
+                    "Sancak Kombi Teknik Servis",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:01"
         )
     }
 
     // 6. Ödeme Bilgileri (Havale / EFT)
-    if (id == "t6" || id.contains("payment_info") || title.contains("ödeme bilgi") || tag.contains("iban") || rawText.contains("IBAN", true)) {
+    if (normId == "t6" || normId.contains("payment_info") || normTitle.contains("odeme bilgi") || normTitle.contains("havale") || normTag.contains("iban") || normRaw.contains("iban")) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Ödeme Bilgileri",
             bodyText = "Merhaba Fettah Sancaklı, Sancak Kombi'yi tercih ettiğiniz için teşekkür ederiz.\n\n" +
@@ -715,22 +733,8 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
         )
     }
 
-    // 7. Ödeme Hatırlatması
-    if (id == "t7" || id.contains("payment_reminder") || title.contains("ödeme hatırlat") || tag.contains("bakiye") || rawText.contains("Ödeme Hatırlatması", true)) {
-        return RenderedTemplatePreview(
-            headerTitle = "Sancak Kombi - Ödeme Hatırlatması",
-            bodyText = "Merhaba Fettah Sancaklı, sistem kayıtlarımıza göre 20.08.2026 tarihi için planlanan ödeme taahhüdünüz bulunmaktadır.\n\n" +
-                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
-                    "💰 Kalan Tutar: 2.500,00 TL\n\n" +
-                    "Ödemenizi tamamlamanızı rica ederiz. Ödemeyi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız.\n" +
-                    "Sancak Kombi Teknik Servis",
-            buttons = listOf("📞 Hemen Ara"),
-            timeStamp = "10:01"
-        )
-    }
-
-    // 8. Periyodik Bakım Zamanı
-    if (id == "t8" || id.contains("maintenance") || title.contains("periyodik") || title.contains("bakım") || rawText.contains("Periyodik Bakım Zamanı", true)) {
+    // 7. Periyodik Bakım Zamanı
+    if (normId == "t8" || normId.contains("maintenance") || normTitle.contains("periyodik") || (normTitle.contains("bakim") && normTitle.contains("zaman")) || normRaw.contains("periyodik bakim") || normRaw.contains("son servis")) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Periyodik Bakım Zamanı",
             bodyText = "Merhaba Fettah Sancaklı, kombinizin verimli ve güvenli çalışması için yıllık periyodik bakım zamanı yaklaşmaktadır.\n\n" +
@@ -743,23 +747,37 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
         )
     }
 
-    // 9. Deneyiminizi Paylaşın (Google Değerlendirme)
-    if (id == "t9" || id.contains("feedback") || title.contains("deneyim") || title.contains("değerlendir") || title.contains("google") || rawText.contains("Deneyiminizi Paylaşın", true)) {
+    // 8. Servis Bilgilendirmesi / Servis Fişi
+    if (normId == "t5" || normId.contains("completed") || normId.contains("receipt") || normTitle.contains("servis bilgilendir") || (normTitle.contains("servis") && normTitle.contains("tamamlan")) || normTag.contains("fis") || normRaw.contains("servis bilgilendir") || normRaw.contains("servis fisinizi")) {
         return RenderedTemplatePreview(
-            headerTitle = "Sancak Kombi - Deneyiminizi Paylaşın",
-            bodyText = "Merhaba Fettah Sancaklı,\n\n" +
-                    "Sancak Kombi'den aldığınız Kombi Bakım & Servis hizmetinden memnun kaldınız mı? 🌟\n\n" +
-                    "Değerli yorumunuz ve puanınız, sizlere sunduğumuz hizmet kalitesini geliştirmemiz için çok önemlidir. 💬\n\n" +
-                    "Aşağıdaki butona dokunarak Google üzerinden birkaç saniyede deneyiminizi paylaşabilirsiniz. 👇\n\n" +
-                    "Bizi tercih ettiğiniz için teşekkür ederiz! 🙏\n" +
-                    "Sancak Kombi Teknik Servis",
-            buttons = listOf("↗ Değerlendir (Google)"),
-            timeStamp = "10:02"
+            headerTitle = "Sancak Kombi - Servis Bilgilendirmesi",
+            bodyText = "Merhaba Fettah Sancaklı, servis işleminiz başarıyla tamamlanmıştır. Bizi tercih ettiğiniz için teşekkür ederiz.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 13.08.2026 Perşembe\n" +
+                    "⏰ Saat: 13:00 - 15:00\n\n" +
+                    "Servis fişinizi aşağıdaki butondan görüntüleyebilir, herhangi bir sorunuzda bizi arayabilirsiniz.",
+            buttons = listOf("↗ Servis Fişini Gör", "📞 Destek Hattı"),
+            timeStamp = "09:59"
+        )
+    }
+
+    // 9. Randevu Hatırlatma (Genel)
+    if ((normId == "t3" || normId.contains("reminder") || normTitle.contains("hatirlat") || normTag.contains("hatirlat")) && !normTitle.contains("odeme") && !normTitle.contains("bakim") && template.category == "MUSTERI") {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu Hatırlatma",
+            bodyText = "Merhaba Fettah Sancaklı, servis randevunuzu hatırlatmak isteriz.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 14.08.2026 Cuma\n" +
+                    "⏰ Saat: 09:00 - 11:00\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\n" +
+                    "Randevu saatinde belirtilen adreste bulunmanızı rica ederiz. Değişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:00"
         )
     }
 
     // 10. USTA - Yeni İş Bildirimi
-    if (template.category == "USTA" && (id == "t10" || title.contains("yeni iş") || tag.contains("atama"))) {
+    if (template.category == "USTA" && (normId == "t10" || normTitle.contains("yeni is") || normTag.contains("atama"))) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Yeni İş Bildirimi",
             bodyText = "🛠️ Yeni Randevu Atandı:\n" +
@@ -775,7 +793,7 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
     }
 
     // 11. USTA - Randevu Hatırlatması
-    if (template.category == "USTA" && (id == "t11" || title.contains("hatırlat"))) {
+    if (template.category == "USTA" && (normId == "t11" || normTitle.contains("hatirlat"))) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Randevu Hatırlatması",
             bodyText = "Sayın Usta, bugün saat 13:00 için Fettah Sancaklı (0532 000 00 00) adresine randevunuz bulunmaktadır.\n" +
@@ -786,7 +804,7 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
     }
 
     // 12. USTA - Günlük Randevu Özeti
-    if (template.category == "USTA" && (id == "t12" || title.contains("özet") || title.contains("günlük"))) {
+    if (template.category == "USTA" && (normId == "t12" || normTitle.contains("ozet") || normTitle.contains("gunluk"))) {
         return RenderedTemplatePreview(
             headerTitle = "Sancak Kombi - Günlük Randevu Özeti",
             bodyText = "Günaydın, bugün için adınıza kayıtlı toplam 4 adet servis randevunuz bulunmaktadır.\n" +
@@ -799,12 +817,16 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
     // 13. Dinamik Değiştirici (Herhangi bir bilinmeyen şablon gelirse {{...}} kalıplarını akıllıca temizler)
     var replaced = rawText
         .replace("{{customer_name}}", "Fettah Sancaklı")
+        .replace("{{service_title}}", "Kombi Bakım & Servis")
         .replace("{{service_line}}", "🗓️ Hizmet: Kombi Bakım & Servis")
         .replace("{{date_line}}", "🗓️ Tarih: 13.08.2026 Perşembe")
         .replace("{{time_line}}", "⏰ Saat: 13:00 - 15:00")
         .replace("{{district_line}}", "📍 İlçe: Bayrampaşa")
         .replace("{{address_line}}", "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa")
+        .replace("{{business_name}}", "Sancak Kombi Teknik Servis")
         .replace("{{business_phone_line}}", "Sancak Kombi · 0212 581 75 74")
+        .replace("{{review_url_line}}", "Aşağıdaki butona dokunarak Google üzerinden birkaç saniyede deneyiminizi paylaşabilirsiniz. 👇")
+        .replace("{{review_url}}", "https://g.page/r/sancakkombi/review")
         .replace("{{amount}}", "2.500,00 TL")
         .replace("{{total_amount}}", "2.500,00 TL")
         .replace("{{bank_name}}", "Kuveyttürk Bankası")
@@ -815,16 +837,22 @@ fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePrevi
     // İlk satır başlık ise ayıkla
     val lines = replaced.split("\n\n", limit = 2)
     val header = if (lines.size > 1 && (lines[0].startsWith("Sancak Kombi") || lines[0].contains("Mesaj"))) {
-        "Sancak Kombi - ${template.title.replace("Mesajı", "").replace("Mesaj", "").trim()}"
+        "Sancak Kombi - ${template.title.replace("Mesajı", "").replace("Mesaj", "").replace("Mesaji", "").trim()}"
     } else {
         "Sancak Kombi - ${template.title}"
     }
     val body = if (lines.size > 1 && (lines[0].startsWith("Sancak Kombi") || lines[0].contains("Mesaj"))) lines[1] else replaced
 
+    val dynamicButtons = if (normTitle.contains("degerlendir") || normTitle.contains("review") || normTitle.contains("yorum")) {
+        listOf("↗ Değerlendir (Google)")
+    } else {
+        template.buttons.ifEmpty { listOf("📞 Hemen Ara") }
+    }
+
     return RenderedTemplatePreview(
         headerTitle = header,
         bodyText = body,
-        buttons = template.buttons.ifEmpty { listOf("📞 Hemen Ara") },
+        buttons = dynamicButtons,
         timeStamp = "10:00"
     )
 }
@@ -938,7 +966,7 @@ private fun WhatsAppTemplateCard(
                                 .fillMaxWidth()
                                 .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 8.dp)
                         ) {
-                            // Kalın Şablon Başlığı (Örn: Sancak Kombi - Randevu Onayı)
+                            // Kalın Şablon Başlığı (Örn: Sancak Kombi - Deneyiminizi Paylaşın)
                             Text(
                                 text = preview.headerTitle,
                                 fontSize = 15.sp,
@@ -1030,7 +1058,7 @@ private fun parseButtonInfo(rawBtn: String): Pair<androidx.compose.ui.graphics.v
         .trim()
 
     val icon = when {
-        rawBtn.contains("↗") || clean.contains("Gör", ignoreCase = true) || clean.contains("Değerlendir", ignoreCase = true) || clean.contains("Panele", ignoreCase = true) -> Icons.AutoMirrored.Filled.OpenInNew
+        rawBtn.contains("↗") || clean.contains("Gör", ignoreCase = true) || clean.contains("Değerlendir", ignoreCase = true) || clean.contains("Degerlendir", ignoreCase = true) || clean.contains("Panele", ignoreCase = true) -> Icons.AutoMirrored.Filled.OpenInNew
         rawBtn.contains("📞") || clean.contains("Ara", ignoreCase = true) || clean.contains("Hat", ignoreCase = true) || clean.contains("Randevu Al", ignoreCase = true) -> Icons.Default.Call
         rawBtn.contains("📍") || clean.contains("Konum", ignoreCase = true) || clean.contains("Adres", ignoreCase = true) -> Icons.Default.LocationOn
         else -> null
