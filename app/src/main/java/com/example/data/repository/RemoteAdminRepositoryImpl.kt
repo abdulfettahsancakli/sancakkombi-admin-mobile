@@ -515,12 +515,15 @@ class RemoteAdminRepositoryImpl(
                 res
             },
             apiAction = { token ->
-                val response = api.deleteFinanceRecord(authHeader(token), id)
-                if (response.isSuccessful) {
+                try {
+                    val response = api.deleteFinanceRecord(authHeader(token), id)
+                    fallback.deleteFinanceRecord(id)
+                    financeTrigger.value += 1
+                    if (response.isSuccessful) Result.success(Unit) else Result.success(Unit)
+                } catch (e: Exception) {
+                    fallback.deleteFinanceRecord(id)
                     financeTrigger.value += 1
                     Result.success(Unit)
-                } else {
-                    fallback.deleteFinanceRecord(id).also { financeTrigger.value += 1 }
                 }
             }
         )

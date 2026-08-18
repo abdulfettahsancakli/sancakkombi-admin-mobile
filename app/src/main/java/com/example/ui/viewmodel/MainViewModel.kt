@@ -454,12 +454,28 @@ class MainViewModel(
     // Finance Actions
     fun addFinanceRecord(record: FinanceRecord) {
         viewModelScope.launch {
+            _financeRecords.value = listOf(record) + _financeRecords.value.filterNot { it.id == record.id }
+            val updated = _financeRecords.value
+            val totalIncome = updated.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
+            val totalExpense = updated.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
+            _financeSummary.value = _financeSummary.value.copy(
+                totalIncome = totalIncome,
+                totalExpense = totalExpense
+            )
             repository.addFinanceRecord(record)
         }
     }
 
     fun deleteFinanceRecord(id: String) {
         viewModelScope.launch {
+            _financeRecords.value = _financeRecords.value.filterNot { it.id == id }
+            val remaining = _financeRecords.value
+            val totalIncome = remaining.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
+            val totalExpense = remaining.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
+            _financeSummary.value = _financeSummary.value.copy(
+                totalIncome = totalIncome,
+                totalExpense = totalExpense
+            )
             repository.deleteFinanceRecord(id)
         }
     }

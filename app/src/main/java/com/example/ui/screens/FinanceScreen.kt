@@ -361,24 +361,59 @@ fun FinanceScreen(
         AlertDialog(
             onDismissRequest = { recordToDelete = null },
             title = {
-                Text(
-                    text = "Finans Kaydını Sil",
-                    fontWeight = FontWeight.Bold,
-                    color = colors.textPrimary
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = colors.dangerColor,
+                        modifier = Modifier.size(22.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Finans Kaydını Sil",
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary,
+                        fontSize = 18.sp
+                    )
+                }
             },
             text = {
-                Text(
-                    text = "\"${rec.source}\" (${rec.date} • ₺%.2f) kaydını silmek istediğinize emin misiniz?".format(rec.amount).replace(".", ","),
-                    color = colors.textSecondary,
-                    fontSize = 13.sp
-                )
+                Column {
+                    Text(
+                        text = "Aşağıdaki finans işlemi sistemden kalıcı olarak silinecektir:",
+                        color = colors.textSecondary,
+                        fontSize = 13.sp
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = colors.tabSelectedBg.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = rec.source,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${rec.date} • ${if (rec.type == FinanceType.GELIR) "+" else "-"}₺%.2f".format(rec.amount).replace(".", ","),
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (rec.type == FinanceType.GELIR) colors.successColor else colors.dangerColor,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
             },
             confirmButton = {
                 Button(
                     onClick = {
-                        onDeleteFinanceRecord(rec.id)
+                        val idToDelete = rec.id
                         recordToDelete = null
+                        onDeleteFinanceRecord(idToDelete)
                         Toast.makeText(context, "Finans kaydı başarıyla silindi.", Toast.LENGTH_SHORT).show()
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = colors.dangerColor)
@@ -1273,36 +1308,45 @@ private fun TransactionRow(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = colors.tabSelectedBg,
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(colors.tabSelectedBg)
+                            .height(30.dp)
                             .clickable { onViewReceipt(record) }
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(imageVector = Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(12.dp), tint = colors.textSecondary)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Receipt, contentDescription = null, modifier = Modifier.size(13.dp), tint = colors.textSecondary)
                             Spacer(modifier = Modifier.width(4.dp))
-                            Text("Makbuz", fontSize = 10.sp, color = colors.textPrimary, fontWeight = FontWeight.Bold)
+                            Text("Makbuz", fontSize = 11.sp, color = colors.textPrimary, fontWeight = FontWeight.Bold)
                         }
                     }
 
-                    Spacer(modifier = Modifier.width(4.dp))
-
-                    Box(
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = colors.dangerColor.copy(alpha = 0.15f),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(colors.dangerColor.copy(alpha = 0.12f))
+                            .size(30.dp)
                             .clickable { onDeleteRecord(record) }
-                            .padding(horizontal = 6.dp, vertical = 3.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Kaydı Sil",
-                            tint = colors.dangerColor,
-                            modifier = Modifier.size(13.dp)
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Kaydı Sil",
+                                tint = colors.dangerColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
                 }
             }
