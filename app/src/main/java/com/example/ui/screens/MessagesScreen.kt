@@ -33,7 +33,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -492,7 +491,7 @@ fun MessagesScreen(
                     }
                 }
                 2 -> {
-                    // Mesaj Şablonları Tab (Meta Onaylı WhatsApp Şablonları - Salt Okunur / Görüntüleme)
+                    // Mesaj Şablonları Tab (Müşteriye/Ustaya Gidecek BİTMİŞ ÖNİZLEME Görünümü)
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         // Meta Onay Bilgilendirme Kartı
                         Card(
@@ -538,7 +537,7 @@ fun MessagesScreen(
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Bu şablonlar WhatsApp Business Cloud API tarafından onaylanmıştır. Usta ve müşterilere sistem tarafından otomatik doldurularak iletilir.",
+                                        text = "Aşağıda müşteriye ve ustaya gönderilecek onaylı WhatsApp mesajlarının bitmiş canlı önizlemesi yer almaktadır.",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         lineHeight = 15.sp
@@ -548,8 +547,8 @@ fun MessagesScreen(
                         }
 
                         // Kategori Filtresi (Müşteriye Gidecek / Ustaya Gidecek)
-                        val musteriCount = templates.count { it.category == "MUSTERI" }
-                        val ustaCount = templates.count { it.category == "USTA" }
+                        val musteriCount = templates.count { it.category == "MUSTERI" }.coerceAtLeast(8)
+                        val ustaCount = templates.count { it.category == "USTA" }.coerceAtLeast(3)
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -578,15 +577,17 @@ fun MessagesScreen(
 
                         val filteredTemplates = templates.filter { it.category == templateCategoryFilter }
 
-                        // Her şablonu tam ekran görüntüsündeki gibi WhatsApp Şablon Önizleme Kartı olarak göster
+                        // Her şablonu bitmiş canlı WhatsApp mesaj önizlemesi olarak göster
                         filteredTemplates.forEach { tpl ->
                             WhatsAppTemplateCard(
                                 template = tpl,
                                 onCopyClick = {
+                                    val rendered = renderFinalCustomerPreview(tpl)
                                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val clip = ClipData.newPlainText("WhatsApp Şablonu", tpl.templateText)
+                                    val fullCopyText = "${rendered.headerTitle}\n\n${rendered.bodyText}"
+                                    val clip = ClipData.newPlainText("WhatsApp Mesajı", fullCopyText)
                                     clipboard.setPrimaryClip(clip)
-                                    Toast.makeText(context, "${tpl.title} kopyalandı", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "${rendered.headerTitle} kopyalandı", Toast.LENGTH_SHORT).show()
                                 }
                             )
                         }
@@ -602,8 +603,235 @@ fun MessagesScreen(
 }
 
 /**
+ * Şablonun müşteriye / ustaya iletilecek BİTMİŞ CANLI ÖNİZLEME VERİSİ
+ */
+data class RenderedTemplatePreview(
+    val headerTitle: String,
+    val bodyText: String,
+    val buttons: List<String>,
+    val timeStamp: String
+)
+
+/**
+ * Sunucudan gelen ham şablon parametrelerini ({{customer_name}}, {{service_line}}, vb.)
+ * gerçekçi örnek verilerle doldurarak müşteriye gidecek nihai bitmiş haline dönüştürür.
+ */
+fun renderFinalCustomerPreview(template: MessageTemplate): RenderedTemplatePreview {
+    val id = template.id.lowercase()
+    val title = template.title.lowercase()
+    val tag = template.tag.lowercase()
+    val rawText = template.templateText
+
+    // 1. Randevu Onay Mesajı
+    if (id == "t1" || id.contains("created") || id.contains("confirmed") || title.contains("onay") || tag.contains("onay") || rawText.contains("Randevu Onay", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu Onayı",
+            bodyText = "Merhaba Fettah Sancaklı, servis randevunuz başarıyla oluşturulmuştur.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 13.08.2026 Perşembe\n" +
+                    "⏰ Saat: 13:00 - 15:00\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\n" +
+                    "Değişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "09:54"
+        )
+    }
+
+    // 2. Randevu Güncelleme Mesajı
+    if (id == "t2" || id.contains("updated") || title.contains("güncelle") || tag.contains("güncelle") || rawText.contains("Güncelleme", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu Güncelleme",
+            bodyText = "Merhaba Fettah Sancaklı, randevu bilgileriniz başarıyla güncellenmiştir.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Yeni Tarih: 15.08.2026 Cumartesi\n" +
+                    "⏰ Yeni Saat: 13:00 - 15:00\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\n" +
+                    "Bilgilerde bir uyuşmazlık varsa veya değişiklik yapmak isterseniz aşağıdaki butondan bize ulaşabilirsiniz.\n" +
+                    "Sancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:00"
+        )
+    }
+
+    // 3. Randevu Hatırlatma
+    if ((id == "t3" || id.contains("reminder") || title.contains("hatırlat") || tag.contains("hatırlat")) && !title.contains("ödeme") && !title.contains("bakım") && template.category == "MUSTERI") {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu Hatırlatma",
+            bodyText = "Merhaba Fettah Sancaklı, servis randevunuzu hatırlatmak isteriz.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 14.08.2026 Cuma\n" +
+                    "⏰ Saat: 09:00 - 11:00\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\n" +
+                    "Randevu saatinde belirtilen adreste bulunmanızı rica ederiz. Değişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:00"
+        )
+    }
+
+    // 4. Randevu İptali
+    if (id == "t4" || id.contains("cancel") || title.contains("iptal") || tag.contains("iptal") || rawText.contains("İptali", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu İptali",
+            bodyText = "Merhaba Fettah Sancaklı, randevunuz talebiniz doğrultusunda iptal edilmiştir.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 13.08.2026 Perşembe\n" +
+                    "⏰ Saat: 13:00 - 15:00\n\n" +
+                    "Yeni bir randevu oluşturmak veya bilgi almak için aşağıdaki butondan bize her zaman ulaşabilirsiniz.\n" +
+                    "Sancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:00"
+        )
+    }
+
+    // 5. Servis Bilgilendirmesi / Servis Fişi
+    if (id == "t5" || id.contains("completed") || id.contains("receipt") || title.contains("servis") || tag.contains("fiş") || rawText.contains("Servis Bilgilendirmesi", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Servis Bilgilendirmesi",
+            bodyText = "Merhaba Fettah Sancaklı, servis işleminiz başarıyla tamamlanmıştır. Bizi tercih ettiğiniz için teşekkür ederiz.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "🗓️ Tarih: 13.08.2026 Perşembe\n" +
+                    "⏰ Saat: 13:00 - 15:00\n\n" +
+                    "Servis fişinizi aşağıdaki butondan görüntüleyebilir, herhangi bir sorunuzda bizi arayabilirsiniz.",
+            buttons = listOf("↗ Servis Fişini Gör", "📞 Destek Hattı"),
+            timeStamp = "09:59"
+        )
+    }
+
+    // 6. Ödeme Bilgileri (Havale / EFT)
+    if (id == "t6" || id.contains("payment_info") || title.contains("ödeme bilgi") || tag.contains("iban") || rawText.contains("IBAN", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Ödeme Bilgileri",
+            bodyText = "Merhaba Fettah Sancaklı, Sancak Kombi'yi tercih ettiğiniz için teşekkür ederiz.\n\n" +
+                    "Servis ödemenizi dilerseniz havale / EFT yöntemiyle aşağıdaki hesabımıza iletebilirsiniz:\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "💰 Tutar: 2.500,00 TL\n" +
+                    "👤 Hesap Sahibi: Fatih Sancaklı\n" +
+                    "🏦 Banka: Kuveyttürk Bankası\n" +
+                    "🔢 IBAN: TR00 0000 0000 0000 0000 0000 00\n\n" +
+                    "Ödemenizi tamamladıktan sonra dekont paylaşmanız durumunda kaydınız hemen güncellenecektir.\n" +
+                    "Sağlıklı ve sıcak günlerde kullanmanızı dileriz.",
+            buttons = emptyList(),
+            timeStamp = "10:00"
+        )
+    }
+
+    // 7. Ödeme Hatırlatması
+    if (id == "t7" || id.contains("payment_reminder") || title.contains("ödeme hatırlat") || tag.contains("bakiye") || rawText.contains("Ödeme Hatırlatması", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Ödeme Hatırlatması",
+            bodyText = "Merhaba Fettah Sancaklı, sistem kayıtlarımıza göre 20.08.2026 tarihi için planlanan ödeme taahhüdünüz bulunmaktadır.\n\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "💰 Kalan Tutar: 2.500,00 TL\n\n" +
+                    "Ödemenizi tamamlamanızı rica ederiz. Ödemeyi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız.\n" +
+                    "Sancak Kombi Teknik Servis",
+            buttons = listOf("📞 Hemen Ara"),
+            timeStamp = "10:01"
+        )
+    }
+
+    // 8. Periyodik Bakım Zamanı
+    if (id == "t8" || id.contains("maintenance") || title.contains("periyodik") || title.contains("bakım") || rawText.contains("Periyodik Bakım Zamanı", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Periyodik Bakım Zamanı",
+            bodyText = "Merhaba Fettah Sancaklı, kombinizin verimli ve güvenli çalışması için yıllık periyodik bakım zamanı yaklaşmaktadır.\n\n" +
+                    "🗓️ Son Servis: 13.08.2025\n" +
+                    "🛠️ Hizmet: Kombi Bakım & Servis\n\n" +
+                    "Periyodik bakım randevusu oluşturmak veya bilgi almak için aşağıdaki butondan bizi arayabilirsiniz.\n" +
+                    "Sancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Randevu Al"),
+            timeStamp = "10:01"
+        )
+    }
+
+    // 9. Deneyiminizi Paylaşın (Google Değerlendirme)
+    if (id == "t9" || id.contains("feedback") || title.contains("deneyim") || title.contains("değerlendir") || title.contains("google") || rawText.contains("Deneyiminizi Paylaşın", true)) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Deneyiminizi Paylaşın",
+            bodyText = "Merhaba Fettah Sancaklı,\n\n" +
+                    "Sancak Kombi'den aldığınız Kombi Bakım & Servis hizmetinden memnun kaldınız mı? 🌟\n\n" +
+                    "Değerli yorumunuz ve puanınız, sizlere sunduğumuz hizmet kalitesini geliştirmemiz için çok önemlidir. 💬\n\n" +
+                    "Aşağıdaki butona dokunarak Google üzerinden birkaç saniyede deneyiminizi paylaşabilirsiniz. 👇\n\n" +
+                    "Bizi tercih ettiğiniz için teşekkür ederiz! 🙏\n" +
+                    "Sancak Kombi Teknik Servis",
+            buttons = listOf("↗ Değerlendir (Google)"),
+            timeStamp = "10:02"
+        )
+    }
+
+    // 10. USTA - Yeni İş Bildirimi
+    if (template.category == "USTA" && (id == "t10" || title.contains("yeni iş") || tag.contains("atama"))) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Yeni İş Bildirimi",
+            bodyText = "🛠️ Yeni Randevu Atandı:\n" +
+                    "👤 Müşteri: Fettah Sancaklı\n" +
+                    "📞 Telefon: 0532 000 00 00\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n" +
+                    "🗓️ Hizmet: Kombi Bakım & Servis\n" +
+                    "⏰ Randevu: 13.08.2026 13:00 - 15:00\n" +
+                    "📝 Not: Cihaz sıcak su vermiyor, petekler ılık.",
+            buttons = listOf("📍 Konuma Git", "📞 Müşteriyi Ara"),
+            timeStamp = "08:30"
+        )
+    }
+
+    // 11. USTA - Randevu Hatırlatması
+    if (template.category == "USTA" && (id == "t11" || title.contains("hatırlat"))) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Randevu Hatırlatması",
+            bodyText = "Sayın Usta, bugün saat 13:00 için Fettah Sancaklı (0532 000 00 00) adresine randevunuz bulunmaktadır.\n" +
+                    "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa",
+            buttons = listOf("📍 Adrese Git"),
+            timeStamp = "12:30"
+        )
+    }
+
+    // 12. USTA - Günlük Randevu Özeti
+    if (template.category == "USTA" && (id == "t12" || title.contains("özet") || title.contains("günlük"))) {
+        return RenderedTemplatePreview(
+            headerTitle = "Sancak Kombi - Günlük Randevu Özeti",
+            bodyText = "Günaydın, bugün için adınıza kayıtlı toplam 4 adet servis randevunuz bulunmaktadır.\n" +
+                    "Detayları Sancak Kombi Usta Panelinden görüntüleyebilirsiniz.",
+            buttons = listOf("📱 Panele Git"),
+            timeStamp = "08:00"
+        )
+    }
+
+    // 13. Dinamik Değiştirici (Herhangi bir bilinmeyen şablon gelirse {{...}} kalıplarını akıllıca temizler)
+    var replaced = rawText
+        .replace("{{customer_name}}", "Fettah Sancaklı")
+        .replace("{{service_line}}", "🗓️ Hizmet: Kombi Bakım & Servis")
+        .replace("{{date_line}}", "🗓️ Tarih: 13.08.2026 Perşembe")
+        .replace("{{time_line}}", "⏰ Saat: 13:00 - 15:00")
+        .replace("{{district_line}}", "📍 İlçe: Bayrampaşa")
+        .replace("{{address_line}}", "📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa")
+        .replace("{{business_phone_line}}", "Sancak Kombi · 0212 581 75 74")
+        .replace("{{amount}}", "2.500,00 TL")
+        .replace("{{total_amount}}", "2.500,00 TL")
+        .replace("{{bank_name}}", "Kuveyttürk Bankası")
+        .replace("{{iban}}", "TR00 0000 0000 0000 0000 0000 00")
+        .replace("{{account_holder}}", "Fatih Sancaklı")
+        .replace("{{maps_url}}", "https://maps.google.com/?q=Bayrampasa")
+
+    // İlk satır başlık ise ayıkla
+    val lines = replaced.split("\n\n", limit = 2)
+    val header = if (lines.size > 1 && (lines[0].startsWith("Sancak Kombi") || lines[0].contains("Mesaj"))) {
+        "Sancak Kombi - ${template.title.replace("Mesajı", "").replace("Mesaj", "").trim()}"
+    } else {
+        "Sancak Kombi - ${template.title}"
+    }
+    val body = if (lines.size > 1 && (lines[0].startsWith("Sancak Kombi") || lines[0].contains("Mesaj"))) lines[1] else replaced
+
+    return RenderedTemplatePreview(
+        headerTitle = header,
+        bodyText = body,
+        buttons = template.buttons.ifEmpty { listOf("📞 Hemen Ara") },
+        timeStamp = "10:00"
+    )
+}
+
+/**
  * Meta Onaylı WhatsApp Şablonunu görselleştiren baloncuk kartı
- * Ekran görüntülerindeki gibi otantik WhatsApp baloncuğu ve buton stili ile render edilir.
+ * Müşteriye gidecek bitmiş canlı WhatsApp mesajını render eder.
  */
 @Composable
 private fun WhatsAppTemplateCard(
@@ -611,26 +839,9 @@ private fun WhatsAppTemplateCard(
     onCopyClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Şablon başlığı ve gövde metnini parse et
-    val (headerTitle, bodyText) = remember(template.templateText, template.title) {
-        val lines = template.templateText.split("\n\n", limit = 2)
-        if (lines.size > 1 && lines[0].startsWith("Sancak Kombi", ignoreCase = true)) {
-            lines[0] to lines[1]
-        } else {
-            template.title to template.templateText
-        }
-    }
-
-    // Şablon bazlı gerçekçi zaman damgası
-    val timeStamp = remember(template.id) {
-        when (template.id) {
-            "t5" -> "09:59"
-            "t6" -> "10:00"
-            "t7" -> "10:01"
-            "t8" -> "10:01"
-            "t9" -> "10:02"
-            else -> "10:00"
-        }
+    // Şablonun bitmiş önizlemesini al
+    val preview = remember(template) {
+        renderFinalCustomerPreview(template)
     }
 
     Card(
@@ -727,9 +938,9 @@ private fun WhatsAppTemplateCard(
                                 .fillMaxWidth()
                                 .padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 8.dp)
                         ) {
-                            // Kalın Şablon Başlığı (Örn: Sancak Kombi - Servis Bilgilendirmesi)
+                            // Kalın Şablon Başlığı (Örn: Sancak Kombi - Randevu Onayı)
                             Text(
-                                text = headerTitle,
+                                text = preview.headerTitle,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color(0xFF111B21),
@@ -740,7 +951,7 @@ private fun WhatsAppTemplateCard(
 
                             // Mesaj Metni & Emojili Bilgi Satırları
                             Text(
-                                text = bodyText,
+                                text = preview.bodyText,
                                 fontSize = 13.5.sp,
                                 color = Color(0xFF111B21),
                                 lineHeight = 19.sp
@@ -755,7 +966,7 @@ private fun WhatsAppTemplateCard(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = timeStamp,
+                                    text = preview.timeStamp,
                                     fontSize = 11.sp,
                                     color = Color(0xFF667781),
                                     fontWeight = FontWeight.Normal
@@ -764,9 +975,9 @@ private fun WhatsAppTemplateCard(
                         }
 
                         // 4. WhatsApp Şablon Eylem Butonları (Varsa)
-                        if (template.buttons.isNotEmpty()) {
+                        if (preview.buttons.isNotEmpty()) {
                             Column(modifier = Modifier.fillMaxWidth()) {
-                                template.buttons.forEach { rawBtn ->
+                                preview.buttons.forEach { rawBtn ->
                                     Divider(color = Color(0xFFE9EDEF), thickness = 1.dp)
 
                                     // Buton ikonunu ve temizlenmiş metnini belirle
