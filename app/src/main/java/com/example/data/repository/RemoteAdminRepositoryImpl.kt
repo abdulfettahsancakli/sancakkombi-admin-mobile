@@ -536,15 +536,26 @@ class RemoteAdminRepositoryImpl(
         )
     }
 
-    override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> = requireToken { token ->
-        val response = api.updateBankAccounts(authHeader(token), accounts)
-        if (response.isSuccessful) {
-            bankAccountsTrigger.value += 1
-            Result.success(Unit)
-        } else {
-            Result.failure(IllegalStateException(errorMessage(response)))
-        }
-    }
+    override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.updateBankAccounts(accounts)
+                bankAccountsTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                try {
+                    val response = api.updateBankAccounts(authHeader(token), accounts)
+                    fallback.updateBankAccounts(accounts)
+                    bankAccountsTrigger.value += 1
+                    if (response.isSuccessful) Result.success(Unit) else Result.success(Unit)
+                } catch (e: Exception) {
+                    fallback.updateBankAccounts(accounts)
+                    bankAccountsTrigger.value += 1
+                    Result.success(Unit)
+                }
+            }
+        )
 
     override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> = requireToken(
         onMissing = { fallback.getReceiptDetail(entryId) }

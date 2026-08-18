@@ -512,6 +512,7 @@ class MainViewModel(
 
     fun updateBankAccounts(accounts: List<BankAccount>) {
         viewModelScope.launch {
+            _bankAccounts.value = accounts
             repository.updateBankAccounts(accounts)
         }
     }

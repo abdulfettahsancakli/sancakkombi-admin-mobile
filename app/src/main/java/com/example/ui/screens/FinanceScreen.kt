@@ -43,13 +43,17 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -67,6 +71,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -1528,7 +1533,15 @@ private fun ReceivableActionBottomSheet(
     }
 }
 
-// Modal BottomSheet for Editing IBANs
+// Helper data class for editing bank account rows
+private data class EditableBankAccountItem(
+    val id: String,
+    val bankName: String,
+    val accountHolder: String,
+    val iban: String
+)
+
+// Modal BottomSheet for Editing Bank Accounts (Bank Name, Account Holder & IBAN)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun IbanEditBottomSheet(
@@ -1538,97 +1551,299 @@ private fun IbanEditBottomSheet(
     onDismiss: () -> Unit,
     onSave: (List<BankAccount>) -> Unit
 ) {
-    var iban1 by remember { mutableStateOf(bankAccounts.getOrNull(0)?.iban ?: "") }
-    var iban2 by remember { mutableStateOf(bankAccounts.getOrNull(1)?.iban ?: "") }
-    var iban3 by remember { mutableStateOf(bankAccounts.getOrNull(2)?.iban ?: "") }
+    val items = remember(bankAccounts) {
+        val initial = if (bankAccounts.isNotEmpty()) {
+            bankAccounts.map {
+                EditableBankAccountItem(
+                    id = it.id,
+                    bankName = it.bankName.ifBlank { it.cardTitle },
+                    accountHolder = it.accountHolder,
+                    iban = it.iban
+                )
+            }
+        } else {
+            listOf(
+                EditableBankAccountItem("b1", "YAPI KREDİ", "Fatih Sancaklı", "TR33 0006 7010 0000 0012 3456 78"),
+                EditableBankAccountItem("b2", "AKBANK", "Abdulfettah Sancaklı", "TR62 0004 6001 2345 6789 0123 45"),
+                EditableBankAccountItem("b3", "KUVEYT TÜRK", "Abdullah Sancaklı", "TR12 0020 5000 0012 3456 7890 12")
+            )
+        }
+        mutableStateListOf<EditableBankAccountItem>().apply { addAll(initial) }
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.bottomSheetBg,
-        scrimColor = Color.Black.copy(alpha = 0.5f)
+        scrimColor = Color.Black.copy(alpha = 0.6f),
+        dragHandle = { BottomSheetDefaults.DragHandle() }
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 12.dp)
+                .padding(horizontal = 20.dp)
                 .verticalScroll(rememberScrollState())
         ) {
-            Text("IBAN Hesapları Güncelleme", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-            Text("Müşterilere iletilen banka IBAN bilgilerinizi düzenleyin", fontSize = 12.sp, color = colors.textSecondary)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(CircleShape)
+                        .background(colors.successColor.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.AccountBalance,
+                        contentDescription = null,
+                        tint = colors.successColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text(
+                        text = "Banka & IBAN Hesaplarını Düzenle",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colors.textPrimary
+                    )
+                    Text(
+                        text = "Banka adı, hesap sahibi ve IBAN numaralarını güncelleyin",
+                        fontSize = 12.sp,
+                        color = colors.textSecondary
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("YAPI KREDİ - Fatih Sancaklı", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.successColor)
-            OutlinedTextField(
-                value = iban1,
-                onValueChange = { iban1 = it },
+            items.forEachIndexed { index, item ->
+                val cardAccentColor = when {
+                    item.bankName.contains("YAPI", ignoreCase = true) -> Color(0xFF0047BB)
+                    item.bankName.contains("AKBANK", ignoreCase = true) -> Color(0xFFE20613)
+                    item.bankName.contains("KUVEYT", ignoreCase = true) -> Color(0xFF008752)
+                    item.bankName.contains("GARANTİ", ignoreCase = true) -> Color(0xFF00A34E)
+                    else -> colors.successColor
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = colors.tabSelectedBg.copy(alpha = 0.6f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 14.dp)
+                ) {
+                    Column(modifier = Modifier.padding(14.dp)) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(24.dp)
+                                        .clip(CircleShape)
+                                        .background(cardAccentColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "${index + 1}",
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    text = if (item.bankName.isNotBlank()) item.bankName else "Banka Hesabı #${index + 1}",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = colors.textPrimary
+                                )
+                            }
+
+                            if (items.size > 1) {
+                                IconButton(
+                                    onClick = { items.removeAt(index) },
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "Hesabı Kaldır",
+                                        tint = colors.dangerColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Banka İsmi
+                        Text(
+                            text = "Banka İsmi",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = item.bankName,
+                            onValueChange = { newName ->
+                                items[index] = item.copy(bankName = newName)
+                            },
+                            placeholder = { Text("Örn: YAPI KREDİ, AKBANK, ZİRAAT...", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(16.dp), tint = cardAccentColor)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = cardAccentColor,
+                                unfocusedBorderColor = colors.cardBorder,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary,
+                                focusedContainerColor = colors.inputBg,
+                                unfocusedContainerColor = colors.inputBg
+                            ),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Hesap Sahibi
+                        Text(
+                            text = "Hesap Sahibi (Ad Soyad)",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = item.accountHolder,
+                            onValueChange = { newHolder ->
+                                items[index] = item.copy(accountHolder = newHolder)
+                            },
+                            placeholder = { Text("Örn: Fatih Sancaklı", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.warningColor)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = colors.warningColor,
+                                unfocusedBorderColor = colors.cardBorder,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary,
+                                focusedContainerColor = colors.inputBg,
+                                unfocusedContainerColor = colors.inputBg
+                            ),
+                            singleLine = true
+                        )
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // IBAN
+                        Text(
+                            text = "IBAN Numarası",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = colors.textSecondary
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        OutlinedTextField(
+                            value = item.iban,
+                            onValueChange = { newIban ->
+                                items[index] = item.copy(iban = newIban)
+                            },
+                            placeholder = { Text("TR00 0000 0000 0000 0000 0000 00", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
+                            leadingIcon = {
+                                Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.dangerColor)
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = colors.dangerColor,
+                                unfocusedBorderColor = colors.cardBorder,
+                                focusedTextColor = colors.textPrimary,
+                                unfocusedTextColor = colors.textPrimary,
+                                focusedContainerColor = colors.inputBg,
+                                unfocusedContainerColor = colors.inputBg
+                            ),
+                            singleLine = true
+                        )
+                    }
+                }
+            }
+
+            // Yeni Banka Ekle Butonu
+            OutlinedButton(
+                onClick = {
+                    val nextId = "b_${System.currentTimeMillis()}"
+                    items.add(
+                        EditableBankAccountItem(
+                            id = nextId,
+                            bankName = "",
+                            accountHolder = "",
+                            iban = "TR"
+                        )
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.successColor,
-                    unfocusedBorderColor = colors.cardBorder,
-                    focusedTextColor = colors.textPrimary,
-                    unfocusedTextColor = colors.textPrimary,
-                    focusedContainerColor = colors.inputBg,
-                    unfocusedContainerColor = colors.inputBg
-                ),
-                singleLine = true
-            )
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.successColor),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.successColor.copy(alpha = 0.6f))
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Yeni Banka Hesabı Ekle", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("AKBANK - Abdulfettah Sancaklı", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.dangerColor)
-            OutlinedTextField(
-                value = iban2,
-                onValueChange = { iban2 = it },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.dangerColor,
-                    unfocusedBorderColor = colors.cardBorder,
-                    focusedTextColor = colors.textPrimary,
-                    unfocusedTextColor = colors.textPrimary,
-                    focusedContainerColor = colors.inputBg,
-                    unfocusedContainerColor = colors.inputBg
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("KUVEYT TÜRK - Abdullah Sancaklı", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = colors.warningColor)
-            OutlinedTextField(
-                value = iban3,
-                onValueChange = { iban3 = it },
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = colors.warningColor,
-                    unfocusedBorderColor = colors.cardBorder,
-                    focusedTextColor = colors.textPrimary,
-                    unfocusedTextColor = colors.textPrimary,
-                    focusedContainerColor = colors.inputBg,
-                    unfocusedContainerColor = colors.inputBg
-                ),
-                singleLine = true
-            )
-
-            Spacer(modifier = Modifier.height(20.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
                 onClick = {
-                    val updated = listOf(
-                        BankAccount("b1", "YAPI KREDİ", "Fatih Sancaklı", "YAPI KREDİ", iban1),
-                        BankAccount("b2", "AKBANK", "Abdulfettah Sancaklı", "AKBANK", iban2),
-                        BankAccount("b3", "KUVEYT TÜRK", "Abdullah Sancaklı", "KUVEYT TÜRK", iban3)
-                    )
+                    val validList = items.filter { it.bankName.isNotBlank() || it.iban.isNotBlank() }
+                    if (validList.isEmpty()) {
+                        Toast.makeText(context, "Lütfen en az bir banka bilgisi giriniz.", Toast.LENGTH_SHORT).show()
+                        return@Button
+                    }
+                    val updated = validList.map {
+                        val bankTitle = it.bankName.trim().ifBlank { "BANKA HESABI" }
+                        BankAccount(
+                            id = it.id,
+                            cardTitle = bankTitle.uppercase(java.util.Locale.getDefault()),
+                            accountHolder = it.accountHolder.trim().ifBlank { "Sancak Kombi Yetkilisi" },
+                            bankName = bankTitle.uppercase(java.util.Locale.getDefault()),
+                            iban = it.iban.trim(),
+                            isReady = true
+                        )
+                    }
                     onSave(updated)
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.successColor)
             ) {
-                Text("Değişiklikleri Kaydet", fontWeight = FontWeight.Bold, color = Color.White)
+                Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp), tint = Color.White)
+                Spacer(modifier = Modifier.width(6.dp))
+                Text("Değişiklikleri Kaydet", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            OutlinedButton(
+                onClick = onDismiss,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textSecondary),
+                border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
+            ) {
+                Text("Vazgeç", fontSize = 13.sp)
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
         }
     }
 }
