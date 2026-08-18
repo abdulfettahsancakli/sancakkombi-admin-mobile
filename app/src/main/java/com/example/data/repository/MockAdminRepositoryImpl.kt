@@ -221,80 +221,99 @@ class MockAdminRepositoryImpl : AdminRepository {
     private val initialMessageTemplates = listOf(
         MessageTemplate(
             id = "t1",
-            title = "Randevu Onay Mesajı",
-            tag = "Onay SMS",
+            title = "Sancak Kombi - Randevu Onayı",
+            tag = "Onay Bildirimi",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nMerhaba {musteri_adi},\nRandevu bilgileriniz aşağıdaki gibidir.\nHizmet: {hizmet}\nTarih: {tarih}\nSaat: {saat}\nİlçe: {ilce}\nAdres: {adres}\nBilgi: 0539 267 77 00\nKonum için aşağıdaki linke tıklayın:\nhttps://maps.google.com/?q={konum}"
+            templateText = "Sancak Kombi - Randevu Onayı\n\nMerhaba Fettah Sancaklı, servis randevunuz başarıyla oluşturulmuştur.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n🗓️ Tarih: 13.08.2026 Perşembe\n⏰ Saat: 13:00 - 15:00\n📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\nDeğişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
+            buttons = listOf("📞 Hemen Ara")
         ),
         MessageTemplate(
             id = "t2",
-            title = "Randevu Güncelleme Mesajı",
+            title = "Sancak Kombi - Randevu Güncelleme",
             tag = "Güncelleme Bilgisi",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nMerhaba {musteri_adi}, randevu bilgileriniz güncellenmiştir.\nHizmet: {hizmet}\nYeni Tarih: {tarih} - {saat}"
+            templateText = "Sancak Kombi - Randevu Güncelleme\n\nMerhaba Fettah Sancaklı, randevu bilgileriniz başarıyla güncellenmiştir.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n🗓️ Yeni Tarih: 15.08.2026 Cumartesi\n⏰ Yeni Saat: 13:00 - 15:00\n📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\nBilgilerde bir uyuşmazlık varsa veya değişiklik yapmak isterseniz aşağıdaki butondan bize ulaşabilirsiniz.\nSancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Hemen Ara")
         ),
         MessageTemplate(
             id = "t3",
-            title = "Randevu Hatırlatma Mesajı",
-            tag = "Randevu Hatırlatması",
+            title = "Sancak Kombi - Randevu Hatırlatma",
+            tag = "Hatırlatma",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nSayın {musteri_adi}, bugün {saat} saatleri arasındaki randevunuzu hatırlatmak isteriz."
+            templateText = "Sancak Kombi - Randevu Hatırlatma\n\nMerhaba Fettah Sancaklı, servis randevunuzu hatırlatmak isteriz.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n🗓️ Tarih: 14.08.2026 Cuma\n⏰ Saat: 09:00 - 11:00\n📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n\nRandevu saatinde belirtilen adreste bulunmanızı rica ederiz. Değişiklik veya bilgi talebiniz için aşağıdaki butondan bizi arayabilirsiniz.",
+            buttons = listOf("📞 Hemen Ara")
         ),
         MessageTemplate(
             id = "t4",
-            title = "Randevu İptal Mesajı",
+            title = "Sancak Kombi - Randevu İptali",
             tag = "İptal Bilgisi",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nSayın {musteri_adi}, {tarih} tarihli randevunuz iptal edilmiştir."
+            templateText = "Sancak Kombi - Randevu İptali\n\nMerhaba Fettah Sancaklı, randevunuz talebiniz doğrultusunda iptal edilmiştir.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n🗓️ Tarih: 13.08.2026 Perşembe\n⏰ Saat: 13:00 - 15:00\n\nYeni bir randevu oluşturmak veya bilgi almak için aşağıdaki butondan bize her zaman ulaşabilirsiniz.\nSancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Hemen Ara")
         ),
         MessageTemplate(
             id = "t5",
-            title = "Randevu Tamamlandı Mesajı",
-            tag = "Tamamlandı Bilgisi",
+            title = "Sancak Kombi - Servis Bilgilendirmesi",
+            tag = "Tamamlandı / Servis Fişi",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nSayın {musteri_adi}, servisimiz tamamlanmıştır. Bizi tercih ettiğiniz için teşekkür ederiz."
+            templateText = "Sancak Kombi - Servis Bilgilendirmesi\n\nMerhaba Fettah Sancaklı, servis işleminiz başarıyla tamamlanmıştır. Bizi tercih ettiğiniz için teşekkür ederiz.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n🗓️ Tarih: 13.08.2026 Perşembe\n⏰ Saat: 13:00 - 15:00\n\nServis fişinizi aşağıdaki butondan görüntüleyebilir, herhangi bir sorunuzda bizi arayabilirsiniz.",
+            buttons = listOf("↗ Servis Fişini Gör", "📞 Destek Hattı")
         ),
         MessageTemplate(
             id = "t6",
-            title = "Havale / EFT Ödeme Bilgisi",
-            tag = "Havale / EFT Bilgisi",
+            title = "Sancak Kombi - Ödeme Bilgileri",
+            tag = "Havale / EFT IBAN",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nIBAN: TR12 0006 2000 0001 0000 0123 457\nAlıcı: Sancak Kombi Isı Sistemleri"
+            templateText = "Sancak Kombi - Ödeme Bilgileri\n\nMerhaba Fettah Sancaklı, Sancak Kombi'yi tercih ettiğiniz için teşekkür ederiz.\n\nServis ödemenizi dilerseniz havale / EFT yöntemiyle aşağıdaki hesabımıza iletebilirsiniz:\n\n🗓️ Hizmet: Kombi Bakım & Servis\n💰 Tutar: 2.500,00 TL\n👤 Hesap Sahibi: Fatih Sancaklı\n🏦 Banka: Kuveyttürk Bankası\n🔢 IBAN: TR00 0000 0000 0000 0000 0000 00\n\nÖdemenizi tamamladıktan sonra dekont paylaşmanız durumunda kaydınız hemen güncellenecektir.\nSağlıklı ve sıcak günlerde kullanmanızı dileriz.",
+            buttons = emptyList()
         ),
         MessageTemplate(
             id = "t7",
-            title = "Değerlendirme Mesajı",
-            tag = "Değerlendirme Mesajı",
+            title = "Sancak Kombi - Ödeme Hatırlatması",
+            tag = "Açık Bakiye Hatırlatıcı",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nHizmetimizi değerlendirmek için lütfen bağlantıya tıklayın: https://sancakkombi.com/degerlendir"
+            templateText = "Sancak Kombi - Ödeme Hatırlatması\n\nMerhaba Fettah Sancaklı, sistem kayıtlarımıza göre 20.08.2026 tarihi için planlanan ödeme taahhüdünüz bulunmaktadır.\n\n🗓️ Hizmet: Kombi Bakım & Servis\n💰 Kalan Tutar: 2.500,00 TL\n\nÖdemenizi tamamlamanızı rica ederiz. Ödemeyi gerçekleştirdiyseniz lütfen bu mesajı dikkate almayınız.\nSancak Kombi Teknik Servis",
+            buttons = listOf("📞 Hemen Ara")
         ),
         MessageTemplate(
             id = "t8",
-            title = "Bakım Hatırlatma Mesajı",
-            tag = "Bakım Hatırlatması",
+            title = "Sancak Kombi - Periyodik Bakım Zamanı",
+            tag = "Yıllık Bakım",
             category = "MUSTERI",
-            templateText = "Sancak Kombi\nSayın {musteri_adi}, cihazınızın periyodik bakım zamanı gelmiştir. Randevu almak için bize ulaşabilirsiniz."
+            templateText = "Sancak Kombi - Periyodik Bakım Zamanı\n\nMerhaba Fettah Sancaklı, kombinizin verimli ve güvenli çalışması için yıllık periyodik bakım zamanı yaklaşmaktadır.\n\n🗓️ Son Servis: 13.08.2025\n🛠️ Hizmet: Kombi Bakım & Servis\n\nPeriyodik bakım randevusu oluşturmak veya bilgi almak için aşağıdaki butondan bizi arayabilirsiniz.\nSancak Kombi · 0212 581 75 74",
+            buttons = listOf("📞 Randevu Al")
         ),
         MessageTemplate(
             id = "t9",
-            title = "Yeni Randevu Bildirimi",
-            tag = "Yeni İş",
-            category = "USTA",
-            templateText = "Sancak Kombi - Usta Bildirimi\nYeni Randevu Atandı:\nMüşteri: {musteri_adi}\nTelefon: {telefon}\nAdres: {adres}\nHizmet: {hizmet}\nTarih: {tarih} {saat}"
+            title = "Sancak Kombi - Deneyiminizi Paylaşın",
+            tag = "Google Değerlendirme",
+            category = "MUSTERI",
+            templateText = "Sancak Kombi - Deneyiminizi Paylaşın\n\nMerhaba Fettah Sancaklı,\n\nSancak Kombi'den aldığınız Kombi Bakım & Servis hizmetinden memnun kaldınız mı? 🌟\n\nDeğerli yorumunuz ve puanınız, sizlere sunduğumuz hizmet kalitesini geliştirmemiz için çok önemlidir. 💬\n\nAşağıdaki butona dokunarak Google üzerinden birkaç saniyede deneyiminizi paylaşabilirsiniz. 👇\n\nBizi tercih ettiğiniz için teşekkür ederiz! 🙏\nSancak Kombi Teknik Servis",
+            buttons = listOf("↗ Değerlendir (Google)")
         ),
         MessageTemplate(
             id = "t10",
-            title = "Usta Randevu Hatırlatması",
-            tag = "Hatırlatma",
+            title = "Sancak Kombi - Yeni İş Bildirimi",
+            tag = "Usta Ataması",
             category = "USTA",
-            templateText = "Hatırlatma: Bugün saat {saat} için {musteri_adi} adresine randevunuz bulunmaktadır."
+            templateText = "Sancak Kombi - Yeni İş Bildirimi\n\n🛠️ Yeni Randevu Atandı:\n👤 Müşteri: Fettah Sancaklı\n📞 Telefon: 0532 000 00 00\n📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa\n🗓️ Hizmet: Kombi Bakım & Servis\n⏰ Randevu: 13.08.2026 13:00 - 15:00\n📝 Not: Cihaz sıcak su vermiyor, petekler ılık.",
+            buttons = listOf("📍 Konuma Git", "📞 Müşteriyi Ara")
         ),
         MessageTemplate(
             id = "t11",
-            title = "Günlük Randevu Özeti",
+            title = "Sancak Kombi - Usta Randevu Hatırlatması",
+            tag = "Hatırlatma",
+            category = "USTA",
+            templateText = "Sancak Kombi - Randevu Hatırlatması\n\nSayın Usta, bugün saat 13:00 için Fettah Sancaklı (0532 000 00 00) adresine randevunuz bulunmaktadır.\n📍 Adres: Yıldırım Mah. Ardıç Sokak No:5, Bayrampaşa",
+            buttons = listOf("📍 Adrese Git")
+        ),
+        MessageTemplate(
+            id = "t12",
+            title = "Sancak Kombi - Günlük Randevu Özeti",
             tag = "Günlük Özet",
             category = "USTA",
-            templateText = "Sancak Kombi - Bugün için tanımlı toplam {randevu_sayisi} randevunuz bulunmaktadır."
+            templateText = "Sancak Kombi - Günlük Randevu Özeti\n\nGünaydın, bugün için adınıza kayıtlı toplam 4 adet servis randevunuz bulunmaktadır.\nDetayları Sancak Kombi Usta Panelinden görüntüleyebilirsiniz.",
+            buttons = listOf("📱 Panele Git")
         )
     )
 

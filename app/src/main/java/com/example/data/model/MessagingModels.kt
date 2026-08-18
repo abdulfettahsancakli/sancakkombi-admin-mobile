@@ -35,7 +35,8 @@ data class MessageTemplate(
     val title: String,
     val tag: String,
     val category: String, // "MUSTERI" or "USTA"
-    val templateText: String
+    val templateText: String,
+    val buttons: List<String> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
