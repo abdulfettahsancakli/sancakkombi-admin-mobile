@@ -308,44 +308,7 @@ class MainViewModel(
     }
 
     fun syncGoogleAdsSpendToFinance(customSpend: Double? = null, force: Boolean = false) {
-        viewModelScope.launch {
-            val statsSpend = _adsStats.value?.totalSpend ?: 0.0
-            val campaignsSpend = _adsCampaigns.value.sumOf { it.spend }
-            val resolvedSpend = customSpend
-                ?: (if (statsSpend > 0.0) statsSpend else if (campaignsSpend > 0.0) campaignsSpend else 0.0)
-
-            if (resolvedSpend <= 0.0) return@launch
-
-            val todayStr = java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault()).format(java.util.Date())
-            val timeStr = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date())
-            val receiptDateCode = java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.getDefault()).format(java.util.Date())
-
-            // Kullanıcı bugünkü reklam giderini sildiyse ve manuel zorlama yapılmadıysa otomatik yeniden oluşturma
-            if (!force && (todayStr in deletedAdsExpenseDates || deletedFinanceRecordIds.any { it.contains("ads_expense_${todayStr.replace(".", "_")}") || it.contains("ads_") })) {
-                return@launch
-            }
-
-            val existing = _financeRecords.value.find {
-                it.date == todayStr && (it.source.contains("Google Ads", ignoreCase = true) || it.id.startsWith("ads_expense_"))
-            }
-
-            // Eğer bugün için kayıt zaten varsa ve tutar aynıysa veya force edilmemişse tekrar ekleme/çağırma yapma
-            if (existing != null && !force && kotlin.math.abs(existing.amount - resolvedSpend) < 0.01) {
-                return@launch
-            }
-
-            val record = FinanceRecord(
-                id = existing?.id ?: "ads_expense_${todayStr.replace(".", "_")}",
-                date = todayStr,
-                type = com.example.data.model.FinanceType.GIDER,
-                amount = resolvedSpend,
-                status = "Ödendi",
-                source = "Google Ads Reklam Harcaması",
-                note = "Günlük senkronize reklam gideri (Son sync: $timeStr)",
-                receiptNo = existing?.receiptNo ?: "ADS-$receiptDateCode"
-            )
-            repository.addFinanceRecord(record)
-        }
+        // Otomatik Google Ads gideri eklenmesi tamamen devre disi birakildi.
     }
 
     fun fetchAdsData(onComplete: ((Boolean) -> Unit)? = null) {
