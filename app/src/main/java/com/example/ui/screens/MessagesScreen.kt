@@ -1,7 +1,6 @@
 package com.example.ui.screens
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,14 +17,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,8 +37,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
@@ -71,17 +67,17 @@ import com.example.data.model.StaffMessagingSettings
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(
-    stats: MessagingStats,
+    stats: MessagingStats = MessagingStats(),
     customerSettings: CustomerMessagingSettings,
     staffSettings: StaffMessagingSettings,
     templates: List<MessageTemplate>,
-    jobs: List<MessageJob>,
-    logs: List<MessageLog>,
+    jobs: List<MessageJob> = emptyList(),
+    logs: List<MessageLog> = emptyList(),
     onBackClick: () -> Unit,
     onUpdateCustomerSettings: (CustomerMessagingSettings) -> Unit,
     onUpdateStaffSettings: (StaffMessagingSettings) -> Unit,
     onUpdateTemplate: (MessageTemplate) -> Unit,
-    onRetryJob: (String) -> Unit,
+    onRetryJob: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -89,18 +85,16 @@ fun MessagesScreen(
     var templateCategoryFilter by remember { mutableStateOf("MUSTERI") } // "MUSTERI" or "USTA"
     var editingTemplate by remember { mutableStateOf<MessageTemplate?>(null) }
 
-    // Local copy of customer settings for form inputs
+    // Local copy of customer settings for form inputs (Channel is strictly WhatsApp)
     var custActive by remember(customerSettings) { mutableStateOf(customerSettings.isNotificationsActive) }
-    var custChannel by remember(customerSettings) { mutableStateOf(customerSettings.selectedChannel) }
     var custAutoCreated by remember(customerSettings) { mutableStateOf(customerSettings.autoSendOnAppointmentCreated) }
     var custAutoUpdated by remember(customerSettings) { mutableStateOf(customerSettings.autoSendOnAppointmentUpdated) }
     var custReminderHours by remember(customerSettings) { mutableStateOf(customerSettings.reminderHoursBefore.toString()) }
     var custAutoFeedback by remember(customerSettings) { mutableStateOf(customerSettings.autoSendFeedbackAfterAppointment) }
     var custFeedbackDays by remember(customerSettings) { mutableStateOf(customerSettings.feedbackDaysAfter.toString()) }
 
-    // Local copy of staff settings for form inputs
+    // Local copy of staff settings for form inputs (Channel is strictly WhatsApp)
     var staffActive by remember(staffSettings) { mutableStateOf(staffSettings.isNotificationsActive) }
-    var staffChannel by remember(staffSettings) { mutableStateOf(staffSettings.selectedChannel) }
     var staffAutoDaily by remember(staffSettings) { mutableStateOf(staffSettings.autoSendDailyAppointmentSummary) }
     var staffDailyTime by remember(staffSettings) { mutableStateOf(staffSettings.dailySummaryTime) }
     var staffAutoReminder by remember(staffSettings) { mutableStateOf(staffSettings.autoSendAppointmentReminder) }
@@ -132,63 +126,16 @@ fun MessagesScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Mesajlar",
+                        text = "Mesaj Sistemi",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Müşteri ayarları, personel bildirimleri, şablonlar ve gönderim kuyruğu.",
+                        text = "Müşteri ve usta WhatsApp bildirimleri ile mesaj şablonları.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-            }
-        }
-
-        // Summary Cards (3 Cards)
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Gönderildi Card
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("GÖNDERİLDİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(stats.gonderildiCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF22C55E))
-                    }
-                }
-
-                // Bekleyen Job Card
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("BEKLEYEN JOB", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(stats.bekleyenCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEAB308))
-                    }
-                }
-
-                // Başarısız Card
-                Card(
-                    modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
-                        Text("BAŞARISIZ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(stats.basarisizCount.toString(), fontSize = 18.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFEF4444))
-                    }
                 }
             }
         }
@@ -263,66 +210,65 @@ fun MessagesScreen(
 
                             Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                            Text("Mesajlar Hangi Kanal Üzerinden Gönderilsin?", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            
-                            // Channel options
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            // Otomatik WhatsApp Kanal Bilgisi (SMS Kaldırıldı)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = 1.5.dp,
+                                        color = Color(0xFF22C55E).copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF22C55E).copy(alpha = 0.08f))
                             ) {
-                                // SMS Card
-                                Card(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .border(
-                                            width = if (custChannel == "SMS") 2.dp else 1.dp,
-                                            color = if (custChannel == "SMS") Color(0xFF22C55E) else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable { custChannel = "SMS" },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF25D366)),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        RadioButton(
-                                            selected = custChannel == "SMS",
-                                            onClick = { custChannel = "SMS" },
-                                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF22C55E))
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Chat,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
                                         )
-                                        Column {
-                                            Text("SMS", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Kısa hatırlatma ve durum mesajları SMS olarak gitsin.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
                                     }
-                                }
-
-                                // WhatsApp Card
-                                Card(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .border(
-                                            width = if (custChannel == "WhatsApp") 2.dp else 1.dp,
-                                            color = if (custChannel == "WhatsApp") Color(0xFF22C55E) else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable { custChannel = "WhatsApp" },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        RadioButton(
-                                            selected = custChannel == "WhatsApp",
-                                            onClick = { custChannel = "WhatsApp" },
-                                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF22C55E))
-                                        )
-                                        Column {
-                                            Text("WhatsApp", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Müşteriyle yazışma ve hatırlatmalar WhatsApp üzerinden gitsin.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Gönderim Kanalı: WhatsApp",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFF22C55E).copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "Otomatik",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF15803D),
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
                                         }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Tüm müşteri randevu, hatırlatma ve onay mesajları doğrudan WhatsApp üzerinden iletilir.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            lineHeight = 15.sp
+                                        )
                                     }
                                 }
                             }
@@ -375,7 +321,7 @@ fun MessagesScreen(
                                 onClick = {
                                     val updated = CustomerMessagingSettings(
                                         isNotificationsActive = custActive,
-                                        selectedChannel = custChannel,
+                                        selectedChannel = "WhatsApp",
                                         autoSendOnAppointmentCreated = custAutoCreated,
                                         autoSendOnAppointmentUpdated = custAutoUpdated,
                                         reminderHoursBefore = custReminderHours.toIntOrNull() ?: 2,
@@ -383,7 +329,7 @@ fun MessagesScreen(
                                         feedbackDaysAfter = custFeedbackDays.toIntOrNull() ?: 2
                                     )
                                     onUpdateCustomerSettings(updated)
-                                    Toast.makeText(context, "Müşteri mesaj ayarları güncellendi", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Müşteri mesaj ayarları güncellendi (WhatsApp)", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E))
@@ -421,63 +367,65 @@ fun MessagesScreen(
 
                             Divider(color = MaterialTheme.colorScheme.outlineVariant)
 
-                            Text("Mesajlar Hangi Kanal Üzerinden Gönderilsin?", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            // Otomatik WhatsApp Kanal Bilgisi (SMS Kaldırıldı)
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .border(
+                                        width = 1.5.dp,
+                                        color = Color(0xFF22C55E).copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(12.dp)
+                                    ),
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFF22C55E).copy(alpha = 0.08f))
                             ) {
-                                Card(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .border(
-                                            width = if (staffChannel == "WhatsApp") 2.dp else 1.dp,
-                                            color = if (staffChannel == "WhatsApp") Color(0xFF22C55E) else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable { staffChannel = "WhatsApp" },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                Row(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                    Box(
+                                        modifier = Modifier
+                                            .size(40.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF25D366)),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        RadioButton(
-                                            selected = staffChannel == "WhatsApp",
-                                            onClick = { staffChannel = "WhatsApp" },
-                                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF22C55E))
+                                        Icon(
+                                            imageVector = Icons.AutoMirrored.Filled.Chat,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(22.dp)
                                         )
-                                        Column {
-                                            Text("WhatsApp", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Usta bildirimleri WhatsApp üzerinden gitsin.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                        }
                                     }
-                                }
-
-                                Card(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .border(
-                                            width = if (staffChannel == "SMS") 2.dp else 1.dp,
-                                            color = if (staffChannel == "SMS") Color(0xFF22C55E) else MaterialTheme.colorScheme.outlineVariant,
-                                            shape = RoundedCornerShape(12.dp)
-                                        )
-                                        .clickable { staffChannel = "SMS" },
-                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        RadioButton(
-                                            selected = staffChannel == "SMS",
-                                            onClick = { staffChannel = "SMS" },
-                                            colors = RadioButtonDefaults.colors(selectedColor = Color(0xFF22C55E))
-                                        )
-                                        Column {
-                                            Text("SMS", fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                            Text("Usta bildirimleri SMS olarak gitsin.", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    Spacer(modifier = Modifier.width(12.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "Gönderim Kanalı: WhatsApp",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color(0xFF22C55E).copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "Otomatik",
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFF15803D),
+                                                    modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                                )
+                                            }
                                         }
+                                        Spacer(modifier = Modifier.height(2.dp))
+                                        Text(
+                                            text = "Usta atamaları, günlük iş özetleri ve görev hatırlatmaları WhatsApp üzerinden iletilir.",
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            lineHeight = 15.sp
+                                        )
                                     }
                                 }
                             }
@@ -513,13 +461,13 @@ fun MessagesScreen(
                                 onClick = {
                                     val updated = StaffMessagingSettings(
                                         isNotificationsActive = staffActive,
-                                        selectedChannel = staffChannel,
+                                        selectedChannel = "WhatsApp",
                                         autoSendDailyAppointmentSummary = staffAutoDaily,
                                         dailySummaryTime = staffDailyTime,
                                         autoSendAppointmentReminder = staffAutoReminder
                                     )
                                     onUpdateStaffSettings(updated)
-                                    Toast.makeText(context, "Personel mesaj ayarları güncellendi", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Personel mesaj ayarları güncellendi (WhatsApp)", Toast.LENGTH_SHORT).show()
                                 },
                                 modifier = Modifier.fillMaxWidth(),
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E))
@@ -532,7 +480,7 @@ fun MessagesScreen(
                     }
                 }
                 2 -> {
-                    // Mesaj Şablonları Tab
+                    // Mesaj Şablonları Tab (Sadece Şablonlar yer alır)
                     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         // Sub-filter pills (Müşteriye Gidecek / Ustaya Gidecek)
                         Row(
@@ -621,143 +569,8 @@ fun MessagesScreen(
             }
         }
 
-        // Section: Bekleyen ve Hata Veren Joblar
         item {
-            Column {
-                Text(
-                    text = "Bekleyen ve Hata Veren Joblar",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                )
-
-                if (jobs.isEmpty()) {
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Box(modifier = Modifier.padding(20.dp), contentAlignment = Alignment.Center) {
-                            Text("Bekleyen veya hatalı job bulunmamaktadır.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                } else {
-                    jobs.forEach { job ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                        ) {
-                            Column(modifier = Modifier.padding(14.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(job.template, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Surface(
-                                        shape = RoundedCornerShape(4.dp),
-                                        color = if (job.status == "FAILED") Color(0xFFEF4444).copy(alpha = 0.15f) else Color(0xFFEAB308).copy(alpha = 0.15f)
-                                    ) {
-                                        Text(
-                                            text = if (job.status == "FAILED") "Başarısız" else "Bekliyor",
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (job.status == "FAILED") Color(0xFFEF4444) else Color(0xFFEAB308),
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text("Kanal: ${job.channel} | Alıcı: ${job.recipient} | Zaman: ${job.time}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-
-                                job.error?.let { err ->
-                                    Spacer(modifier = Modifier.height(4.dp))
-                                    Text("Hata: $err", fontSize = 11.sp, color = Color(0xFFEF4444), fontWeight = FontWeight.Medium)
-                                }
-
-                                Spacer(modifier = Modifier.height(8.dp))
-
-                                Button(
-                                    onClick = {
-                                        onRetryJob(job.id)
-                                        Toast.makeText(context, "Yeniden gönderim başlatıldı", Toast.LENGTH_SHORT).show()
-                                    },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E)),
-                                    modifier = Modifier.align(Alignment.End)
-                                ) {
-                                    Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Yeniden Dene", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        // Section: Müşteriye/Ustaya Gönderilen Son Mesaj Logları
-        item {
-            Column {
-                Text(
-                    text = "Müşteriye/Ustaya Gönderilen Son Mesaj Logları",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
-                )
-
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                ) {
-                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        logs.forEachIndexed { index, log ->
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(log.template, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Text("${log.recipient} • ${log.channel} • ${log.time}", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                                }
-
-                                val (statusText, statusBg, statusColor) = when (log.status) {
-                                    "sent" -> Triple("Gönderildi", Color(0xFF22C55E).copy(alpha = 0.15f), Color(0xFF22C55E))
-                                    "skipped" -> Triple("Atlandı", Color(0xFF6B7280).copy(alpha = 0.15f), Color(0xFF6B7280))
-                                    else -> Triple("Başarısız", Color(0xFFEF4444).copy(alpha = 0.15f), Color(0xFFEF4444))
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = statusBg
-                                ) {
-                                    Text(
-                                        text = statusText,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = statusColor,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
-                            }
-
-                            if (index < logs.size - 1) {
-                                Divider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 

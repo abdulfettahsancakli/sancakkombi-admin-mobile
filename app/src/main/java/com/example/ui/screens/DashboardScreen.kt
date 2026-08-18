@@ -850,7 +850,7 @@ private fun CompactBentoModuleCard(
     val (moduleAccent, badgeText) = when (module) {
         AdminModule.MUSTERILER -> Color(0xFF0288D1) to "123 Kayıtlı"
         AdminModule.RANDEVULAR -> Color(0xFF10B981) to "${stats.bugunkuRandevu} Bugünkü"
-        AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6) to "SMS & WA"
+        AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6) to "WhatsApp"
         AdminModule.ISTATISTIKLER -> Color(0xFF3B82F6) to "Raporlar"
         AdminModule.FINANS -> Color(0xFF059669) to stats.acikAlacak
         AdminModule.TEKLIFLER -> Color(0xFF6366F1) to "3 Aktif"

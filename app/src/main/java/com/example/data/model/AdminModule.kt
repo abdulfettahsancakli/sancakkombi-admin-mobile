@@ -38,7 +38,7 @@ enum class AdminModule(
     MESAJ_SISTEMI(
         id = "messages",
         title = "Mesaj Sistemi",
-        description = "SMS ve WhatsApp kuyruğu, hata logları ve tekrar deneme akışları.",
+        description = "Müşteri ve usta otomatik WhatsApp bildirimleri ve mesaj şablonları.",
         icon = Icons.AutoMirrored.Filled.Chat,
         isPrimaryBottomNav = false
     ),
