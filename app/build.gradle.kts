@@ -124,3 +124,8 @@ dependencies {
   "ksp"(libs.androidx.room.compiler)
   "ksp"(libs.moshi.kotlin.codegen)
 }
+
+secrets {
+  propertiesFileName = "secrets.properties"
+  defaultPropertiesFileName = "secrets.defaults.properties"
+}
