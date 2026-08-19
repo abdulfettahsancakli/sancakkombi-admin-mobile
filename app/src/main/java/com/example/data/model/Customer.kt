@@ -4,9 +4,9 @@ import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
 data class Customer(
-    val id: String,
-    val name: String,
-    val phone: String,
+    val id: String = "",
+    val name: String = "",
+    val phone: String = "",
     val district: String = "Bayrampaşa",
     val address: String = "",
     val appointmentCount: Int = 0,

@@ -44,17 +44,17 @@ data class JobReport(
 
 @JsonClass(generateAdapter = true)
 data class Appointment(
-    val id: String,
-    val customerId: String,
-    val customerName: String,
-    val phone: String,
+    val id: String = "",
+    val customerId: String = "",
+    val customerName: String = "",
+    val phone: String = "",
     val email: String = "",
     val district: String = "Bayrampaşa",
     val neighborhood: String = "",
     val streetDoorNo: String = "",
-    val date: String, // e.g. "03.08.2026"
-    val timeSlot: String, // e.g. "13:00 - 15:00"
-    val serviceType: String, // e.g. "Kombi Bakım & Servis"
+    val date: String = "", // e.g. "03.08.2026"
+    val timeSlot: String = "", // e.g. "13:00 - 15:00"
+    val serviceType: String = "Kombi Bakım & Servis", // e.g. "Kombi Bakım & Servis"
     val status: AppointmentStatus = AppointmentStatus.ONAYLANDI,
     val addressDetail: String = "",
     val problemNote: String = "",
