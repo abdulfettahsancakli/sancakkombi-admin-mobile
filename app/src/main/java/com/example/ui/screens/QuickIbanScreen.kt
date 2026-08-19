@@ -96,6 +96,8 @@ fun QuickIbanScreen(
     bankAccounts: List<BankAccount> = emptyList(),
     onBackClick: () -> Unit,
     onAddFinanceRecord: ((FinanceRecord) -> Unit)? = null,
+    onSendBankTransfer: ((appointmentId: String, accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit)? = null,
+    onAddAppointment: ((Appointment) -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -118,6 +120,8 @@ fun QuickIbanScreen(
     var selectedBankIndex by remember { mutableStateOf(0) }
     var showCustomerPicker by remember { mutableStateOf(false) }
     var customerSearchQuery by remember { mutableStateOf("") }
+    var isSendingCloudApi by remember { mutableStateOf(false) }
+    var selectedAppointmentId by remember { mutableStateOf<String?>(null) }
 
     val selectedBank = activeBankAccounts.getOrElse(selectedBankIndex) { activeBankAccounts.firstOrNull() }
 
@@ -309,6 +313,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                                     .clickable {
                                         customerName = appt.customerName
                                         customerPhone = appt.phone
+                                        selectedAppointmentId = appt.id
                                         if (appt.serviceType.isNotBlank()) {
                                             serviceTitle = appt.serviceType
                                         }
@@ -733,32 +738,83 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
             // ==================== BÜYÜK DEV EYLEM BUTONLARI ====================
             Spacer(modifier = Modifier.height(4.dp))
 
-            // 1. DEV YEŞİL WHATSAPP BUTONU (TEK DOKUNUŞLA GÖNDER)
+            // 1. DEV YEŞİL WHATSAPP BUTONU (TEK DOKUNUŞLA CLOUD API İLE GÖNDER)
             Button(
-                onClick = { sendWhatsApp() },
+                onClick = {
+                    val cleanDigits = customerPhone.filter { it.isDigit() }
+                    if (cleanDigits.length < 10) {
+                        Toast.makeText(context, "Lütfen geçerli bir telefon numarası girin veya yukarıdan bir randevu seçin.", Toast.LENGTH_LONG).show()
+                        return@Button
+                    }
+
+                    val parsedAmt = amountText.toDoubleOrNull() ?: 2000.0
+                    val accountKey = when {
+                        selectedBank?.bankName?.contains("YAPI", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Fatih", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Fatih", ignoreCase = true) == true -> "fatih"
+                        selectedBank?.bankName?.contains("AKBANK", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Fettah", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Fettah", ignoreCase = true) == true -> "fettah"
+                        selectedBank?.bankName?.contains("KUVEYT", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Abdullah", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Abdullah", ignoreCase = true) == true -> "abdullah"
+                        else -> "fatih"
+                    }
+
+                    val targetApptId = selectedAppointmentId
+                        ?: appointments.find {
+                            val aPhone = it.phone.filter { c -> c.isDigit() }
+                            aPhone.takeLast(10) == cleanDigits.takeLast(10)
+                        }?.id
+
+                    if (targetApptId != null && onSendBankTransfer != null) {
+                        isSendingCloudApi = true
+                        onSendBankTransfer(targetApptId, accountKey, parsedAmt, null) { result ->
+                            isSendingCloudApi = false
+                            result.onSuccess {
+                                Toast.makeText(context, "✅ WhatsApp IBAN mesajı Meta Cloud API ile müşteriye gönderildi!", Toast.LENGTH_LONG).show()
+                            }.onFailure { err ->
+                                Toast.makeText(context, "Cloud API Hatası: ${err.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    } else {
+                        // Fallback if no appointment found in system
+                        sendWhatsApp()
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(58.dp)
                     .testTag("send_whatsapp_button"),
+                enabled = !isSendingCloudApi,
                 shape = RoundedCornerShape(16.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF25D366)
                 ),
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 6.dp)
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
-                )
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(
-                    text = "WhatsApp ile IBAN Gönder",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
+                if (isSendingCloudApi) {
+                    androidx.compose.material3.CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = Color.White,
+                        strokeWidth = 2.dp
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "Cloud API ile Gönderiliyor...",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "WhatsApp ile IBAN Gönder",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                }
             }
 
             // 2. FİNANSA GELİR/ALACAK OLARAK İŞLE (İSTEĞE BAĞLI)

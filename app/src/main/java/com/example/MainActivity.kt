@@ -293,7 +293,10 @@ class MainActivity : ComponentActivity() {
                                         customers = customers,
                                         bankAccounts = bankAccounts,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
-                                        onAddFinanceRecord = { record -> viewModel.addFinanceRecord(record) }
+                                        onAddFinanceRecord = { record -> viewModel.addFinanceRecord(record) },
+                                        onSendBankTransfer = { appointmentId, accountKey, amount, date, onResult ->
+                                            viewModel.sendBankTransferMessage(appointmentId, accountKey, amount, date, onResult)
+                                        }
                                     )
                                 }
                                 "modules" -> {
