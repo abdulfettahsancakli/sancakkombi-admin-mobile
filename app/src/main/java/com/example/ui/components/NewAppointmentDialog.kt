@@ -166,8 +166,10 @@ fun NewAppointmentDialog(
     var phone by remember { mutableStateOf("") }
     var district by remember { mutableStateOf("") }
     var neighborhood by remember { mutableStateOf("") }
-    var streetDoorNo by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf("05.08.2026") }
+    val todayFormatted = remember {
+        java.text.SimpleDateFormat("dd.MM.yyyy", Locale("tr", "TR")).format(java.util.Date())
+    }
+    var date by remember { mutableStateOf(todayFormatted) }
     var timeSlot by remember { mutableStateOf("13:00 - 15:00") }
     var serviceType by remember { mutableStateOf("Kombi Bakım & Servis") }
     var status by remember { mutableStateOf(AppointmentStatus.ONAYLANDI) }
