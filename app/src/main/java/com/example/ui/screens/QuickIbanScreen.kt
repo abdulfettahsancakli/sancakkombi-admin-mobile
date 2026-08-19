@@ -678,8 +678,10 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
             // 5. CANLI WHATSAPP MESAJI ÖNİZLEMESİ
             Card(
                 shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFDCF8C6).copy(alpha = 0.35f)),
-                border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.4f))
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
+                ),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -691,7 +693,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Chat,
                                 contentDescription = null,
-                                tint = Color(0xFF25D366),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -699,7 +701,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                                 text = "WhatsApp Mesajı Önizleme",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF15803D)
+                                color = MaterialTheme.colorScheme.primary
                             )
                         }
 
@@ -710,7 +712,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                             Icon(
                                 imageVector = Icons.Default.ContentCopy,
                                 contentDescription = "Kopyala",
-                                tint = Color(0xFF15803D),
+                                tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(16.dp)
                             )
                         }
@@ -721,7 +723,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MaterialTheme.colorScheme.surface,
-                        border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.25f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Text(
