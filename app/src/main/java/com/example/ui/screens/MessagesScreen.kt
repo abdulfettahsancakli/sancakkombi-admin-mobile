@@ -128,15 +128,30 @@ fun MessagesScreen(
                     )
                 }
                 Spacer(modifier = Modifier.width(8.dp))
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Müşteri Mesaj Sistemi",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFF22C55E).copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                text = "WhatsApp Cloud API",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF16A34A),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                     Text(
-                        text = "Müşteri Mesaj Sistemi",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    Text(
-                        text = "Meta onaylı resmi WhatsApp Cloud API şablonları ve müşteri bildirim kuralları.",
+                        text = "Meta onaylı resmi WhatsApp şablonları ve müşteri bildirim kuralları.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
