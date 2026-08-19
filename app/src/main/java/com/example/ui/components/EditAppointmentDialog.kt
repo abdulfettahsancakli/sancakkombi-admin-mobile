@@ -71,7 +71,23 @@ fun EditAppointmentDialog(
     val currentNeighborhoods = remember(district) { IstanbulLocationData.getNeighborhoods(district) }
     val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(context, district, neighborhood) }
 
-    val timeSlots = listOf("09:00 - 11:00", "11:00 - 13:00", "13:00 - 15:00", "15:00 - 17:00", "17:00 - 19:00")
+    val timeSlots = listOf(
+        "09:00 - 10:00",
+        "10:00 - 11:00",
+        "11:00 - 12:00",
+        "12:00 - 13:00",
+        "13:00 - 14:00",
+        "14:00 - 15:00",
+        "15:00 - 16:00",
+        "16:00 - 17:00",
+        "17:00 - 18:00",
+        "18:00 - 19:00",
+        "19:00 - 20:00",
+        "20:00 - 21:00",
+        "21:00 - 22:00",
+        "22:00 - 23:00",
+        "23:00 - 00:00"
+    )
     val services = listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarım", "Gaz Kaçağı Tespiti")
 
     var expandedDistrict by remember { mutableStateOf(false) }
