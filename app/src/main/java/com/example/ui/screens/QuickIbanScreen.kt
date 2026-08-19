@@ -43,7 +43,6 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Sms
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -196,27 +195,6 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
             } catch (ex: Exception) {
                 Toast.makeText(context, "WhatsApp açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
             }
-        }
-    }
-
-    // Send SMS Action
-    fun sendSms() {
-        val cleanDigits = customerPhone.filter { it.isDigit() }
-        val finalPhone = when {
-            cleanDigits.startsWith("90") && cleanDigits.length == 12 -> "0${cleanDigits.substring(2)}"
-            cleanDigits.startsWith("0") -> cleanDigits
-            cleanDigits.length == 10 -> "0$cleanDigits"
-            else -> cleanDigits
-        }
-
-        try {
-            val smsUri = Uri.parse("smsto:$finalPhone")
-            val intent = Intent(Intent.ACTION_SENDTO, smsUri).apply {
-                putExtra("sms_body", generatedMessage)
-            }
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            Toast.makeText(context, "SMS uygulaması açılamadı", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -783,45 +761,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                 )
             }
 
-            // 2. YAN YANA: SMS İLE GÖNDER & METNİ KOPYALA
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                OutlinedButton(
-                    onClick = { sendSms() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF0288D1)
-                    ),
-                    border = BorderStroke(1.dp, Color(0xFF0288D1))
-                ) {
-                    Icon(Icons.Default.Sms, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("SMS ile At", fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                }
-
-                OutlinedButton(
-                    onClick = { copyToClipboard() },
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
-                    ),
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
-                ) {
-                    Icon(Icons.Default.ContentCopy, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Metni Kopyala", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                }
-            }
-
-            // 3. FİNANSA GELİR/ALACAK OLARAK İŞLE (İSTEĞE BAĞLI)
+            // 2. FİNANSA GELİR/ALACAK OLARAK İŞLE (İSTEĞE BAĞLI)
             if (onAddFinanceRecord != null) {
                 OutlinedButton(
                     onClick = {
@@ -847,7 +787,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(46.dp),
+                        .height(48.dp),
                     shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.outlinedButtonColors(
                         contentColor = Color(0xFF10B981)
