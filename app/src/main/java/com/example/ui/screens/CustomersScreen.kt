@@ -183,7 +183,7 @@ fun CustomersScreen(
     // Editable form state for selected customer
     var editName by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.name ?: "") }
     var editPhone by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.phone ?: "") }
-    var editDistrict by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.district ?: "Bayrampaşa") }
+    var editDistrict by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.district ?: "") }
     var editAddress by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.address ?: "") }
     var editNotes by remember(selectedCustomer) { mutableStateOf(selectedCustomer?.notes ?: "") }
 
@@ -1439,7 +1439,7 @@ private fun NewCustomerDialog(
 
     var name by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var district by remember { mutableStateOf("Bayrampaşa") }
+    var district by remember { mutableStateOf("") }
     var address by remember { mutableStateOf("") }
     var notes by remember { mutableStateOf("") }
 
@@ -1605,6 +1605,7 @@ private fun NewCustomerDialog(
                     value = district,
                     onValueChange = { district = it },
                     label = { Text("İlçe / Bölge") },
+                    placeholder = { Text("Örn: Bayrampaşa, Esenler, Gaziosmanpaşa...") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -1638,7 +1639,8 @@ private fun NewCustomerDialog(
                 OutlinedTextField(
                     value = notes,
                     onValueChange = { notes = it },
-                    label = { Text("Kombi / Özel Notlar") },
+                    label = { Text("Müşteri / Cihaz Notu") },
+                    placeholder = { Text("Örn: Demirdöküm kombi, 2. kat") },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -1650,57 +1652,60 @@ private fun NewCustomerDialog(
                     minLines = 2
                 )
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
+                // Action Buttons
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     OutlinedButton(
                         onClick = onDismiss,
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.weight(1f).height(48.dp)
                     ) {
-                        Text("Vazgeç", color = Color(0xFF757575), fontWeight = FontWeight.SemiBold)
+                        Text("İptal", fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
                         onClick = {
-                            if (name.isNotBlank() && phone.isNotBlank()) {
-                                val newCust = Customer(
-                                    id = UUID.randomUUID().toString(),
-                                    name = name,
-                                    phone = phone,
-                                    district = district,
-                                    address = address,
-                                    appointmentCount = 0,
-                                    activeAppointmentCount = 0,
-                                    notes = notes
-                                )
-                                onSave(newCust)
+                            if (name.isBlank() || phone.isBlank()) {
+                                Toast.makeText(context, "Lütfen isim ve telefon alanlarını doldurunuz.", Toast.LENGTH_SHORT).show()
+                                return@Button
                             }
+
+                            val newCustomer = Customer(
+                                id = UUID.randomUUID().toString(),
+                                name = name.trim(),
+                                phone = phone.trim(),
+                                district = district.trim(),
+                                address = address.trim(),
+                                appointmentCount = 0,
+                                activeAppointmentCount = 0,
+                                notes = notes.trim()
+                            )
+                            onSave(newCustomer)
                         },
-                        enabled = name.isNotBlank() && phone.isNotBlank(),
-                        shape = RoundedCornerShape(20.dp),
+                        shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(),
-                        modifier = Modifier.weight(1.2f).height(48.dp)
+                        modifier = Modifier.weight(1f).height(48.dp)
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
-                                    brush = if (name.isNotBlank() && phone.isNotBlank()) {
-                                        Brush.linearGradient(colors = listOf(Color(0xFF43A047), Color(0xFF1B5E20)))
-                                    } else {
-                                        Brush.linearGradient(colors = listOf(Color(0xFFBDBDBD), Color(0xFF9E9E9E)))
-                                    },
-                                    shape = RoundedCornerShape(20.dp)
+                                    brush = Brush.linearGradient(
+                                        colors = listOf(
+                                            MaterialTheme.colorScheme.primary,
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                        )
+                                    ),
+                                    shape = RoundedCornerShape(14.dp)
                                 ),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text("Müşteri Kaydet", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                            Text("Kaydet", color = Color.White, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1752,7 +1757,7 @@ private fun BulkImportContactsDialog(
     var isLoading by remember { mutableStateOf(true) }
     var searchQuery by remember { mutableStateOf("") }
     var hideExisting by remember { mutableStateOf(true) }
-    var defaultDistrict by remember { mutableStateOf("Bayrampaşa") }
+    var defaultDistrict by remember { mutableStateOf("") }
 
     val existingPhonesSet = remember(existingCustomers) {
         existingCustomers.map { it.phone.replace("[^0-9]".toRegex(), "") }.filter { it.isNotBlank() }.toSet()
@@ -2209,7 +2214,7 @@ private fun BulkImportContactsDialog(
                                         id = UUID.randomUUID().toString(),
                                         name = c.name,
                                         phone = c.phone,
-                                        district = defaultDistrict.ifBlank { "Bayrampaşa" },
+                                        district = defaultDistrict.trim(),
                                         address = "Rehberden Toplu İçe Aktarıldı",
                                         appointmentCount = 0,
                                         activeAppointmentCount = 0,

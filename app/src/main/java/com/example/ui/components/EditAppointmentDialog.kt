@@ -58,7 +58,7 @@ fun EditAppointmentDialog(
     var customerName by remember { mutableStateOf(appointment.customerName) }
     var phone by remember { mutableStateOf(appointment.phone) }
     var email by remember { mutableStateOf(appointment.email) }
-    var district by remember { mutableStateOf(if (appointment.district.isNotBlank()) appointment.district else "Bayrampaşa") }
+    var district by remember { mutableStateOf(appointment.district) }
     var neighborhood by remember { mutableStateOf(IstanbulLocationData.getNeighborhoods(district).firstOrNull() ?: "") }
     var streetDoorNo by remember { mutableStateOf(appointment.addressDetail) }
     var date by remember { mutableStateOf(appointment.date) }

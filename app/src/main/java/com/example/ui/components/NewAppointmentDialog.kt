@@ -164,9 +164,9 @@ fun NewAppointmentDialog(
 
     var customerName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
-    var district by remember { mutableStateOf("Bayrampaşa") }
-    var neighborhood by remember { mutableStateOf("Muratpaşa Mah.") }
-    var streetDoorNo by remember { mutableStateOf("Kamil Caddesi No:12") }
+    var district by remember { mutableStateOf("") }
+    var neighborhood by remember { mutableStateOf("") }
+    var streetDoorNo by remember { mutableStateOf("") }
     var date by remember { mutableStateOf("05.08.2026") }
     var timeSlot by remember { mutableStateOf("13:00 - 15:00") }
     var serviceType by remember { mutableStateOf("Kombi Bakım & Servis") }
