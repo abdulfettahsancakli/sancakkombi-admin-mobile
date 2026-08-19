@@ -530,50 +530,58 @@ fun CustomersScreen(
 
                         val dismissState = rememberSwipeToDismissBoxState(
                             confirmValueChange = { dismissVal ->
-                                if (dismissVal == SwipeToDismissBoxValue.EndToStart) {
+                                if (dismissVal == SwipeToDismissBoxValue.EndToStart && !isSelected) {
                                     customerToDelete = cust
                                 }
                                 false
                             }
                         )
 
+                        LaunchedEffect(isSelected) {
+                            if (isSelected && dismissState.currentValue != SwipeToDismissBoxValue.Settled) {
+                                dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                            }
+                        }
+
                         SwipeToDismissBox(
                             state = dismissState,
                             enableDismissFromStartToEnd = false,
-                            enableDismissFromEndToStart = onDeleteCustomer != null,
+                            enableDismissFromEndToStart = onDeleteCustomer != null && !isSelected,
                             backgroundContent = {
-                                val color by animateColorAsState(
-                                    targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
-                                        Color(0xFFDC2626)
-                                    else
-                                        Color(0xFFDC2626).copy(alpha = 0.85f),
-                                    label = "swipeBgColor"
-                                )
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .padding(vertical = 6.dp)
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(color)
-                                        .padding(horizontal = 24.dp),
-                                    contentAlignment = Alignment.CenterEnd
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                if (!isSelected) {
+                                    val color by animateColorAsState(
+                                        targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                            Color(0xFFDC2626)
+                                        else
+                                            Color(0xFFDC2626).copy(alpha = 0.85f),
+                                        label = "swipeBgColor"
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(vertical = 6.dp)
+                                            .clip(RoundedCornerShape(18.dp))
+                                            .background(color)
+                                            .padding(horizontal = 24.dp),
+                                        contentAlignment = Alignment.CenterEnd
                                     ) {
-                                        Text(
-                                            text = "Sil",
-                                            color = Color.White,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp
-                                        )
-                                        Icon(
-                                            imageVector = Icons.Default.Delete,
-                                            contentDescription = "Sil",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Text(
+                                                text = "Sil",
+                                                color = Color.White,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp
+                                            )
+                                            Icon(
+                                                imageVector = Icons.Default.Delete,
+                                                contentDescription = "Sil",
+                                                tint = Color.White,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
