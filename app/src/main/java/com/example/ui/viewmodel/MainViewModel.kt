@@ -158,12 +158,13 @@ class MainViewModel(
 
     init {
         viewModelScope.launch {
+            repository.login("SancakKombi2026")
+        }
+        viewModelScope.launch {
             repository.getAuthToken().collect { token ->
                 _authToken.value = token
                 _isLoggedIn.value = true
-                if (token.isNullOrBlank()) {
-                    login("SancakKombi2026")
-                } else {
+                if (!token.isNullOrBlank()) {
                     fetchAdsData()
                 }
             }
