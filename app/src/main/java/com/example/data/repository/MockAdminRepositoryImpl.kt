@@ -592,6 +592,14 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.failure(IllegalArgumentException("Müşteri bulunamadı."))
     }
 
+    override suspend fun deleteCustomer(id: String): Result<Unit> {
+        delay(200)
+        val list = _customers.value.toMutableList()
+        list.removeAll { it.id == id }
+        _customers.value = list
+        return Result.success(Unit)
+    }
+
     override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> {
         delay(300)
         val cust = _customers.value.find { it.id == customerId }

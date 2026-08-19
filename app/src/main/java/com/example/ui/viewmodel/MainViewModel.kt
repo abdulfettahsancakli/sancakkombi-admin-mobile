@@ -433,6 +433,12 @@ class MainViewModel(
         }
     }
 
+    fun deleteCustomer(id: String) {
+        viewModelScope.launch {
+            repository.deleteCustomer(id)
+        }
+    }
+
     suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> {
         return repository.getDeviceHistory(customerId)
     }

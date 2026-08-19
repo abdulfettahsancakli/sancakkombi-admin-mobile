@@ -43,6 +43,8 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Info
@@ -59,6 +61,7 @@ import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Verified
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -120,6 +123,7 @@ fun CustomersScreen(
     onAddCustomer: (Customer) -> Unit,
     onAddCustomers: ((List<Customer>) -> Unit)? = null,
     onUpdateCustomer: (Customer) -> Unit,
+    onDeleteCustomer: ((String) -> Unit)? = null,
     onFetchDeviceHistory: (suspend (String) -> Result<com.example.data.remote.DeviceHistoryDto>)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -129,6 +133,7 @@ fun CustomersScreen(
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedCustomer by remember { mutableStateOf<Customer?>(null) }
+    var customerToDelete by remember { mutableStateOf<Customer?>(null) }
     var activeTab by remember { mutableStateOf("bilgiler") } // "bilgiler", "cihaz_gecmisi", "randevular", "islemler"
     var showNewCustomerDialog by remember { mutableStateOf(false) }
     var showBulkImportDialog by remember { mutableStateOf(false) }
@@ -592,6 +597,37 @@ fun CustomersScreen(
 
                                     Spacer(modifier = Modifier.width(8.dp))
 
+                                    if (onDeleteCustomer != null) {
+                                        Surface(
+                                            onClick = { customerToDelete = cust },
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = Color(0xFFDC2626).copy(alpha = 0.10f),
+                                            border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.25f)),
+                                            modifier = Modifier.height(36.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.DeleteOutline,
+                                                    contentDescription = "Müşteriyi Sil",
+                                                    tint = Color(0xFFDC2626),
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Text(
+                                                    text = "Sil",
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = Color(0xFFDC2626)
+                                                )
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                    }
+
                                     // Modern Detay / Kapat Toggle Pill
                                     Surface(
                                         onClick = {
@@ -861,42 +897,64 @@ fun CustomersScreen(
 
                                             Spacer(modifier = Modifier.height(16.dp))
 
-                                            Button(
-                                                onClick = {
-                                                    val updated = cust.copy(
-                                                        name = editName,
-                                                        phone = editPhone,
-                                                        district = editDistrict,
-                                                        address = editAddress,
-                                                        notes = editNotes
-                                                    )
-                                                    onUpdateCustomer(updated)
-                                                    selectedCustomer = updated
-                                                    Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
-                                                },
-                                                shape = RoundedCornerShape(20.dp),
-                                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(),
-                                                modifier = Modifier.fillMaxWidth().height(48.dp)
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .fillMaxSize()
-                                                        .background(
-                                                            brush = Brush.linearGradient(
-                                                                colors = listOf(
-                                                                    Color(0xFF43A047),
-                                                                    Color(0xFF1B5E20)
-                                                                )
-                                                            ),
-                                                            shape = RoundedCornerShape(20.dp)
-                                                        ),
-                                                    contentAlignment = Alignment.Center
+                                                Button(
+                                                    onClick = {
+                                                        val updated = cust.copy(
+                                                            name = editName,
+                                                            phone = editPhone,
+                                                            district = editDistrict,
+                                                            address = editAddress,
+                                                            notes = editNotes
+                                                        )
+                                                        onUpdateCustomer(updated)
+                                                        selectedCustomer = updated
+                                                        Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
+                                                    },
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(),
+                                                    modifier = Modifier.weight(1.3f).height(48.dp)
                                                 ) {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                                        Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                                        Spacer(modifier = Modifier.width(8.dp))
-                                                        Text("Kaydı Güncelle", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxSize()
+                                                            .background(
+                                                                brush = Brush.linearGradient(
+                                                                    colors = listOf(
+                                                                        Color(0xFF43A047),
+                                                                        Color(0xFF1B5E20)
+                                                                    )
+                                                                ),
+                                                                shape = RoundedCornerShape(16.dp)
+                                                            ),
+                                                        contentAlignment = Alignment.Center
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                            Spacer(modifier = Modifier.width(8.dp))
+                                                            Text("Kaydı Güncelle", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color.White)
+                                                        }
+                                                    }
+                                                }
+
+                                                if (onDeleteCustomer != null) {
+                                                    OutlinedButton(
+                                                        onClick = { customerToDelete = cust },
+                                                        shape = RoundedCornerShape(16.dp),
+                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                                                        border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.5f)),
+                                                        modifier = Modifier.weight(0.9f).height(48.dp)
+                                                    ) {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Müşteriyi Sil", tint = Color(0xFFDC2626), modifier = Modifier.size(18.dp))
+                                                            Spacer(modifier = Modifier.width(6.dp))
+                                                            Text("Sil", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFFDC2626))
+                                                        }
                                                     }
                                                 }
                                             }
@@ -1184,6 +1242,109 @@ fun CustomersScreen(
                 }
                 showBulkImportDialog = false
             }
+        )
+    }
+
+    // Delete Customer Confirmation Dialog
+    if (customerToDelete != null) {
+        val cust = customerToDelete!!
+        AlertDialog(
+            onDismissRequest = { customerToDelete = null },
+            icon = {
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFDC2626).copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = Color(0xFFDC2626),
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = "Müşteriyi Sil",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        text = "${cust.name} isimli müşteriyi silmek istediğinize emin misiniz?",
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp)) {
+                            Text(
+                                text = "📞 ${cust.phone}",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (cust.district.isNotBlank()) {
+                                Text(
+                                    text = "📍 ${cust.district}",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Bu işlem müşteriyi sistemden kaldıracaktır.",
+                        fontSize = 11.sp,
+                        color = Color(0xFFDC2626),
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val idToDelete = cust.id
+                        val nameDeleted = cust.name
+                        if (selectedCustomer?.id == idToDelete) {
+                            selectedCustomer = null
+                        }
+                        customerToDelete = null
+                        onDeleteCustomer?.invoke(idToDelete)
+                        Toast.makeText(context, "$nameDeleted silindi.", Toast.LENGTH_SHORT).show()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Evet, Sil", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { customerToDelete = null },
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text("Vazgeç", color = MaterialTheme.colorScheme.onSurface)
+                }
+            },
+            shape = RoundedCornerShape(20.dp),
+            containerColor = MaterialTheme.colorScheme.surface
         )
     }
 }

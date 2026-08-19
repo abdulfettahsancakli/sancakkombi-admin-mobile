@@ -52,6 +52,7 @@ interface AdminRepository {
     suspend fun addCustomer(customer: Customer): Result<Unit>
     suspend fun addCustomers(customers: List<Customer>): Result<Unit>
     suspend fun updateCustomer(customer: Customer): Result<Unit>
+    suspend fun deleteCustomer(id: String): Result<Unit>
     suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto>
 
     // Finance

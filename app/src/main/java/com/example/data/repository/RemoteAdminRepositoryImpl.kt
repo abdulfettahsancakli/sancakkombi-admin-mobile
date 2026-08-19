@@ -463,6 +463,25 @@ class RemoteAdminRepositoryImpl(
             }
         )
 
+    override suspend fun deleteCustomer(id: String): Result<Unit> =
+        executeWithFallback(
+            fallbackAction = {
+                val res = fallback.deleteCustomer(id)
+                customersTrigger.value += 1
+                res
+            },
+            apiAction = { token ->
+                val response = api.deleteCustomer(authHeader(token), id)
+                if (response.isSuccessful) {
+                    fallback.deleteCustomer(id)
+                    customersTrigger.value += 1
+                    Result.success(Unit)
+                } else {
+                    Result.failure(IllegalStateException(errorMessage(response)))
+                }
+            }
+        )
+
     override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> = requireToken(
         onMissing = { fallback.getDeviceHistory(customerId) }
     ) { token ->

@@ -161,6 +161,7 @@ class MainActivity : ComponentActivity() {
                                         onAddCustomer = { cust -> viewModel.addCustomer(cust) },
                                         onAddCustomers = { list -> viewModel.addCustomers(list) },
                                         onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) },
+                                        onDeleteCustomer = { id -> viewModel.deleteCustomer(id) },
                                         onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) }
                                     )
                                 }
