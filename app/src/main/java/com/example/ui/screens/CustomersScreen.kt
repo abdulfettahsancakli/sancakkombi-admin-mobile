@@ -70,6 +70,7 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Divider
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
@@ -79,9 +80,12 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -115,6 +119,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomersScreen(
     customers: List<Customer>,
@@ -523,120 +528,139 @@ fun CustomersScreen(
                             label = "cardBg"
                         )
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 6.dp)
-                                .clip(RoundedCornerShape(18.dp))
-                                .clickable {
-                                    selectedCustomer = if (isSelected) null else cust
-                                },
-                            shape = RoundedCornerShape(18.dp),
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
-                            ),
-                            border = BorderStroke(
-                                width = if (isSelected) 1.5.dp else 1.dp,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-                            ),
-                            elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
+                        val dismissState = rememberSwipeToDismissBoxState(
+                            confirmValueChange = { dismissVal ->
+                                if (dismissVal == SwipeToDismissBoxValue.EndToStart) {
+                                    customerToDelete = cust
+                                }
+                                false
+                            }
+                        )
+
+                        SwipeToDismissBox(
+                            state = dismissState,
+                            enableDismissFromStartToEnd = false,
+                            enableDismissFromEndToStart = onDeleteCustomer != null,
+                            backgroundContent = {
+                                val color by animateColorAsState(
+                                    targetValue = if (dismissState.targetValue == SwipeToDismissBoxValue.EndToStart)
+                                        Color(0xFFDC2626)
+                                    else
+                                        Color(0xFFDC2626).copy(alpha = 0.85f),
+                                    label = "swipeBgColor"
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(vertical = 6.dp)
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .background(color)
+                                        .padding(horizontal = 24.dp),
+                                    contentAlignment = Alignment.CenterEnd
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text(
+                                            text = "Sil",
+                                            color = Color.White,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp
+                                        )
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Sil",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                }
+                            }
                         ) {
-                            Column(
+                            Card(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(16.dp)
+                                    .padding(vertical = 6.dp)
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .clickable {
+                                        selectedCustomer = if (isSelected) null else cust
+                                    },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surface
+                                ),
+                                border = BorderStroke(
+                                    width = if (isSelected) 1.5.dp else 1.dp,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+                                ),
+                                elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 2.dp)
                             ) {
-                                // Top Header Row: Avatar, Name & Info, Detay Toggle
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(16.dp)
                                 ) {
-                                    // Avatar Circle with Initials
-                                    Box(
-                                        modifier = Modifier
-                                            .size(50.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                brush = Brush.linearGradient(
-                                                    colors = listOf(
-                                                        avatarColor.copy(alpha = 0.25f),
-                                                        avatarColor.copy(alpha = 0.10f)
-                                                    )
-                                                )
-                                            ),
-                                        contentAlignment = Alignment.Center
+                                    // Top Header Row: Avatar, Name & Info, Detay Toggle
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Text(
-                                            text = initials,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = avatarColor
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(14.dp))
-
-                                    // Customer Info Column
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = cust.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 16.sp,
-                                            color = MaterialTheme.colorScheme.onSurface
-                                        )
-
-                                        Spacer(modifier = Modifier.height(4.dp))
-
-                                        Text(
-                                            text = cust.phone,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-
-                                    Spacer(modifier = Modifier.width(8.dp))
-
-                                    if (onDeleteCustomer != null) {
-                                        Surface(
-                                            onClick = { customerToDelete = cust },
-                                            shape = RoundedCornerShape(20.dp),
-                                            color = Color(0xFFDC2626).copy(alpha = 0.10f),
-                                            border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.25f)),
-                                            modifier = Modifier.height(36.dp)
+                                        // Avatar Circle with Initials
+                                        Box(
+                                            modifier = Modifier
+                                                .size(50.dp)
+                                                .clip(CircleShape)
+                                                .background(
+                                                    brush = Brush.linearGradient(
+                                                        colors = listOf(
+                                                            avatarColor.copy(alpha = 0.25f),
+                                                            avatarColor.copy(alpha = 0.10f)
+                                                        )
+                                                    )
+                                                ),
+                                            contentAlignment = Alignment.Center
                                         ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.DeleteOutline,
-                                                    contentDescription = "Müşteriyi Sil",
-                                                    tint = Color(0xFFDC2626),
-                                                    modifier = Modifier.size(16.dp)
-                                                )
-                                                Text(
-                                                    text = "Sil",
-                                                    fontSize = 12.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFFDC2626)
-                                                )
-                                            }
+                                            Text(
+                                                text = initials,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 17.sp,
+                                                color = avatarColor
+                                            )
                                         }
 
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                    }
+                                        Spacer(modifier = Modifier.width(14.dp))
 
-                                    // Modern Detay / Kapat Toggle Pill
-                                    Surface(
-                                        onClick = {
-                                            selectedCustomer = if (isSelected) null else cust
-                                        },
-                                        shape = RoundedCornerShape(20.dp),
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                                        modifier = Modifier.height(36.dp)
-                                    ) {
+                                        // Customer Info Column
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = cust.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+
+                                            Spacer(modifier = Modifier.height(4.dp))
+
+                                            Text(
+                                                text = cust.phone,
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+
+                                        Spacer(modifier = Modifier.width(8.dp))
+
+                                        // Modern Detay / Kapat Toggle Pill
+                                        Surface(
+                                            onClick = {
+                                                selectedCustomer = if (isSelected) null else cust
+                                            },
+                                            shape = RoundedCornerShape(20.dp),
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
+                                            modifier = Modifier.height(36.dp)
+                                        ) {
                                         Row(
                                             modifier = Modifier.padding(horizontal = 12.dp),
                                             verticalAlignment = Alignment.CenterVertically,
@@ -897,64 +921,59 @@ fun CustomersScreen(
 
                                             Spacer(modifier = Modifier.height(16.dp))
 
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                                verticalAlignment = Alignment.CenterVertically
+                                            Button(
+                                                onClick = {
+                                                    val updated = cust.copy(
+                                                        name = editName,
+                                                        phone = editPhone,
+                                                        district = editDistrict,
+                                                        address = editAddress,
+                                                        notes = editNotes
+                                                    )
+                                                    onUpdateCustomer(updated)
+                                                    selectedCustomer = updated
+                                                    Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
+                                                },
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
+                                                contentPadding = androidx.compose.foundation.layout.PaddingValues(),
+                                                modifier = Modifier.fillMaxWidth().height(48.dp)
                                             ) {
-                                                Button(
-                                                    onClick = {
-                                                        val updated = cust.copy(
-                                                            name = editName,
-                                                            phone = editPhone,
-                                                            district = editDistrict,
-                                                            address = editAddress,
-                                                            notes = editNotes
-                                                        )
-                                                        onUpdateCustomer(updated)
-                                                        selectedCustomer = updated
-                                                        Toast.makeText(context, "Müşteri bilgileri güncellendi", Toast.LENGTH_SHORT).show()
-                                                    },
-                                                    shape = RoundedCornerShape(16.dp),
-                                                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(),
-                                                    modifier = Modifier.weight(1.3f).height(48.dp)
-                                                ) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .background(
-                                                                brush = Brush.linearGradient(
-                                                                    colors = listOf(
-                                                                        Color(0xFF43A047),
-                                                                        Color(0xFF1B5E20)
-                                                                    )
-                                                                ),
-                                                                shape = RoundedCornerShape(16.dp)
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize()
+                                                        .background(
+                                                            brush = Brush.linearGradient(
+                                                                colors = listOf(
+                                                                    Color(0xFF43A047),
+                                                                    Color(0xFF1B5E20)
+                                                                )
                                                             ),
-                                                        contentAlignment = Alignment.Center
-                                                    ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                                            Spacer(modifier = Modifier.width(8.dp))
-                                                            Text("Kaydı Güncelle", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color.White)
-                                                        }
+                                                            shape = RoundedCornerShape(16.dp)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(imageVector = Icons.Default.Save, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text("Kaydı Güncelle", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
                                                     }
                                                 }
+                                            }
 
-                                                if (onDeleteCustomer != null) {
-                                                    OutlinedButton(
-                                                        onClick = { customerToDelete = cust },
-                                                        shape = RoundedCornerShape(16.dp),
-                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
-                                                        border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.5f)),
-                                                        modifier = Modifier.weight(0.9f).height(48.dp)
-                                                    ) {
-                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Müşteriyi Sil", tint = Color(0xFFDC2626), modifier = Modifier.size(18.dp))
-                                                            Spacer(modifier = Modifier.width(6.dp))
-                                                            Text("Sil", fontWeight = FontWeight.Bold, fontSize = 13.5.sp, color = Color(0xFFDC2626))
-                                                        }
+                                            if (onDeleteCustomer != null) {
+                                                Spacer(modifier = Modifier.height(10.dp))
+                                                OutlinedButton(
+                                                    onClick = { customerToDelete = cust },
+                                                    shape = RoundedCornerShape(16.dp),
+                                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFDC2626)),
+                                                    border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.35f)),
+                                                    modifier = Modifier.fillMaxWidth().height(42.dp)
+                                                ) {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Icon(imageVector = Icons.Default.DeleteOutline, contentDescription = "Müşteriyi Sil", tint = Color(0xFFDC2626), modifier = Modifier.size(18.dp))
+                                                        Spacer(modifier = Modifier.width(8.dp))
+                                                        Text("Müşteri Kaydını Sil", fontWeight = FontWeight.SemiBold, fontSize = 13.sp, color = Color(0xFFDC2626))
                                                     }
                                                 }
                                             }
@@ -1205,6 +1224,7 @@ fun CustomersScreen(
                             }
                         }
                     }
+                }
                 }
 
                 item {
