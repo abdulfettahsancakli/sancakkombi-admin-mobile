@@ -81,20 +81,19 @@ import com.example.data.model.StaffMessagingSettings
 fun MessagesScreen(
     stats: MessagingStats = MessagingStats(),
     customerSettings: CustomerMessagingSettings,
-    staffSettings: StaffMessagingSettings,
+    staffSettings: StaffMessagingSettings? = null,
     templates: List<MessageTemplate>,
     jobs: List<MessageJob> = emptyList(),
     logs: List<MessageLog> = emptyList(),
     onBackClick: () -> Unit,
     onUpdateCustomerSettings: (CustomerMessagingSettings) -> Unit,
-    onUpdateStaffSettings: (StaffMessagingSettings) -> Unit,
+    onUpdateStaffSettings: ((StaffMessagingSettings) -> Unit)? = null,
     onUpdateTemplate: (MessageTemplate) -> Unit = {},
     onRetryJob: (String) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(2) } // Varsayılan: Mesaj Şablonları sekmesi
-    var templateCategoryFilter by remember { mutableStateOf("MUSTERI") } // "MUSTERI" or "USTA"
+    var selectedTab by remember { mutableIntStateOf(0) } // Varsayılan: Müşteri WhatsApp Ayarları
 
     // Local copy of customer settings
     var custActive by remember(customerSettings) { mutableStateOf(customerSettings.isNotificationsActive) }
@@ -103,12 +102,6 @@ fun MessagesScreen(
     var custReminderHours by remember(customerSettings) { mutableStateOf(customerSettings.reminderHoursBefore.toString()) }
     var custAutoFeedback by remember(customerSettings) { mutableStateOf(customerSettings.autoSendFeedbackAfterAppointment) }
     var custFeedbackDays by remember(customerSettings) { mutableStateOf(customerSettings.feedbackDaysAfter.toString()) }
-
-    // Local copy of staff settings
-    var staffActive by remember(staffSettings) { mutableStateOf(staffSettings.isNotificationsActive) }
-    var staffAutoDaily by remember(staffSettings) { mutableStateOf(staffSettings.autoSendDailyAppointmentSummary) }
-    var staffDailyTime by remember(staffSettings) { mutableStateOf(staffSettings.dailySummaryTime) }
-    var staffAutoReminder by remember(staffSettings) { mutableStateOf(staffSettings.autoSendAppointmentReminder) }
 
     LazyColumn(
         modifier = modifier
@@ -137,13 +130,13 @@ fun MessagesScreen(
                 Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
-                        text = "Mesaj Sistemi",
+                        text = "Müşteri Mesaj Sistemi",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Meta onaylı resmi WhatsApp şablonları ve bildirim kuralları.",
+                        text = "Meta onaylı resmi WhatsApp Cloud API şablonları ve müşteri bildirim kuralları.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -151,7 +144,7 @@ fun MessagesScreen(
             }
         }
 
-        // Navigation Tabs (Müşteri Ayarları / Personel Ayarları / Mesaj Şablonları)
+        // Navigation Tabs (Müşteri WhatsApp Ayarları / WhatsApp Şablonları)
         item {
             Column {
                 Text(
@@ -169,7 +162,7 @@ fun MessagesScreen(
                         .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    listOf("Müşteri Ayarları", "Personel Ayarları", "Mesaj Şablonları").forEachIndexed { index, title ->
+                    listOf("Müşteri WhatsApp Ayarları", "WhatsApp Şablonları").forEachIndexed { index, title ->
                         val isSelected = selectedTab == index
                         Box(
                             modifier = Modifier
@@ -182,7 +175,7 @@ fun MessagesScreen(
                         ) {
                             Text(
                                 text = title,
-                                fontSize = 12.sp,
+                                fontSize = 12.5.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
                             )
@@ -275,7 +268,7 @@ fun MessagesScreen(
                                         }
                                         Spacer(modifier = Modifier.height(2.dp))
                                         Text(
-                                            text = "Tüm randevu onayı, hatırlatma ve servis fişi bildirimleri doğrudan Meta WhatsApp Cloud API üzerinden gönderilir.",
+                                            text = "Tüm randevu onayı, hatırlatma ve servis fişi bildirimleri doğrudan Meta WhatsApp Cloud API üzerinden müşteriye gönderilir.",
                                             fontSize = 11.sp,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                                             lineHeight = 15.sp
@@ -302,13 +295,13 @@ fun MessagesScreen(
                                     onCheckedChange = { custAutoUpdated = it },
                                     colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E))
                                 )
-                                Text("Randevu güncellendiğinde bilgi mesajı gönderilsin", fontSize = 13.sp)
+                                Text("Randevu güncellendiğinde müşteriye bilgilendirme mesajı gönderilsin", fontSize = 13.sp)
                             }
 
                             OutlinedTextField(
                                 value = custReminderHours,
                                 onValueChange = { custReminderHours = it },
-                                label = { Text("Hatırlatma Mesajı Kaç Saat Önce Gönderilsin?") },
+                                label = { Text("Randevudan Kaç Saat Önce Hatırlatılsın? (Örn: 2)") },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -318,13 +311,13 @@ fun MessagesScreen(
                                     onCheckedChange = { custAutoFeedback = it },
                                     colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E))
                                 )
-                                Text("Randevudan sonra değerlendirme (Google) mesajı gönderilsin", fontSize = 13.sp)
+                                Text("Servis tamamlandıktan sonra memnuniyet/anket mesajı gönderilsin", fontSize = 13.sp)
                             }
 
                             OutlinedTextField(
                                 value = custFeedbackDays,
                                 onValueChange = { custFeedbackDays = it },
-                                label = { Text("Değerlendirme Mesajı Kaç Gün Sonra Gönderilsin?") },
+                                label = { Text("Tamamlandıktan Kaç Gün Sonra Anket Gönderilsin? (Örn: 1)") },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -337,7 +330,7 @@ fun MessagesScreen(
                                         autoSendOnAppointmentUpdated = custAutoUpdated,
                                         reminderHoursBefore = custReminderHours.toIntOrNull() ?: 2,
                                         autoSendFeedbackAfterAppointment = custAutoFeedback,
-                                        feedbackDaysAfter = custFeedbackDays.toIntOrNull() ?: 2
+                                        feedbackDaysAfter = custFeedbackDays.toIntOrNull() ?: 1
                                     )
                                     onUpdateCustomerSettings(updated)
                                     Toast.makeText(context, "Müşteri mesaj ayarları kaydedildi", Toast.LENGTH_SHORT).show()
@@ -353,145 +346,7 @@ fun MessagesScreen(
                     }
                 }
                 1 -> {
-                    // Personel Ayarları Tab
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("Usta bildirimleri aktif", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
-                                Switch(
-                                    checked = staffActive,
-                                    onCheckedChange = { staffActive = it },
-                                    colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFF22C55E))
-                                )
-                            }
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                            // WhatsApp Otomatik Kanal Kartı
-                            Card(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .border(
-                                        width = 1.dp,
-                                        color = Color(0xFF22C55E).copy(alpha = 0.4f),
-                                        shape = RoundedCornerShape(12.dp)
-                                    ),
-                                colors = CardDefaults.cardColors(containerColor = Color(0xFF22C55E).copy(alpha = 0.08f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(38.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF25D366)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.Chat,
-                                            contentDescription = null,
-                                            tint = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(12.dp))
-                                    Column {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Text(
-                                                text = "Kanal: WhatsApp",
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                color = MaterialTheme.colorScheme.onSurface
-                                            )
-                                            Spacer(modifier = Modifier.width(6.dp))
-                                            Surface(
-                                                shape = RoundedCornerShape(4.dp),
-                                                color = Color(0xFF22C55E).copy(alpha = 0.2f)
-                                            ) {
-                                                Text(
-                                                    text = "Otomatik",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = Color(0xFF15803D),
-                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                                )
-                                            }
-                                        }
-                                        Spacer(modifier = Modifier.height(2.dp))
-                                        Text(
-                                            text = "Usta iş atamaları, konum bağlantıları ve günlük iş özetleri WhatsApp üzerinden iletilir.",
-                                            fontSize = 11.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            lineHeight = 15.sp
-                                        )
-                                    }
-                                }
-                            }
-
-                            Divider(color = MaterialTheme.colorScheme.outlineVariant)
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = staffAutoDaily,
-                                    onCheckedChange = { staffAutoDaily = it },
-                                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E))
-                                )
-                                Text("Günlük randevu bilgilendirme mesajı gönderilsin", fontSize = 13.sp)
-                            }
-
-                            OutlinedTextField(
-                                value = staffDailyTime,
-                                onValueChange = { staffDailyTime = it },
-                                label = { Text("Günlük Randevu Mesajı Saati (Örn: 08:30)") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = staffAutoReminder,
-                                    onCheckedChange = { staffAutoReminder = it },
-                                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF22C55E))
-                                )
-                                Text("Randevu öncesi ustaya hatırlatma bildirimi gönderilsin", fontSize = 13.sp)
-                            }
-
-                            Button(
-                                onClick = {
-                                    val updated = StaffMessagingSettings(
-                                        isNotificationsActive = staffActive,
-                                        selectedChannel = "WhatsApp",
-                                        autoSendDailyAppointmentSummary = staffAutoDaily,
-                                        dailySummaryTime = staffDailyTime,
-                                        autoSendAppointmentReminder = staffAutoReminder
-                                    )
-                                    onUpdateStaffSettings(updated)
-                                    Toast.makeText(context, "Personel mesaj ayarları kaydedildi", Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF22C55E))
-                            ) {
-                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text("Ayarları Kaydet", fontWeight = FontWeight.Bold)
-                            }
-                        }
-                    }
-                }
-                2 -> {
-                    // Mesaj Şablonları Tab (Müşteriye/Ustaya Gidecek BİTMİŞ ÖNİZLEME Görünümü)
+                    // Mesaj Şablonları Tab (Müşteriye Gidecek BİTMİŞ ÖNİZLEME Görünümü)
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         // Meta Onay Bilgilendirme Kartı
                         Card(
@@ -537,7 +392,7 @@ fun MessagesScreen(
                                     }
                                     Spacer(modifier = Modifier.height(2.dp))
                                     Text(
-                                        text = "Aşağıda müşteriye ve ustaya gönderilecek onaylı WhatsApp mesajlarının bitmiş canlı önizlemesi yer almaktadır.",
+                                        text = "Aşağıda müşteriye gönderilecek resmi WhatsApp mesajlarının bitmiş canlı önizlemesi yer almaktadır.",
                                         fontSize = 11.sp,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                                         lineHeight = 15.sp
@@ -546,39 +401,10 @@ fun MessagesScreen(
                             }
                         }
 
-                        // Kategori Filtresi (Müşteriye Gidecek / Ustaya Gidecek)
-                        val musteriCount = templates.count { it.category == "MUSTERI" }.coerceAtLeast(8)
-                        val ustaCount = templates.count { it.category == "USTA" }.coerceAtLeast(3)
+                        // Müşteriye giden tüm şablonları listele
+                        val customerTemplates = templates.filter { it.category == "MUSTERI" }.ifEmpty { templates }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            listOf(
-                                "MUSTERI" to "Müşteriye Gidecek ($musteriCount)",
-                                "USTA" to "Ustaya Gidecek ($ustaCount)"
-                            ).forEach { (catKey, catLabel) ->
-                                val isCatSelected = templateCategoryFilter == catKey
-                                Surface(
-                                    shape = RoundedCornerShape(20.dp),
-                                    color = if (isCatSelected) Color(0xFF22C55E) else MaterialTheme.colorScheme.surfaceVariant,
-                                    modifier = Modifier.clickable { templateCategoryFilter = catKey }
-                                ) {
-                                    Text(
-                                        text = catLabel,
-                                        color = if (isCatSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
-                                    )
-                                }
-                            }
-                        }
-
-                        val filteredTemplates = templates.filter { it.category == templateCategoryFilter }
-
-                        // Her şablonu bitmiş canlı WhatsApp mesaj önizlemesi olarak göster
-                        filteredTemplates.forEach { tpl ->
+                        customerTemplates.forEach { tpl ->
                             WhatsAppTemplateCard(
                                 template = tpl,
                                 onCopyClick = {

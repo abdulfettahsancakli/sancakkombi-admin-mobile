@@ -158,6 +158,62 @@ object ReminderManager {
         }
     }
 
+    fun scheduleDailySummaryReminders(context: Context, todayCount: Int = 0, firstApptSummary: String? = null) {
+        createNotificationChannel(context)
+        val morningMsg = if (todayCount > 0) {
+            "Bugün toplam $todayCount randevunuz var. ${firstApptSummary?.let { "İlk servis: $it" } ?: ""}"
+        } else {
+            "Bugün için planlanmış randevunuz bulunmuyor. İyi çalışmalar!"
+        }
+        scheduleDailyAlarm(context, 9, 0, 10001, "☀️ Günaydın Usta (09:00)", morningMsg)
+
+        val noonMsg = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edin."
+        scheduleDailyAlarm(context, 12, 0, 10002, "🕛 Gün Ortası Durumu (12:00)", noonMsg)
+    }
+
+    private fun scheduleDailyAlarm(context: Context, hour: Int, minute: Int, requestCode: Int, title: String, message: String) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val calendar = Calendar.getInstance().apply {
+            set(Calendar.HOUR_OF_DAY, hour)
+            set(Calendar.MINUTE, minute)
+            set(Calendar.SECOND, 0)
+            if (timeInMillis <= System.currentTimeMillis()) {
+                add(Calendar.DAY_OF_YEAR, 1)
+            }
+        }
+
+        val intent = Intent(context, AppointmentReminderReceiver::class.java).apply {
+            putExtra(AppointmentReminderReceiver.EXTRA_APPOINTMENT_ID, "daily_$requestCode")
+            putExtra(AppointmentReminderReceiver.EXTRA_TITLE, title)
+            putExtra(AppointmentReminderReceiver.EXTRA_CUSTOMER_NAME, message)
+            putExtra(AppointmentReminderReceiver.EXTRA_ADDRESS, "Sancak Kombi Mobil Yönetim")
+        }
+
+        val pendingIntent = PendingIntent.getBroadcast(
+            context,
+            requestCode,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        try {
+            alarmManager.setRepeating(
+                AlarmManager.RTC_WAKEUP,
+                calendar.timeInMillis,
+                AlarmManager.INTERVAL_DAY,
+                pendingIntent
+            )
+        } catch (e: Exception) {
+            try {
+                alarmManager.set(
+                    AlarmManager.RTC_WAKEUP,
+                    calendar.timeInMillis,
+                    pendingIntent
+                )
+            } catch (ignored: Exception) {}
+        }
+    }
+
     fun showImmediateNotification(context: Context, title: String, message: String) {
         createNotificationChannel(context)
         val notificationManager =

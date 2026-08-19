@@ -99,6 +99,14 @@ class MainActivity : ComponentActivity() {
             val adsError by viewModel.adsError.collectAsState()
             val togglingCampaignId by viewModel.togglingCampaignId.collectAsState()
 
+            LaunchedEffect(appointments) {
+                com.example.utils.ReminderManager.scheduleDailySummaryReminders(
+                    applicationContext,
+                    appointments.size,
+                    appointments.firstOrNull()?.let { "${it.timeSlot} - ${it.customerName} (${it.district})" }
+                )
+            }
+
             SancakKombiTheme(darkTheme = isDarkTheme) {
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
@@ -130,6 +138,7 @@ class MainActivity : ComponentActivity() {
                             "dashboard" -> {
                                     DashboardScreen(
                                         stats = stats,
+                                        appointments = appointments,
                                         onNavigateToModule = { module ->
                                             viewModel.navigateTo(module.id, module)
                                         }

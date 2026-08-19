@@ -91,6 +91,7 @@ import java.util.Locale
 @Composable
 fun DashboardScreen(
     stats: DashboardStats,
+    appointments: List<com.example.data.model.Appointment> = emptyList(),
     onNavigateToModule: (AdminModule) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -100,6 +101,96 @@ fun DashboardScreen(
         val sdf = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr", "TR"))
         sdf.format(Date())
     }
+
+    val todayStr = remember {
+        SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+    }
+    val todayAppts = remember(appointments, todayStr) {
+        appointments.filter { it.date == todayStr || it.date.contains(todayStr) }.ifEmpty { appointments.take(4) }
+    }
+
+    val dynamicNotifications = remember(stats, todayAppts) {
+        val list = mutableListOf<DynamicNotificationItem>()
+
+        // 1. 09:00 Sabah Bildirimi
+        val firstAppt = todayAppts.firstOrNull()
+        val morningDesc = if (firstAppt != null) {
+            "Bugün toplam ${todayAppts.size} randevunuz var. İlk servis: ${firstAppt.timeSlot} - ${firstAppt.customerName} (${firstAppt.district})"
+        } else {
+            "Bugün için planlanmış randevunuz bulunmuyor. İyi çalışmalar dileriz!"
+        }
+        list.add(
+            DynamicNotificationItem(
+                title = "☀️ Günün Randevu Özeti (09:00)",
+                desc = morningDesc,
+                time = "09:00",
+                isUnread = true,
+                icon = Icons.Default.DateRange,
+                iconColor = Color(0xFF0288D1),
+                targetModule = AdminModule.RANDEVULAR
+            )
+        )
+
+        // 2. 12:00 Öğlen Takibi
+        list.add(
+            DynamicNotificationItem(
+                title = "🕛 Gün Ortası Durumu (12:00)",
+                desc = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edebilirsiniz.",
+                time = "12:00",
+                isUnread = true,
+                icon = Icons.Default.PendingActions,
+                iconColor = Color(0xFFF59E0B),
+                targetModule = AdminModule.RANDEVULAR
+            )
+        )
+
+        // 3. Sıradaki Yaklaşan Randevu
+        if (firstAppt != null) {
+            list.add(
+                DynamicNotificationItem(
+                    title = "⏰ Yaklaşan Randevu",
+                    desc = "${firstAppt.customerName} • ${firstAppt.serviceType} (${firstAppt.district}, ${firstAppt.timeSlot})",
+                    time = "1 saat önce",
+                    isUnread = true,
+                    icon = Icons.Default.Bolt,
+                    iconColor = Color(0xFF10B981),
+                    targetModule = AdminModule.RANDEVULAR
+                )
+            )
+        }
+
+        // 4. Teklif Onayları
+        if (stats.bekleyenOnay > 0) {
+            list.add(
+                DynamicNotificationItem(
+                    title = "📋 Bekleyen Teklif Yanıtı",
+                    desc = "${stats.bekleyenOnay} adet müşteri teklifi yanıt beklemektedir.",
+                    time = "Bugün",
+                    isUnread = false,
+                    icon = Icons.Default.Description,
+                    iconColor = Color(0xFF8B5CF6),
+                    targetModule = AdminModule.TEKLIFLER
+                )
+            )
+        }
+
+        // 5. Periyodik Bakım
+        list.add(
+            DynamicNotificationItem(
+                title = "🔧 Yaklaşan Periyodik Bakımlar",
+                desc = "Yıllık kombi bakımı yaklaşan müşterilerinizi Bakım Takvimi üzerinden inceleyebilirsiniz.",
+                time = "Dün",
+                isUnread = false,
+                icon = Icons.Default.Handyman,
+                iconColor = Color(0xFFF97316),
+                targetModule = AdminModule.BAKIM_TAKVIMLERI
+            )
+        )
+
+        list
+    }
+
+    val unreadCount = dynamicNotifications.count { it.isUnread }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
@@ -115,7 +206,7 @@ fun DashboardScreen(
         item(span = { GridItemSpan(2) }) {
             DashboardGreetingHeader(
                 currentDate = currentDateStr,
-                unreadNotificationCount = 3,
+                unreadNotificationCount = unreadCount,
                 onOpenNotifications = { showNotificationDialog = true }
             )
         }
@@ -271,7 +362,13 @@ fun DashboardScreen(
     }
 
     if (showNotificationDialog) {
-        NotificationCenterDialog(onDismiss = { showNotificationDialog = false })
+        NotificationCenterDialog(
+            notifications = dynamicNotifications,
+            onNotificationClick = { module ->
+                onNavigateToModule(module)
+            },
+            onDismiss = { showNotificationDialog = false }
+        )
     }
 }
 
@@ -1082,77 +1179,149 @@ private fun PulseEffectDot(
     }
 }
 
+data class DynamicNotificationItem(
+    val title: String,
+    val desc: String,
+    val time: String,
+    val isUnread: Boolean,
+    val icon: ImageVector,
+    val iconColor: Color,
+    val targetModule: AdminModule
+)
+
 @Composable
 private fun NotificationCenterDialog(
+    notifications: List<DynamicNotificationItem>,
+    onNotificationClick: (AdminModule) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Notifications,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(22.dp)
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Bildirim Merkezi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text("Usta Bildirimleri", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF22C55E).copy(alpha = 0.15f)
+                ) {
+                    Text(
+                        text = "09:00 & 12:00 Aktif",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF16A34A),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
             }
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                NotificationItemCard(
-                    title = "Teklif Onayı Bekliyor",
-                    desc = "Teklif #1024 müşteriden yanıt beklemektedir.",
-                    time = "10 dk önce",
-                    isUnread = true
-                )
-                NotificationItemCard(
-                    title = "Yaklaşan Periyodik Bakım",
-                    desc = "Ahmet Yılmaz müşterisinin 1 yıllık kombi bakımı geldi.",
-                    time = "1 saat önce",
-                    isUnread = true
-                )
-                NotificationItemCard(
-                    title = "Servis Tamamlandı",
-                    desc = "Kombisi tamir edilen servis tamamlandı olarak işaretlendi.",
-                    time = "3 saat önce",
-                    isUnread = false
-                )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                notifications.forEach { item ->
+                    NotificationItemCard(
+                        item = item,
+                        onClick = {
+                            onNotificationClick(item.targetModule)
+                            onDismiss()
+                        }
+                    )
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = onDismiss) {
                 Text("Kapat", fontWeight = FontWeight.Bold)
             }
-        }
+        },
+        shape = RoundedCornerShape(20.dp)
     )
 }
 
 @Composable
 private fun NotificationItemCard(
-    title: String,
-    desc: String,
-    time: String,
-    isUnread: Boolean
+    item: DynamicNotificationItem,
+    onClick: () -> Unit
 ) {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = if (isUnread) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        border = BorderStroke(1.dp, if (isUnread) MaterialTheme.colorScheme.primary.copy(alpha = 0.3f) else Color.Transparent)
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = if (item.isUnread) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+        border = BorderStroke(1.dp, if (item.isUnread) item.iconColor.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(item.iconColor.copy(alpha = 0.15f)),
+                contentAlignment = Alignment.Center
             ) {
-                Text(text = title, fontSize = 13.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                Text(text = time, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(
+                    imageVector = item.icon,
+                    contentDescription = null,
+                    tint = item.iconColor,
+                    modifier = Modifier.size(18.dp)
+                )
             }
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(text = desc, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+
+            Spacer(modifier = Modifier.width(10.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = item.title,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = item.time,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                Spacer(modifier = Modifier.height(3.dp))
+                Text(
+                    text = item.desc,
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 15.sp
+                )
+            }
         }
     }
 }
