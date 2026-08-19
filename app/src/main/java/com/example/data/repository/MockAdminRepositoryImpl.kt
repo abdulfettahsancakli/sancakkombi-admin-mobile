@@ -601,10 +601,8 @@ class MockAdminRepositoryImpl : AdminRepository {
     }
 
     override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> {
-        delay(300)
+        delay(200)
         val cust = _customers.value.find { it.id == customerId }
-        val brand = if (!cust?.notes.isNullOrBlank() && cust?.notes?.contains("Demirdöküm", ignoreCase = true) == true) "Demirdöküm" else "E.C.A."
-        val model = if (brand == "Demirdöküm") "Nitromix P24" else "Proteus Premix"
 
         // Dynamic completed appointments for this customer
         val completedAppts = _appointments.value.filter { appt ->
@@ -612,8 +610,8 @@ class MockAdminRepositoryImpl : AdminRepository {
                     appt.status == AppointmentStatus.TAMAMLANDI
         }.map { appt ->
             val report = appt.jobReport
-            val dBrand = report?.deviceBrand?.takeIf { it.isNotBlank() } ?: brand
-            val dModel = report?.deviceModel?.takeIf { it.isNotBlank() } ?: model
+            val dBrand = report?.deviceBrand?.takeIf { it.isNotBlank() } ?: "Kombi"
+            val dModel = report?.deviceModel?.takeIf { it.isNotBlank() } ?: ""
             val partsList = report?.usedParts?.map { p ->
                 com.example.data.remote.DeviceHistoryPartDto(
                     name = p.name,
@@ -638,57 +636,29 @@ class MockAdminRepositoryImpl : AdminRepository {
             )
         }
 
-        val baseRecords = listOf(
-            com.example.data.remote.DeviceHistoryRecordDto(
-                appointmentId = "rec_1",
-                date = "12.03.2026",
-                serviceTitle = "Kombi Genel Bakım & Parça Değişimi",
-                deviceBrand = brand,
-                deviceModel = model,
-                workDescription = "Ateşleme elektrodu temizlendi. O-ring conta yenilendi. Genleşme tankı hava basıncı 1.2 bar'a ayarlandı.",
-                parts = listOf(
-                    com.example.data.remote.DeviceHistoryPartDto(name = "Ateşleme Elektrodu", quantity = 1, unitPrice = 450.0),
-                    com.example.data.remote.DeviceHistoryPartDto(name = "O-Ring Conta Takımı", quantity = 1, unitPrice = 120.0)
-                ),
-                warrantyMonths = 12,
-                warrantyUntil = "12.03.2027",
-                isUnderWarranty = true
-            ),
-            com.example.data.remote.DeviceHistoryRecordDto(
-                appointmentId = "rec_2",
-                date = "15.01.2025",
-                serviceTitle = "Sirkülasyon Pompası Değişimi",
-                deviceBrand = brand,
-                deviceModel = model,
-                workDescription = "Sirkülasyon pompası arızası giderildi. Orijinal Wilo yedek pompa takıldı, tesisat havası alındı.",
-                parts = listOf(
-                    com.example.data.remote.DeviceHistoryPartDto(name = "Wilo Sirkülasyon Pompası", quantity = 1, unitPrice = 2800.0)
-                ),
-                warrantyMonths = 12,
-                warrantyUntil = "15.01.2026",
-                isUnderWarranty = false
-            ),
-            com.example.data.remote.DeviceHistoryRecordDto(
-                appointmentId = "rec_3",
-                date = "10.05.2024",
-                serviceTitle = "Kombili Tesisat Yıkama & Filtre Temizliği",
-                deviceBrand = brand,
-                deviceModel = model,
-                workDescription = "Radyatör petek temizleme ilacı ile tesisat yıkandı. Manyetik pislik tutucu filtre temizlendi.",
-                parts = emptyList(),
-                warrantyMonths = null,
-                warrantyUntil = null,
-                isUnderWarranty = false
-            )
-        )
+        // Customer specific device brand & model from notes or completed records
+        val brandFromNotes = when {
+            cust?.notes?.contains("Demirdöküm", ignoreCase = true) == true -> "Demirdöküm"
+            cust?.notes?.contains("E.C.A", ignoreCase = true) == true -> "E.C.A."
+            cust?.notes?.contains("Vaillant", ignoreCase = true) == true -> "Vaillant"
+            cust?.notes?.contains("Baymak", ignoreCase = true) == true -> "Baymak"
+            cust?.notes?.contains("Bosch", ignoreCase = true) == true -> "Bosch"
+            cust?.notes?.contains("Buderus", ignoreCase = true) == true -> "Buderus"
+            cust?.notes?.contains("Viessmann", ignoreCase = true) == true -> "Viessmann"
+            cust?.notes?.contains("Protherm", ignoreCase = true) == true -> "Protherm"
+            cust?.notes?.contains("Alarko", ignoreCase = true) == true -> "Alarko"
+            else -> ""
+        }
 
-        val combinedRecords = completedAppts + baseRecords
+        val brand = completedAppts.firstOrNull()?.deviceBrand ?: brandFromNotes
+        val model = completedAppts.firstOrNull()?.deviceModel ?: if (brand.isNotBlank()) "Kombi" else ""
 
         val mockDto = com.example.data.remote.DeviceHistoryDto(
+            customerId = customerId,
             deviceBrand = brand,
             deviceModel = model,
-            deviceNotes = cust?.notes ?: "Periyodik bakımları sistemde kayıtlı.",
-            records = combinedRecords
+            deviceNotes = cust?.notes ?: "",
+            records = completedAppts
         )
         return Result.success(mockDto)
     }

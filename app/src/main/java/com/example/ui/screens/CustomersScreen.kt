@@ -999,15 +999,15 @@ fun CustomersScreen(
                                                                         )
                                                                     }
                                                                     Spacer(modifier = Modifier.height(6.dp))
-                                                                    val bName = history?.deviceBrand?.takeIf { it.isNotBlank() } ?: cust.notes.takeIf { it.isNotBlank() } ?: "Kombi"
+                                                                    val bName = history?.deviceBrand?.takeIf { it.isNotBlank() } ?: cust.notes.takeIf { it.isNotBlank() } ?: ""
                                                                     val mName = history?.deviceModel?.takeIf { it.isNotBlank() } ?: ""
                                                                     Text(
-                                                                        text = "Cihaz: $bName $mName".trim(),
+                                                                        text = if (bName.isNotBlank() || mName.isNotBlank()) "Cihaz: $bName $mName".trim() else "Cihaz Bilgisi: Belirtilmemiş",
                                                                         fontWeight = FontWeight.Bold,
                                                                         fontSize = 13.sp,
                                                                         color = MaterialTheme.colorScheme.onSurface
                                                                     )
-                                                                    if (!history?.deviceNotes.isNullOrBlank()) {
+                                                                    if (!history?.deviceNotes.isNullOrBlank() && history?.deviceNotes != bName) {
                                                                         Spacer(modifier = Modifier.height(4.dp))
                                                                         Text(
                                                                             text = "Notlar: ${history?.deviceNotes}",
