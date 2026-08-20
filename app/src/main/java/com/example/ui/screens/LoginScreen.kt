@@ -80,12 +80,18 @@ fun LoginScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Sancak Kombi Logo & Title
-            Image(
-                painter = painterResource(id = R.drawable.logo_sancakkombi),
-                contentDescription = "Sancak Kombi",
-                contentScale = ContentScale.Fit,
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = Color(0xFF111632),
                 modifier = Modifier.size(96.dp)
-            )
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.logo_sancakkombi),
+                    contentDescription = "Sancak Kombi",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

@@ -71,12 +71,18 @@ fun TopHeaderBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Image(
-                    painter = painterResource(id = R.drawable.logo_sancakkombi),
-                    contentDescription = "Sancak Kombi Logo",
-                    contentScale = ContentScale.Fit,
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF111632),
                     modifier = Modifier.size(34.dp)
-                )
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.logo_sancakkombi),
+                        contentDescription = "Sancak Kombi Logo",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
                 Spacer(modifier = Modifier.width(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
