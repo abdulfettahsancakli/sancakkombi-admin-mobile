@@ -970,15 +970,14 @@ private fun AppointmentCard(
 
                             Spacer(modifier = Modifier.weight(1f))
 
-                            // Toolbar Icons: Hatırlatıcı, Düzenle, İptal, Sil
+                            // Toolbar Icons: Hatırlatıcı (30s Test), Düzenle, İptal, Sil
                             IconButton(
                                 onClick = {
-                                    com.example.utils.ReminderManager.scheduleAppointmentReminder(context, appointment, 30)
-                                    Toast.makeText(context, "⏰ ${appointment.customerName} için 30 dk öncesine bildirim kuruldu!", Toast.LENGTH_SHORT).show()
+                                    com.example.utils.ReminderManager.scheduleTestReminder(context, 30)
                                 },
                                 modifier = Modifier.size(34.dp)
                             ) {
-                                Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = "Hatırlatıcı Kur", tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                                Icon(imageVector = Icons.Default.NotificationsActive, contentDescription = "30s Test Bildirimi", tint = Color(0xFF10B981), modifier = Modifier.size(18.dp))
                             }
 
                             IconButton(

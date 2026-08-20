@@ -100,35 +100,44 @@ fun CompleteJobDialog(
     var showIbanDialog by remember { mutableStateOf(false) }
 
     val isEditMode = appointment.status == AppointmentStatus.TAMAMLANDI
+    val existingReport = appointment.jobReport
 
     // Basic Form State
-    var technicianName by remember { mutableStateOf("Fatih Sancaklı") }
+    var technicianName by remember { mutableStateOf(existingReport?.technicianName?.ifBlank { "Fatih Sancaklı" } ?: "Fatih Sancaklı") }
     var notifyCustomerMessage by remember { mutableStateOf(!isEditMode) }
     var sendWhatsappPdf by remember { mutableStateOf(!isEditMode) }
 
     // Revenue Section State
-    var addRevenueRecord by remember { mutableStateOf(true) }
-    var collectedAmount by remember { mutableStateOf("") }
-    var paymentStatus by remember { mutableStateOf("Ödendi") }
-    var paymentMethod by remember { mutableStateOf("Nakit") }
-    var revenueNote by remember { mutableStateOf("") }
+    var addRevenueRecord by remember { mutableStateOf(existingReport?.addRevenueRecord ?: true) }
+    var collectedAmount by remember { mutableStateOf(existingReport?.collectedAmount ?: "") }
+    var paymentStatus by remember { mutableStateOf(existingReport?.paymentStatus?.ifBlank { "Ödendi" } ?: "Ödendi") }
+    var paymentMethod by remember { mutableStateOf(existingReport?.paymentMethod?.ifBlank { "Nakit" } ?: "Nakit") }
+    var revenueNote by remember { mutableStateOf(existingReport?.revenueNote ?: "") }
 
     // Job Report Section State
-    var addJobReport by remember { mutableStateOf(true) }
-    var deviceBrand by remember { mutableStateOf("") }
-    var deviceModel by remember { mutableStateOf("") }
-    var workDoneNote by remember { mutableStateOf("") }
-    var warrantyMonths by remember { mutableStateOf("") }
+    var addJobReport by remember { mutableStateOf(existingReport?.addJobReport ?: true) }
+    var deviceBrand by remember { mutableStateOf(existingReport?.deviceBrand ?: "") }
+    var deviceModel by remember { mutableStateOf(existingReport?.deviceModel ?: "") }
+    var workDoneNote by remember { mutableStateOf(existingReport?.workDoneNote ?: "") }
+    var warrantyMonths by remember { mutableStateOf(existingReport?.warrantyMonths ?: "") }
 
-    val usedParts = remember { mutableStateListOf<UsedPart>() }
-    var serviceFee by remember { mutableStateOf("") }
-    var otherFee by remember { mutableStateOf("") }
-    var deviceTested by remember { mutableStateOf(true) }
-    var createExpenseRecord by remember { mutableStateOf(false) }
+    val usedParts = remember {
+        mutableStateListOf<UsedPart>().apply {
+            existingReport?.usedParts?.let { addAll(it) }
+        }
+    }
+    var serviceFee by remember { mutableStateOf(existingReport?.serviceFee ?: "") }
+    var otherFee by remember { mutableStateOf(existingReport?.otherFee ?: "") }
+    var deviceTested by remember { mutableStateOf(existingReport?.deviceTested ?: true) }
+    var createExpenseRecord by remember { mutableStateOf(existingReport?.createExpenseRecord ?: false) }
 
     // Photo & Signature State
     val context = LocalContext.current
-    val photoUris = remember { mutableStateListOf<String>() }
+    val photoUris = remember {
+        mutableStateListOf<String>().apply {
+            existingReport?.photoUris?.let { addAll(it) }
+        }
+    }
     val customerSignatureLines = remember { mutableStateListOf<Line>() }
     val technicianSignatureLines = remember { mutableStateListOf<Line>() }
     var customerSignatureCanvasSize by remember { mutableStateOf(IntSize.Zero) }
