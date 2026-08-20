@@ -128,7 +128,7 @@ fun CustomersScreen(
     onAddCustomer: (Customer) -> Unit,
     onAddCustomers: ((List<Customer>) -> Unit)? = null,
     onUpdateCustomer: (Customer) -> Unit,
-    onDeleteCustomer: ((String) -> Unit)? = null,
+    onDeleteCustomer: ((String, (Result<Unit>) -> Unit) -> Unit)? = null,
     onFetchDeviceHistory: (suspend (String) -> Result<com.example.data.remote.DeviceHistoryDto>)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -143,24 +143,30 @@ fun CustomersScreen(
     var showNewCustomerDialog by remember { mutableStateOf(false) }
     var showBulkImportDialog by remember { mutableStateOf(false) }
     var filterOnlyActiveAppointments by remember { mutableStateOf(false) }
+    var isDeletingCustomer by remember { mutableStateOf(false) }
+    var deleteError by remember { mutableStateOf<String?>(null) }
 
     var deviceHistoryState by remember { mutableStateOf<com.example.data.remote.DeviceHistoryDto?>(null) }
     var isDeviceHistoryLoading by remember { mutableStateOf(false) }
+    var deviceHistoryError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(selectedCustomer?.id) {
         val custId = selectedCustomer?.id
         if (custId != null && onFetchDeviceHistory != null) {
             isDeviceHistoryLoading = true
+            deviceHistoryError = null
             val res = onFetchDeviceHistory(custId)
             if (res.isSuccess) {
                 deviceHistoryState = res.getOrNull()
             } else {
                 deviceHistoryState = null
+                deviceHistoryError = res.exceptionOrNull()?.message ?: "Cihaz geçmişi yüklenemedi."
             }
             isDeviceHistoryLoading = false
         } else {
             deviceHistoryState = null
             isDeviceHistoryLoading = false
+            deviceHistoryError = null
         }
     }
 
@@ -169,6 +175,7 @@ fun CustomersScreen(
 
     val filteredCustomers = remember(customers, searchQuery, filterOnlyActiveAppointments) {
         customers.filter { cust ->
+            !cust.isArchived &&
             val matchesSearch = searchQuery.isBlank() ||
                     cust.name.contains(searchQuery, ignoreCase = true) ||
                     cust.phone.contains(searchQuery) ||
@@ -971,6 +978,8 @@ fun CustomersScreen(
                                                         ) {
                                                             CircularProgressIndicator(modifier = Modifier.size(28.dp))
                                                         }
+                                                    } else if (deviceHistoryError != null) {
+                                                        Text(deviceHistoryError!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp, modifier = Modifier.padding(16.dp))
                                                     } else {
                                                         val history = deviceHistoryState
                                                         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1336,13 +1345,24 @@ fun CustomersScreen(
                             selectedCustomer = null
                         }
                         customerToDelete = null
-                        onDeleteCustomer?.invoke(idToDelete)
-                        Toast.makeText(context, "$nameDeleted silindi.", Toast.LENGTH_SHORT).show()
+                        isDeletingCustomer = true
+                        deleteError = null
+                        onDeleteCustomer?.invoke(idToDelete, { result ->
+                            isDeletingCustomer = false
+                            result.onSuccess {
+                                customerToDelete = null
+                                Toast.makeText(context, "$nameDeleted arşivlendi.", Toast.LENGTH_SHORT).show()
+                            }.onFailure {
+                                deleteError = it.message ?: "Müşteri arşivlenemedi."
+                                Toast.makeText(context, deleteError, Toast.LENGTH_LONG).show()
+                            }
+                        })
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
                     shape = RoundedCornerShape(12.dp)
                 ) {
-                    Text("Evet, Sil", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (isDeletingCustomer) CircularProgressIndicator(modifier = Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text("Arşivle", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {

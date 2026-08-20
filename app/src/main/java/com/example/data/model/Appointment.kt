@@ -14,7 +14,8 @@ data class UsedPart(
     val id: String,
     val name: String,
     val quantity: Int = 1,
-    val price: Double = 0.0
+    val price: Double = 0.0,
+    val stockItemId: String? = null
 )
 
 @JsonClass(generateAdapter = true)

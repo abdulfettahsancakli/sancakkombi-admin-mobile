@@ -11,6 +11,9 @@ import com.example.data.model.JobReport
 import com.example.data.model.Proposal
 import com.example.data.model.ProposalStatus
 import com.example.data.model.CustomerMessagingSettings
+import com.example.data.model.CatalogItem
+import com.example.data.model.StockItem
+import com.example.data.model.StockMovement
 import com.example.data.model.MaintenanceRule
 import com.example.data.model.MaintenanceStats
 import com.example.data.model.MessageJob
@@ -54,6 +57,14 @@ interface AdminRepository {
     suspend fun updateCustomer(customer: Customer): Result<Unit>
     suspend fun deleteCustomer(id: String): Result<Unit>
     suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto>
+
+    // Catalog & Stock
+    fun getCatalogItems(): Flow<List<CatalogItem>>
+    suspend fun saveCatalogItem(item: CatalogItem): Result<Unit>
+    fun getStockItems(): Flow<List<StockItem>>
+    fun getStockMovements(): Flow<List<StockMovement>>
+    suspend fun saveStockItem(item: StockItem): Result<Unit>
+    suspend fun createStockMovement(movement: StockMovement): Result<Unit>
 
     // Finance
     fun getFinanceRecords(): Flow<List<FinanceRecord>>

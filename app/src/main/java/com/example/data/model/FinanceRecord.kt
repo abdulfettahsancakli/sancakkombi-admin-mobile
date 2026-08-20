@@ -13,7 +13,9 @@ data class FinanceRecord(
     val totalAmount: Double = amount,
     val collectedAmount: Double = amount,
     val note: String = "",
-    val receiptNo: String = "SK-202606-6A6F7A"
+    val receiptNo: String = "SK-202606-6A6F7A",
+    val appointmentId: String? = null,
+    val category: String = ""
 )
 
 enum class FinanceType(val label: String) {

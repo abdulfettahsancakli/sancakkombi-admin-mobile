@@ -98,7 +98,21 @@ data class ReceiptDetailDto(
     val deviceTested: Boolean = false,
     val workDescription: String = "",
     val warrantyMonths: Int? = null,
-    val serviceTitle: String = ""
+    val serviceTitle: String = "",
+    val appointmentId: String? = null,
+    val totalAmount: Double = amount,
+    val collectedAmount: Double = amount,
+    val serviceFee: Double = 0.0,
+    val otherFee: Double = 0.0,
+    val usedParts: List<ReceiptPartDto> = emptyList()
+)
+
+@JsonClass(generateAdapter = true)
+data class ReceiptPartDto(
+    val id: String = "",
+    val name: String = "",
+    val quantity: Int = 1,
+    val unitPrice: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)

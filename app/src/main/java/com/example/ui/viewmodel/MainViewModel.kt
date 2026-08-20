@@ -14,6 +14,9 @@ import com.example.data.model.JobReport
 import com.example.data.model.Proposal
 import com.example.data.model.ProposalStatus
 import com.example.data.model.CustomerMessagingSettings
+import com.example.data.model.CatalogItem
+import com.example.data.model.StockItem
+import com.example.data.model.StockMovement
 import com.example.data.model.MaintenanceRule
 import com.example.data.model.MaintenanceStats
 import com.example.data.model.MessageJob
@@ -65,6 +68,7 @@ class MainViewModel(
 
     // Finance State
     private val deletedFinanceRecordIds = mutableSetOf<String>()
+    private val deletedAppointmentIds = mutableSetOf<String>()
     private val deletedAdsExpenseDates = mutableSetOf<String>()
 
     private val _financeRecords = MutableStateFlow<List<FinanceRecord>>(emptyList())
@@ -75,6 +79,15 @@ class MainViewModel(
 
     private val _bankAccounts = MutableStateFlow<List<BankAccount>>(emptyList())
     val bankAccounts: StateFlow<List<BankAccount>> = _bankAccounts.asStateFlow()
+
+    private val _catalogItems = MutableStateFlow<List<CatalogItem>>(emptyList())
+    val catalogItems: StateFlow<List<CatalogItem>> = _catalogItems.asStateFlow()
+
+    private val _stockItems = MutableStateFlow<List<StockItem>>(emptyList())
+    val stockItems: StateFlow<List<StockItem>> = _stockItems.asStateFlow()
+
+    private val _stockMovements = MutableStateFlow<List<StockMovement>>(emptyList())
+    val stockMovements: StateFlow<List<StockMovement>> = _stockMovements.asStateFlow()
 
     private val _selectedFinanceRecordForReceipt = MutableStateFlow<FinanceRecord?>(null)
     val selectedFinanceRecordForReceipt: StateFlow<FinanceRecord?> = _selectedFinanceRecordForReceipt.asStateFlow()
@@ -181,13 +194,14 @@ class MainViewModel(
         }
         viewModelScope.launch {
             repository.getCustomers().collect { list ->
-                _customers.value = list
+                _customers.value = list.filterNot { it.isArchived }
             }
         }
         viewModelScope.launch {
             repository.getFinanceRecords().collect { list ->
                 val filtered = list.filterNot { rec ->
                     rec.id in deletedFinanceRecordIds ||
+                    rec.appointmentId?.let { it in deletedAppointmentIds } == true ||
                     (deletedAdsExpenseDates.contains(rec.date) && (rec.source.contains("Google Ads", ignoreCase = true) || rec.id.startsWith("ads_")))
                 }
                 _financeRecords.value = filtered
@@ -207,6 +221,15 @@ class MainViewModel(
             repository.getBankAccounts().collect { accs ->
                 _bankAccounts.value = accs
             }
+        }
+        viewModelScope.launch {
+            repository.getCatalogItems().collect { _catalogItems.value = it }
+        }
+        viewModelScope.launch {
+            repository.getStockItems().collect { _stockItems.value = it }
+        }
+        viewModelScope.launch {
+            repository.getStockMovements().collect { _stockMovements.value = it }
         }
         viewModelScope.launch {
             repository.getProposals().collect { props ->
@@ -360,15 +383,15 @@ class MainViewModel(
     }
 
     // Appointments Actions
-    fun addAppointment(appointment: Appointment) {
+    fun addAppointment(appointment: Appointment, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            repository.addAppointment(appointment)
+            onResult(repository.addAppointment(appointment))
         }
     }
 
-    fun updateAppointment(appointment: Appointment) {
+    fun updateAppointment(appointment: Appointment, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            repository.updateAppointment(appointment)
+            onResult(repository.updateAppointment(appointment))
         }
     }
 
@@ -378,9 +401,9 @@ class MainViewModel(
         }
     }
 
-    fun completeJob(appointmentId: String, jobReport: JobReport) {
+    fun completeJob(appointmentId: String, jobReport: JobReport, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            repository.completeJob(appointmentId, jobReport)
+            onResult(repository.completeJob(appointmentId, jobReport))
         }
     }
 
@@ -411,7 +434,14 @@ class MainViewModel(
 
     fun deleteAppointment(id: String) {
         viewModelScope.launch {
-            repository.deleteAppointment(id)
+            deletedAppointmentIds.add(id)
+            _financeRecords.value = _financeRecords.value.filterNot { it.appointmentId == id }
+            recalculateFinanceSummary(_financeRecords.value)
+            val result = repository.deleteAppointment(id)
+            if (result.isFailure) {
+                deletedAppointmentIds.remove(id)
+                repository.refreshAll()
+            }
         }
     }
 
@@ -434,9 +464,9 @@ class MainViewModel(
         }
     }
 
-    fun deleteCustomer(id: String) {
+    fun deleteCustomer(id: String, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            repository.deleteCustomer(id)
+            onResult(repository.deleteCustomer(id))
         }
     }
 
@@ -477,6 +507,24 @@ class MainViewModel(
         viewModelScope.launch {
             _bankAccounts.value = accounts
             repository.updateBankAccounts(accounts)
+        }
+    }
+
+    fun saveCatalogItem(item: CatalogItem, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            onResult(repository.saveCatalogItem(item))
+        }
+    }
+
+    fun saveStockItem(item: StockItem, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            onResult(repository.saveStockItem(item))
+        }
+    }
+
+    fun createStockMovement(movement: StockMovement, onResult: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch {
+            onResult(repository.createStockMovement(movement))
         }
     }
 

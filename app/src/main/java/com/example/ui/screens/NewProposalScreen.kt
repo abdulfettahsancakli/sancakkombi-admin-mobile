@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.Proposal
 import com.example.data.model.ProposalItem
 import com.example.data.model.ProposalStatus
+import com.example.data.model.CatalogItem
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -56,6 +57,7 @@ import java.util.UUID
 
 @Composable
 fun NewProposalScreen(
+    catalogItems: List<CatalogItem> = emptyList(),
     onBackClick: () -> Unit,
     onCreateProposal: (Proposal) -> Unit,
     modifier: Modifier = Modifier
@@ -229,6 +231,23 @@ fun NewProposalScreen(
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text("Teklif Kalemleri", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+
+                    if (catalogItems.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Hazır hizmet / ürün fiyatları", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                            catalogItems.filter { it.active }.take(4).forEach { catalogItem ->
+                                OutlinedButton(
+                                    onClick = { items.add(ProposalItem(UUID.randomUUID().toString(), catalogItem.name, 1, catalogItem.defaultPrice)) },
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                                    modifier = Modifier.weight(1f)
+                                ) {
+                                    Text("${catalogItem.name}\n₺%.0f".format(catalogItem.defaultPrice), fontSize = 10.sp, maxLines = 2)
+                                }
+                            }
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 

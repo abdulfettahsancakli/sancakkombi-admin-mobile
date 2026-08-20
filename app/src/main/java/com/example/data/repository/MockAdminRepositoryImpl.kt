@@ -21,6 +21,11 @@ import kotlinx.coroutines.flow.map
 import java.util.UUID
 
 import com.example.data.model.CustomerMessagingSettings
+import com.example.data.model.CatalogItem
+import com.example.data.model.CatalogItemType
+import com.example.data.model.StockItem
+import com.example.data.model.StockMovement
+import com.example.data.model.StockMovementType
 import com.example.data.model.MaintenanceRule
 import com.example.data.model.MaintenanceStats
 import com.example.data.model.MessageJob
@@ -217,6 +222,21 @@ class MockAdminRepositoryImpl : AdminRepository {
     private val _bankAccounts = MutableStateFlow(initialBankAccounts)
     private val _financeRecords = MutableStateFlow(initialFinanceRecords)
     private val _proposals = MutableStateFlow(initialProposals)
+    private val _catalogItems = MutableStateFlow(
+        listOf(
+            CatalogItem("service-kombi", "Kombi Bakım & Servis", CatalogItemType.SERVICE, "hizmet", 0.0),
+            CatalogItem("boiler", "Kombi", CatalogItemType.BOILER, "adet", 0.0),
+            CatalogItem("second-hand-boiler", "2. El Kombi", CatalogItemType.SECOND_HAND_BOILER, "adet", 15000.0),
+            CatalogItem("service-fee", "Servis / İşçilik", CatalogItemType.SERVICE, "hizmet", 0.0)
+        )
+    )
+    private val _stockItems = MutableStateFlow(
+        listOf(
+            StockItem("stock-o-ring", "O-Ring Takımı", "OR-001", "takım", 12.0, 3.0, 35.0, 75.0),
+            StockItem("stock-electrode", "Ateşleyici Elektrodu", "EL-001", "adet", 8.0, 2.0, 180.0, 350.0)
+        )
+    )
+    private val _stockMovements = MutableStateFlow<List<StockMovement>>(emptyList())
 
     private val initialMessageTemplates = listOf(
         MessageTemplate(
@@ -514,12 +534,59 @@ class MockAdminRepositoryImpl : AdminRepository {
         val newList = _appointments.value.toMutableList()
         val index = newList.indexOfFirst { it.id == appointmentId }
         if (index != -1) {
+            val previousReport = newList[index].jobReport
             val updated = newList[index].copy(
                 status = AppointmentStatus.TAMAMLANDI,
                 jobReport = jobReport
             )
             newList[index] = updated
             _appointments.value = newList
+
+            // Apply only the quantity delta so editing a completed job is idempotent.
+            val previousParts = previousReport?.usedParts.orEmpty().filter { !it.stockItemId.isNullOrBlank() }
+                .groupingBy { it.stockItemId!! }.fold(0) { acc, part -> acc + part.quantity }
+            val nextParts = jobReport.usedParts.filter { !it.stockItemId.isNullOrBlank() }
+                .groupingBy { it.stockItemId!! }.fold(0) { acc, part -> acc + part.quantity }
+            (previousParts.keys + nextParts.keys).forEach { stockId ->
+                val delta = (nextParts[stockId] ?: 0) - (previousParts[stockId] ?: 0)
+                if (delta != 0) {
+                    createStockMovement(
+                        StockMovement(
+                            id = UUID.randomUUID().toString(),
+                            stockItemId = stockId,
+                            quantity = kotlin.math.abs(delta).toDouble(),
+                            type = if (delta > 0) StockMovementType.OUT else StockMovementType.REVERSAL,
+                            reason = "Servis fişi: ${updated.customerName}",
+                            appointmentId = appointmentId
+                        )
+                    )
+                }
+            }
+
+            if (jobReport.addRevenueRecord) {
+                val collected = jobReport.collectedAmount.replace(",", ".").toDoubleOrNull() ?: 0.0
+                if (collected > 0.0) {
+                    val record = FinanceRecord(
+                        id = "appointment_$appointmentId",
+                        date = updated.date,
+                        type = FinanceType.GELIR,
+                        amount = collected,
+                        totalAmount = collected,
+                        collectedAmount = collected,
+                        status = jobReport.paymentStatus,
+                        source = "${updated.customerName} • ${updated.serviceType}",
+                        note = jobReport.revenueNote.ifBlank { jobReport.workDoneNote },
+                        category = "Servis Tahsilatı",
+                        appointmentId = appointmentId,
+                        receiptNo = "SK-${updated.id.takeLast(8).uppercase()}"
+                    )
+                    addFinanceRecord(record)
+                } else {
+                    _financeRecords.value = _financeRecords.value.filterNot { it.appointmentId == appointmentId || it.id == "appointment_$appointmentId" }
+                }
+            } else {
+                _financeRecords.value = _financeRecords.value.filterNot { it.appointmentId == appointmentId || it.id == "appointment_$appointmentId" }
+            }
 
             // Update active count on customer
             val custs = _customers.value.toMutableList()
@@ -555,9 +622,23 @@ class MockAdminRepositoryImpl : AdminRepository {
 
     override suspend fun deleteAppointment(id: String): Result<Unit> {
         delay(300)
+        val appointment = _appointments.value.firstOrNull { it.id == id }
+        appointment?.jobReport?.usedParts.orEmpty().filter { !it.stockItemId.isNullOrBlank() }.forEach { part ->
+            createStockMovement(
+                StockMovement(
+                    id = UUID.randomUUID().toString(),
+                    stockItemId = part.stockItemId!!,
+                    quantity = part.quantity.toDouble(),
+                    type = StockMovementType.REVERSAL,
+                    reason = "Randevu silindi: ${appointment.customerName}",
+                    appointmentId = id
+                )
+            )
+        }
         val newList = _appointments.value.toMutableList()
         newList.removeAll { it.id == id }
         _appointments.value = newList
+        _financeRecords.value = _financeRecords.value.filterNot { it.appointmentId == id || it.id == "appointment_$id" }
         recalculateStats()
         return Result.success(Unit)
     }
@@ -594,9 +675,7 @@ class MockAdminRepositoryImpl : AdminRepository {
 
     override suspend fun deleteCustomer(id: String): Result<Unit> {
         delay(200)
-        val list = _customers.value.toMutableList()
-        list.removeAll { it.id == id }
-        _customers.value = list
+        _customers.value = _customers.value.map { if (it.id == id) it.copy(isArchived = true) else it }
         return Result.success(Unit)
     }
 
@@ -610,7 +689,7 @@ class MockAdminRepositoryImpl : AdminRepository {
                     appt.status == AppointmentStatus.TAMAMLANDI
         }.map { appt ->
             val report = appt.jobReport
-            val dBrand = report?.deviceBrand?.takeIf { it.isNotBlank() } ?: "Kombi"
+            val dBrand = report?.deviceBrand?.takeIf { it.isNotBlank() } ?: ""
             val dModel = report?.deviceModel?.takeIf { it.isNotBlank() } ?: ""
             val partsList = report?.usedParts?.map { p ->
                 com.example.data.remote.DeviceHistoryPartDto(
@@ -630,9 +709,9 @@ class MockAdminRepositoryImpl : AdminRepository {
                 deviceModel = dModel,
                 workDescription = (report?.workDoneNote ?: "").ifBlank { appt.problemNote.ifBlank { "Servis ve bakım işlemi başarıyla tamamlandı." } },
                 parts = partsList,
-                warrantyMonths = report?.warrantyMonths?.toIntOrNull() ?: 12,
-                warrantyUntil = "12.08.2027",
-                isUnderWarranty = true
+                warrantyMonths = report?.warrantyMonths?.toIntOrNull(),
+                warrantyUntil = null,
+                isUnderWarranty = false
             )
         }
 
@@ -651,7 +730,7 @@ class MockAdminRepositoryImpl : AdminRepository {
         }
 
         val brand = completedAppts.firstOrNull()?.deviceBrand ?: brandFromNotes
-        val model = completedAppts.firstOrNull()?.deviceModel ?: if (brand.isNotBlank()) "Kombi" else ""
+        val model = completedAppts.firstOrNull()?.deviceModel ?: ""
 
         val mockDto = com.example.data.remote.DeviceHistoryDto(
             customerId = customerId,
@@ -661,6 +740,40 @@ class MockAdminRepositoryImpl : AdminRepository {
             records = completedAppts
         )
         return Result.success(mockDto)
+    }
+
+    override fun getCatalogItems(): Flow<List<CatalogItem>> = _catalogItems.asStateFlow()
+
+    override suspend fun saveCatalogItem(item: CatalogItem): Result<Unit> {
+        delay(150)
+        _catalogItems.value = listOf(item) + _catalogItems.value.filterNot { it.id == item.id }
+        return Result.success(Unit)
+    }
+
+    override fun getStockItems(): Flow<List<StockItem>> = _stockItems.asStateFlow()
+
+    override fun getStockMovements(): Flow<List<StockMovement>> = _stockMovements.asStateFlow()
+
+    override suspend fun saveStockItem(item: StockItem): Result<Unit> {
+        delay(150)
+        _stockItems.value = listOf(item) + _stockItems.value.filterNot { it.id == item.id }
+        return Result.success(Unit)
+    }
+
+    override suspend fun createStockMovement(movement: StockMovement): Result<Unit> {
+        delay(100)
+        val current = _stockItems.value.find { it.id == movement.stockItemId }
+            ?: return Result.failure(IllegalArgumentException("Stok ürünü bulunamadı."))
+        val signedQuantity = when (movement.type) {
+            StockMovementType.IN, StockMovementType.REVERSAL -> movement.quantity
+            StockMovementType.OUT -> -movement.quantity
+            StockMovementType.ADJUSTMENT -> movement.quantity
+        }
+        _stockItems.value = _stockItems.value.map {
+            if (it.id == current.id) it.copy(quantity = it.quantity + signedQuantity) else it
+        }
+        _stockMovements.value = listOf(movement) + _stockMovements.value
+        return Result.success(Unit)
     }
 
     // Finance Implementations

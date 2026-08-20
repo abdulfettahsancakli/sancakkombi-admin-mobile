@@ -1,23 +1,31 @@
 package com.example.ui.components
 
+import android.app.DatePickerDialog
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CalendarMonth
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -42,451 +50,121 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
-import com.example.data.model.IstanbulLocationData
+import com.example.data.model.Customer
+import java.util.Calendar
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditAppointmentDialog(
     appointment: Appointment,
+    customers: List<Customer> = emptyList(),
     onDismiss: () -> Unit,
-    onSave: (Appointment) -> Unit,
+    onSave: (Appointment, (Result<Unit>) -> Unit) -> Unit,
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val initialDistrict = appointment.district.ifBlank { "Bayrampaşa" }
-    val allNeighborhoods = remember(initialDistrict) { IstanbulLocationData.getNeighborhoods(initialDistrict) }
-
-    // Smart neighborhood detection
-    val initialNeighborhood = remember(appointment) {
-        if (appointment.neighborhood.isNotBlank() && allNeighborhoods.contains(appointment.neighborhood)) {
-            appointment.neighborhood
-        } else {
-            allNeighborhoods.firstOrNull { nh ->
-                val cleanNh = nh.replace(" Mah.", "").replace(" Mahallesi", "").trim()
-                appointment.addressDetail.contains(cleanNh, ignoreCase = true)
-            } ?: appointment.neighborhood.ifBlank { allNeighborhoods.firstOrNull() ?: "" }
-        }
-    }
-
-    // Smart street extraction: strip neighborhood prefix if already included in addressDetail
-    val initialStreet = remember(appointment, initialNeighborhood) {
-        if (appointment.streetDoorNo.isNotBlank()) {
-            appointment.streetDoorNo
-        } else if (initialNeighborhood.isNotBlank()) {
-            val cleanNh = initialNeighborhood.replace(" Mah.", "").replace(" Mahallesi", "").trim()
-            val raw = appointment.addressDetail
-            val regex = Regex("""^(${Regex.escape(initialNeighborhood)}|${Regex.escape(cleanNh)}\s*(Mah\.|Mahallesi|Mah\.?|Mh\.?))\s*[,.-]?\s*""", RegexOption.IGNORE_CASE)
-            val stripped = raw.replace(regex, "").trim()
-            stripped.ifBlank { raw }
-        } else {
-            appointment.addressDetail
-        }
-    }
-
-    var customerName by remember { mutableStateOf(appointment.customerName) }
+    var selectedCustomer by remember { mutableStateOf(customers.find { it.id == appointment.customerId }) }
+    var query by remember { mutableStateOf(appointment.customerName) }
+    var customerMenuOpen by remember { mutableStateOf(false) }
+    var name by remember { mutableStateOf(appointment.customerName) }
     var phone by remember { mutableStateOf(appointment.phone) }
-    var email by remember { mutableStateOf(appointment.email) }
-    var district by remember { mutableStateOf(initialDistrict) }
-    var neighborhood by remember { mutableStateOf(initialNeighborhood) }
-    var streetDoorNo by remember { mutableStateOf(initialStreet) }
+    var district by remember { mutableStateOf(appointment.district) }
+    var address by remember { mutableStateOf(appointment.addressDetail) }
     var date by remember { mutableStateOf(appointment.date) }
-    var timeSlot by remember { mutableStateOf(appointment.timeSlot) }
-    var serviceType by remember { mutableStateOf(appointment.serviceType) }
+    var slot by remember { mutableStateOf(appointment.timeSlot) }
+    var service by remember { mutableStateOf(appointment.serviceType) }
+    var note by remember { mutableStateOf(appointment.problemNote) }
     var status by remember { mutableStateOf(appointment.status) }
-    var problemNote by remember { mutableStateOf(appointment.problemNote) }
+    var statusMenuOpen by remember { mutableStateOf(false) }
+    var serviceMenuOpen by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
+    var saved by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
-    val districts = IstanbulLocationData.districts
-    val currentNeighborhoods = remember(district) { IstanbulLocationData.getNeighborhoods(district) }
-    val currentStreets = remember(district, neighborhood) { IstanbulLocationData.getStreets(context, district, neighborhood) }
+    fun chooseCustomer(customer: Customer) {
+        selectedCustomer = customer
+        query = customer.name
+        name = customer.name
+        phone = customer.phone
+        district = customer.district
+        address = customer.address
+        customerMenuOpen = false
+    }
 
-    val timeSlots = listOf(
-        "09:00 - 10:00",
-        "10:00 - 11:00",
-        "11:00 - 12:00",
-        "12:00 - 13:00",
-        "13:00 - 14:00",
-        "14:00 - 15:00",
-        "15:00 - 16:00",
-        "16:00 - 17:00",
-        "17:00 - 18:00",
-        "18:00 - 19:00",
-        "19:00 - 20:00",
-        "20:00 - 21:00",
-        "21:00 - 22:00",
-        "22:00 - 23:00",
-        "23:00 - 00:00"
-    )
-    val services = listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarım", "Gaz Kaçağı Tespiti")
-
-    var expandedDistrict by remember { mutableStateOf(false) }
-    var expandedNeighborhood by remember { mutableStateOf(false) }
-    var expandedStreet by remember { mutableStateOf(false) }
-    var expandedTimeSlot by remember { mutableStateOf(false) }
-    var expandedService by remember { mutableStateOf(false) }
-    var expandedStatus by remember { mutableStateOf(false) }
-
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = modifier
-                .fillMaxWidth(0.92f)
-                .padding(vertical = 16.dp),
-            shape = RoundedCornerShape(16.dp),
-            color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 6.dp
-        ) {
-            Column(
-                modifier = Modifier
-                    .padding(20.dp)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Randevu Düzenle",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                        Text(
-                            text = appointment.customerName,
-                            fontSize = 12.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    IconButton(onClick = onDismiss) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = "Kapat")
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Müşteri Adı & Telefon
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = customerName,
-                        onValueChange = { customerName = it },
-                        label = { Text("Müşteri Adı *") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    OutlinedTextField(
-                        value = phone,
-                        onValueChange = { phone = it },
-                        label = { Text("Telefon *") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                }
-
-
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // İlçe & Mahalle Dropdowns
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    ExposedDropdownMenuBox(
-                        expanded = expandedDistrict,
-                        onExpandedChange = { expandedDistrict = !expandedDistrict },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = district,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("İlçe *") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedDistrict) },
-                            modifier = Modifier.menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedDistrict,
-                            onDismissRequest = { expandedDistrict = false }
-                        ) {
-                            districts.forEach { item ->
-                                DropdownMenuItem(
-                                    text = { Text(item) },
-                                    onClick = {
-                                        district = item
-                                        expandedDistrict = false
-                                        val nList = IstanbulLocationData.getNeighborhoods(item)
-                                        if (nList.isNotEmpty()) {
-                                            neighborhood = nList.first()
-                                            val sList = IstanbulLocationData.getStreets(context, item, nList.first())
-                                            streetDoorNo = if (sList.isNotEmpty()) "${sList.first()} No:12" else ""
-                                        } else {
-                                            neighborhood = ""
-                                            streetDoorNo = ""
-                                        }
-                                    }
-                                )
-                            }
+    Dialog(onDismissRequest = { if (!isSaving) onDismiss() }, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Surface(modifier = modifier.fillMaxWidth(.94f).padding(vertical = 12.dp), shape = RoundedCornerShape(22.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+            Box {
+                Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Randevuyu Düzenle", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                            Text("Müşteri, zaman ve servis bilgilerini güncelleyin.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
+                        IconButton(onClick = onDismiss, enabled = !isSaving) { Icon(Icons.Default.Close, "Kapat") }
                     }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    ExposedDropdownMenuBox(
-                        expanded = expandedNeighborhood,
-                        onExpandedChange = { expandedNeighborhood = !expandedNeighborhood },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = neighborhood,
-                            onValueChange = {
-                                neighborhood = it
-                                expandedNeighborhood = true
-                            },
-                            label = { Text("Mahalle *") },
-                            placeholder = { Text("Mahalle seçin") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedNeighborhood) },
-                            modifier = Modifier.menuAnchor(),
-                            singleLine = true
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedNeighborhood,
-                            onDismissRequest = { expandedNeighborhood = false }
-                        ) {
-                            currentNeighborhoods.forEach { nItem ->
-                                DropdownMenuItem(
-                                    text = { Text(nItem) },
-                                    onClick = {
-                                        neighborhood = nItem
-                                        expandedNeighborhood = false
-                                        val sList = IstanbulLocationData.getStreets(context, district, nItem)
-                                        if (sList.isNotEmpty()) {
-                                            streetDoorNo = "${sList.first()} No:12"
-                                        }
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Müşteri", fontWeight = FontWeight.Bold)
+                            Box {
+                                OutlinedTextField(query, { query = it; name = it; customerMenuOpen = true }, label = { Text("Mevcut müşteriden seçin") }, leadingIcon = { Icon(Icons.Default.Person, null) }, modifier = Modifier.fillMaxWidth().testTag("edit_appointment_customer_picker"), singleLine = true)
+                                DropdownMenu(expanded = customerMenuOpen, onDismissRequest = { customerMenuOpen = false }) {
+                                    customers.filter { !it.isArchived && (it.name.contains(query, true) || it.phone.contains(query, true)) }.take(8).forEach { customer ->
+                                        DropdownMenuItem(text = { Text("${customer.name} • ${customer.phone}") }, onClick = { chooseCustomer(customer) })
                                     }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Cadde / Sokak / Kapı No
-                ExposedDropdownMenuBox(
-                    expanded = expandedStreet,
-                    onExpandedChange = { expandedStreet = !expandedStreet },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    OutlinedTextField(
-                        value = streetDoorNo,
-                        onValueChange = {
-                            streetDoorNo = it
-                            expandedStreet = true
-                        },
-                        label = { Text("Cadde / Sokak / Kapı No") },
-                        placeholder = { Text("Sokak seçin veya yazın") },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStreet) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        singleLine = true
-                    )
-                    ExposedDropdownMenu(
-                        expanded = expandedStreet,
-                        onDismissRequest = { expandedStreet = false }
-                    ) {
-                        currentStreets.forEach { sItem ->
-                            DropdownMenuItem(
-                                text = { Text(sItem) },
-                                onClick = {
-                                    streetDoorNo = "$sItem No:12"
-                                    expandedStreet = false
                                 }
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Tarih & Saat Aralığı
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    OutlinedTextField(
-                        value = date,
-                        onValueChange = { date = it },
-                        label = { Text("Tarih *") },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    ExposedDropdownMenuBox(
-                        expanded = expandedTimeSlot,
-                        onExpandedChange = { expandedTimeSlot = !expandedTimeSlot },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = timeSlot,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Saat Aralığı *") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedTimeSlot) },
-                            modifier = Modifier.menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedTimeSlot,
-                            onDismissRequest = { expandedTimeSlot = false }
-                        ) {
-                            timeSlots.forEach { slot ->
-                                DropdownMenuItem(
-                                    text = { Text(slot) },
-                                    onClick = {
-                                        timeSlot = slot
-                                        expandedTimeSlot = false
-                                    }
-                                )
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(name, { name = it }, label = { Text("Ad Soyad *") }, modifier = Modifier.weight(1f), singleLine = true)
+                                OutlinedTextField(phone, { phone = it }, label = { Text("Telefon *") }, modifier = Modifier.weight(1f), singleLine = true)
                             }
                         }
                     }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                // Hizmet & Durum
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    ExposedDropdownMenuBox(
-                        expanded = expandedService,
-                        onExpandedChange = { expandedService = !expandedService },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = serviceType,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Hizmet") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedService) },
-                            modifier = Modifier.menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedService,
-                            onDismissRequest = { expandedService = false }
-                        ) {
-                            services.forEach { service ->
-                                DropdownMenuItem(
-                                    text = { Text(service) },
-                                    onClick = {
-                                        serviceType = service
-                                        expandedService = false
-                                    }
-                                )
+                    Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .45f)), shape = RoundedCornerShape(16.dp)) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Randevu Detayları", fontWeight = FontWeight.Bold)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(value = date, onValueChange = {}, readOnly = true, label = { Text("Tarih *") }, leadingIcon = { Icon(Icons.Default.CalendarMonth, null) }, modifier = Modifier.weight(1f).clickable {
+                                    val cal = Calendar.getInstance()
+                                    DatePickerDialog(context, { _, year, month, day -> date = "%02d.%02d.%04d".format(day, month + 1, year) }, cal.get(Calendar.YEAR), cal.get(Calendar.MONTH), cal.get(Calendar.DAY_OF_MONTH)).show()
+                                })
+                                OutlinedTextField(value = slot, onValueChange = { slot = it }, label = { Text("Saat aralığı *") }, modifier = Modifier.weight(1f), singleLine = true)
                             }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                    ExposedDropdownMenuBox(
-                        expanded = expandedStatus,
-                        onExpandedChange = { expandedStatus = !expandedStatus },
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        OutlinedTextField(
-                            value = status.label,
-                            onValueChange = {},
-                            readOnly = true,
-                            label = { Text("Durum") },
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedStatus) },
-                            modifier = Modifier.menuAnchor()
-                        )
-                        ExposedDropdownMenu(
-                            expanded = expandedStatus,
-                            onDismissRequest = { expandedStatus = false }
-                        ) {
-                            AppointmentStatus.values().forEach { st ->
-                                DropdownMenuItem(
-                                    text = { Text(st.label) },
-                                    onClick = {
-                                        status = st
-                                        expandedStatus = false
-                                    }
-                                )
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                OutlinedTextField(
-                    value = problemNote,
-                    onValueChange = { problemNote = it },
-                    label = { Text("Sorun Notu / Ek Açıklama") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 3
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Actions: Sil (Left), Vazgeç, Kaydet
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { onDelete(appointment.id) },
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = Color(0xFFEF4444)
-                        ),
-                        modifier = Modifier.testTag("delete_appointment_button")
-                    ) {
-                        Text("Sil", color = Color(0xFFEF4444), fontWeight = FontWeight.Bold)
-                    }
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(8.dp)
-                    ) {
-                        Text("Vazgeç")
-                    }
-
-                    Spacer(modifier = Modifier.width(10.dp))
-
-                        Button(
-                            onClick = {
-                                val fullAddress = if (neighborhood.isNotBlank()) {
-                                    if (streetDoorNo.contains(neighborhood, ignoreCase = true)) streetDoorNo else "$neighborhood, $streetDoorNo".trim()
-                                } else {
-                                    streetDoorNo
+                            Box {
+                                OutlinedTextField(value = service, onValueChange = {}, readOnly = true, label = { Text("Hizmet") }, trailingIcon = { Icon(Icons.Default.KeyboardArrowDown, null) }, modifier = Modifier.fillMaxWidth().clickable { serviceMenuOpen = true })
+                                DropdownMenu(expanded = serviceMenuOpen, onDismissRequest = { serviceMenuOpen = false }) {
+                                    listOf("Kombi Bakım & Servis", "Genel Servis", "Petek Temizliği", "Arıza Onarımı", "Gaz Kaçağı Tespiti").forEach { item -> DropdownMenuItem(text = { Text(item) }, onClick = { service = item; serviceMenuOpen = false }) }
                                 }
-                                val updated = appointment.copy(
-                                    customerName = customerName.trim(),
-                                    phone = phone.trim(),
-                                    email = email.trim(),
-                                    district = district,
-                                    neighborhood = neighborhood,
-                                    streetDoorNo = streetDoorNo.trim(),
-                                    date = date,
-                                    timeSlot = timeSlot,
-                                    serviceType = serviceType,
-                                    status = status,
-                                    addressDetail = fullAddress,
-                                    problemNote = problemNote.trim()
-                                )
-                                onSave(updated)
-                            },
-                            enabled = customerName.isNotBlank() && phone.isNotBlank(),
-                            shape = RoundedCornerShape(8.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary
-                            ),
-                            modifier = Modifier.testTag("submit_edit_appointment")
-                        ) {
-                            Text("Kaydet", fontWeight = FontWeight.Bold)
+                            }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedTextField(value = district, onValueChange = { district = it }, label = { Text("İlçe") }, modifier = Modifier.weight(1f), singleLine = true)
+                                Box(Modifier.weight(1f)) {
+                                    OutlinedTextField(value = status.label, onValueChange = {}, readOnly = true, label = { Text("Durum") }, modifier = Modifier.fillMaxWidth().clickable { statusMenuOpen = true })
+                                    DropdownMenu(expanded = statusMenuOpen, onDismissRequest = { statusMenuOpen = false }) { AppointmentStatus.values().forEach { item -> DropdownMenuItem(text = { Text(item.label) }, onClick = { status = item; statusMenuOpen = false }) } }
+                                }
+                            }
+                            OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Adres") }, modifier = Modifier.fillMaxWidth(), minLines = 2)
+                            OutlinedTextField(value = note, onValueChange = { note = it }, label = { Text("Sorun / servis notu") }, modifier = Modifier.fillMaxWidth(), minLines = 3)
                         }
+                    }
+                    if (error != null) Text(error!!, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    if (saved) Row(verticalAlignment = Alignment.CenterVertically) { Icon(Icons.Default.CheckCircle, null, tint = Color(0xFF16A34A)); Spacer(Modifier.width(6.dp)); Text("Randevu güncellendi", color = Color(0xFF16A34A), fontWeight = FontWeight.Bold) }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(onClick = { onDelete(appointment.id) }, enabled = !isSaving, modifier = Modifier.weight(1f), colors = androidx.compose.material3.ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)) { Text("Arşivle / Sil") }
+                        Button(onClick = onDismiss, enabled = !isSaving, modifier = Modifier.weight(1f)) { Text("Vazgeç") }
+                        Button(onClick = {
+                            if (name.isBlank() || phone.isBlank() || date.isBlank() || slot.isBlank()) { error = "Ad, telefon, tarih ve saat zorunludur."; return@Button }
+                            isSaving = true; error = null
+                            onSave(appointment.copy(customerId = selectedCustomer?.id ?: appointment.customerId, customerName = name.trim(), phone = phone.trim(), district = district.trim(), addressDetail = address.trim(), date = date, timeSlot = slot.trim(), serviceType = service, status = status, problemNote = note.trim())) { result ->
+                                isSaving = false
+                                result.onSuccess { saved = true }.onFailure { error = it.message ?: "Randevu güncellenemedi." }
+                            }
+                        }, enabled = !isSaving && !saved, modifier = Modifier.weight(1f).testTag("submit_edit_appointment")) {
+                            if (isSaving) CircularProgressIndicator(Modifier.size(18.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp) else Text("Kaydet", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                if (isSaving) Surface(color = MaterialTheme.colorScheme.scrim.copy(alpha = .35f), modifier = Modifier.matchParentSize()) {
+                    Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) { CircularProgressIndicator(); Spacer(Modifier.height(8.dp)); Text("Randevu güncelleniyor…", color = Color.White, fontWeight = FontWeight.Bold) }
                 }
             }
         }

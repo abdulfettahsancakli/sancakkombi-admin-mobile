@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PhonelinkSetup
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.filled.Inventory2
 
 enum class AdminModule(
     val id: String,
@@ -82,6 +83,13 @@ enum class AdminModule(
         title = "Hızlı IBAN At",
         description = "Serviste müşteriye tek tıkla WhatsApp'tan IBAN ve hesap bilgilerini gönderin.",
         icon = Icons.Default.Bolt,
+        isPrimaryBottomNav = false
+    ),
+    STOK(
+        id = "stock",
+        title = "Stok",
+        description = "Parça, ürün ve stok hareketlerini yönetin.",
+        icon = Icons.Default.Inventory2,
         isPrimaryBottomNav = false
     )
 }

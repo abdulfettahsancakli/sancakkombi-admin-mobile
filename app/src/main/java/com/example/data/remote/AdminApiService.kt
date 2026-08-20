@@ -4,6 +4,9 @@ import com.example.data.model.Appointment
 import com.example.data.model.BankAccount
 import com.example.data.model.Customer
 import com.example.data.model.CustomerMessagingSettings
+import com.example.data.model.CatalogItem
+import com.example.data.model.StockItem
+import com.example.data.model.StockMovement
 import com.example.data.model.FinanceRecord
 import com.example.data.model.FinanceSummary
 import com.example.data.model.GoogleAdsCampaign
@@ -93,8 +96,30 @@ interface AdminApiService {
     @DELETE("api/admin/customers/{id}")
     suspend fun deleteCustomer(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
 
+    @PATCH("api/admin/customers/{id}/archive")
+    suspend fun archiveCustomer(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
+
     @GET("api/admin/customers/{id}/device-history")
     suspend fun getDeviceHistory(@Header("Authorization") auth: String, @Path("id") id: String): Response<DeviceHistoryDto>
+
+    // Katalog & Stok
+    @GET("api/admin/catalog/items")
+    suspend fun getCatalogItems(@Header("Authorization") auth: String): Response<List<CatalogItem>>
+
+    @POST("api/admin/catalog/items")
+    suspend fun saveCatalogItem(@Header("Authorization") auth: String, @Body item: CatalogItem): Response<SuccessResponseDto>
+
+    @GET("api/admin/inventory/items")
+    suspend fun getStockItems(@Header("Authorization") auth: String): Response<List<StockItem>>
+
+    @POST("api/admin/inventory/items")
+    suspend fun saveStockItem(@Header("Authorization") auth: String, @Body item: StockItem): Response<SuccessResponseDto>
+
+    @GET("api/admin/inventory/movements")
+    suspend fun getStockMovements(@Header("Authorization") auth: String): Response<List<StockMovement>>
+
+    @POST("api/admin/inventory/movements")
+    suspend fun createStockMovement(@Header("Authorization") auth: String, @Body movement: StockMovement): Response<SuccessResponseDto>
 
     // Finans
     @GET("api/admin/finance/records")

@@ -95,6 +95,8 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.BankAccount
+import com.example.data.model.Customer
+import com.example.data.model.StockItem
 import com.example.data.model.JobReport
 import com.example.ui.components.CompleteJobDialog
 import com.example.ui.components.EditAppointmentDialog
@@ -104,12 +106,14 @@ import com.example.ui.components.NewAppointmentDialog
 @Composable
 fun AppointmentsScreen(
     appointments: List<Appointment>,
+    customers: List<Customer> = emptyList(),
+    stockItems: List<StockItem> = emptyList(),
     bankAccounts: List<BankAccount> = emptyList(),
     onBackClick: () -> Unit,
-    onAddAppointment: (Appointment) -> Unit,
-    onUpdateAppointment: (Appointment) -> Unit,
+    onAddAppointment: (Appointment, (Result<Unit>) -> Unit) -> Unit,
+    onUpdateAppointment: (Appointment, (Result<Unit>) -> Unit) -> Unit,
     onUpdateStatus: (String, AppointmentStatus) -> Unit,
-    onCompleteJob: (String, JobReport) -> Unit,
+    onCompleteJob: (String, JobReport, (Result<Unit>) -> Unit) -> Unit,
     onDeleteAppointment: (String) -> Unit,
     onSendBankTransfer: (appointmentId: String, accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _, _ -> },
     onGetAvailableSlots: (dateIso: String, onResult: (Result<List<String>>) -> Unit) -> Unit = { _, _ -> },
@@ -555,10 +559,12 @@ fun AppointmentsScreen(
     }
     if (showNewDialog) {
         NewAppointmentDialog(
+            customers = customers,
             onDismiss = { showNewDialog = false },
-            onSave = { newAppt ->
-                onAddAppointment(newAppt)
-                showNewDialog = false
+            onSave = { newAppt, callback ->
+                onAddAppointment(newAppt) { result ->
+                    callback(result)
+                }
             },
             onGetAvailableSlots = onGetAvailableSlots
         )
@@ -567,10 +573,12 @@ fun AppointmentsScreen(
     editingAppointment?.let { appt ->
         EditAppointmentDialog(
             appointment = appt,
+            customers = customers,
             onDismiss = { editingAppointment = null },
-            onSave = { updated ->
-                onUpdateAppointment(updated)
-                editingAppointment = null
+            onSave = { updated, callback ->
+                onUpdateAppointment(updated) { result ->
+                    callback(result)
+                }
             },
             onDelete = { id ->
                 onDeleteAppointment(id)
@@ -583,10 +591,12 @@ fun AppointmentsScreen(
         CompleteJobDialog(
             appointment = appt,
             bankAccounts = bankAccounts,
+            stockItems = stockItems,
             onDismiss = { completingAppointment = null },
-            onComplete = { report ->
-                onCompleteJob(appt.id, report)
-                completingAppointment = null
+            onComplete = { report, callback ->
+                onCompleteJob(appt.id, report) { result ->
+                    callback(result)
+                }
             },
             onSendBankTransfer = { accountKey, amount, date, onResult ->
                 onSendBankTransfer(appt.id, accountKey, amount, date, onResult)

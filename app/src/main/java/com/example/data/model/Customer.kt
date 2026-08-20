@@ -11,5 +11,6 @@ data class Customer(
     val address: String = "",
     val appointmentCount: Int = 0,
     val activeAppointmentCount: Int = 0,
-    val notes: String = ""
+    val notes: String = "",
+    val isArchived: Boolean = false
 )

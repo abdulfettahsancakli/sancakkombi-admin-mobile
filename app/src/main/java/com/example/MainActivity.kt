@@ -37,6 +37,7 @@ import com.example.ui.screens.ProposalsScreen
 import com.example.ui.screens.QuickIbanScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.ServiceReceiptScreen
+import com.example.ui.screens.StockScreen
 import com.example.ui.theme.SancakKombiTheme
 import com.example.ui.viewmodel.MainViewModel
 
@@ -76,6 +77,9 @@ class MainActivity : ComponentActivity() {
             val financeRecords by viewModel.financeRecords.collectAsState()
             val financeSummary by viewModel.financeSummary.collectAsState()
             val bankAccounts by viewModel.bankAccounts.collectAsState()
+            val catalogItems by viewModel.catalogItems.collectAsState()
+            val stockItems by viewModel.stockItems.collectAsState()
+            val stockMovements by viewModel.stockMovements.collectAsState()
             val selectedRecordForReceipt by viewModel.selectedFinanceRecordForReceipt.collectAsState()
 
             val proposals by viewModel.proposals.collectAsState()
@@ -148,12 +152,14 @@ class MainActivity : ComponentActivity() {
                                 "appointments", "randevular" -> {
                                     AppointmentsScreen(
                                         appointments = appointments,
+                                        customers = customers,
+                                        stockItems = stockItems,
                                         bankAccounts = bankAccounts,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
-                                        onAddAppointment = { appt -> viewModel.addAppointment(appt) },
-                                        onUpdateAppointment = { appt -> viewModel.updateAppointment(appt) },
+                                        onAddAppointment = { appt, callback -> viewModel.addAppointment(appt, callback) },
+                                        onUpdateAppointment = { appt, callback -> viewModel.updateAppointment(appt, callback) },
                                         onUpdateStatus = { id, st -> viewModel.updateAppointmentStatus(id, st) },
-                                        onCompleteJob = { id, report -> viewModel.completeJob(id, report) },
+                                        onCompleteJob = { id, report, callback -> viewModel.completeJob(id, report, callback) },
                                         onDeleteAppointment = { id -> viewModel.deleteAppointment(id) },
                                         onSendBankTransfer = { id, accKey, amt, date, callback ->
                                             viewModel.sendBankTransferMessage(id, accKey, amt, date, callback)
@@ -171,7 +177,7 @@ class MainActivity : ComponentActivity() {
                                         onAddCustomer = { cust -> viewModel.addCustomer(cust) },
                                         onAddCustomers = { list -> viewModel.addCustomers(list) },
                                         onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) },
-                                        onDeleteCustomer = { id -> viewModel.deleteCustomer(id) },
+                                        onDeleteCustomer = { id, callback -> viewModel.deleteCustomer(id, callback) },
                                         onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) }
                                     )
                                 }
@@ -212,6 +218,7 @@ class MainActivity : ComponentActivity() {
                                 }
                                 "new_proposal" -> {
                                     NewProposalScreen(
+                                        catalogItems = catalogItems,
                                         onBackClick = { viewModel.navigateTo("quotes") },
                                         onCreateProposal = { prop ->
                                             viewModel.addProposal(prop)
@@ -297,6 +304,17 @@ class MainActivity : ComponentActivity() {
                                         onSendBankTransfer = { appointmentId, accountKey, amount, date, onResult ->
                                             viewModel.sendBankTransferMessage(appointmentId, accountKey, amount, date, onResult)
                                         }
+                                    )
+                                }
+                                "stock", "stok" -> {
+                                    StockScreen(
+                                        catalogItems = catalogItems,
+                                        stockItems = stockItems,
+                                        movements = stockMovements,
+                                        onBackClick = { viewModel.navigateTo("dashboard") },
+                                        onSaveCatalogItem = { item, callback -> viewModel.saveCatalogItem(item, callback) },
+                                        onSaveStockItem = { item, callback -> viewModel.saveStockItem(item, callback) },
+                                        onCreateMovement = { movement, callback -> viewModel.createStockMovement(movement, callback) }
                                     )
                                 }
                                 "modules" -> {

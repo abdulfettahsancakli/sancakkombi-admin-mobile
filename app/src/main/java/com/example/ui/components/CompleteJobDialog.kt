@@ -43,6 +43,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -80,6 +81,7 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.BankAccount
 import com.example.data.model.JobReport
+import com.example.data.model.StockItem
 import com.example.data.model.UsedPart
 import com.example.ui.screens.SendBankTransferDialog
 import java.util.UUID
@@ -89,8 +91,9 @@ import java.util.UUID
 fun CompleteJobDialog(
     appointment: Appointment,
     bankAccounts: List<BankAccount> = emptyList(),
+    stockItems: List<StockItem> = emptyList(),
     onDismiss: () -> Unit,
-    onComplete: (JobReport) -> Unit,
+    onComplete: (JobReport, (Result<Unit>) -> Unit) -> Unit,
     onSendBankTransfer: (accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
@@ -130,6 +133,9 @@ fun CompleteJobDialog(
     var otherFee by remember { mutableStateOf(existingReport?.otherFee ?: "") }
     var deviceTested by remember { mutableStateOf(existingReport?.deviceTested ?: true) }
     var createExpenseRecord by remember { mutableStateOf(existingReport?.createExpenseRecord ?: false) }
+    var isSubmitting by remember { mutableStateOf(false) }
+    var submitError by remember { mutableStateOf<String?>(null) }
+    var submitSuccess by remember { mutableStateOf(false) }
 
     // Photo & Signature State
     val context = LocalContext.current
@@ -263,6 +269,7 @@ fun CompleteJobDialog(
                             warrantyMonths = warrantyMonths,
                             onWarrantyMonthsChange = { warrantyMonths = it },
                             usedParts = usedParts,
+                            stockItems = stockItems,
                             serviceFee = serviceFee,
                             onServiceFeeChange = { serviceFee = it },
                             otherFee = otherFee,
@@ -330,6 +337,7 @@ fun CompleteJobDialog(
                     } else {
                         Button(
                             onClick = {
+                                if (isSubmitting) return@Button
                                 val customerSignatureBitmap = renderSignatureToBitmap(customerSignatureLines, customerSignatureCanvasSize)
                                 val technicianSignatureBitmap = renderSignatureToBitmap(technicianSignatureLines, technicianSignatureCanvasSize)
                                 val customerSignaturePath = customerSignatureBitmap?.let {
@@ -362,8 +370,15 @@ fun CompleteJobDialog(
                                     customerSignaturePath = customerSignaturePath,
                                     technicianSignaturePath = technicianSignaturePath
                                 )
-                                onComplete(report)
+                                isSubmitting = true
+                                submitError = null
+                                onComplete(report) { result ->
+                                    isSubmitting = false
+                                    result.onSuccess { submitSuccess = true }
+                                        .onFailure { submitError = it.message ?: "İş kapatılamadı." }
+                                }
                             },
+                            enabled = !isSubmitting && !submitSuccess,
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = if (isEditMode) MaterialTheme.colorScheme.primary else Color(0xFF2E7D32)),
                             modifier = Modifier
@@ -375,6 +390,46 @@ fun CompleteJobDialog(
                             Text(if (isEditMode) "Fişi Güncelle & Kaydet" else "İşi Kapat & Kaydet", fontWeight = FontWeight.Bold)
                         }
                     }
+                }
+            }
+        }
+    }
+
+    if (submitSuccess) {
+        Dialog(onDismissRequest = onDismiss) {
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF16A34A), modifier = Modifier.size(36.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Tamamlandı", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Text("Servis fişi, finans ve stok bilgileri güncellendi.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = onDismiss) { Text("Kapat") }
+                }
+            }
+        }
+    }
+    if (submitError != null) {
+        Dialog(onDismissRequest = { submitError = null }) {
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("İşlem tamamlanamadı", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.error)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(submitError!!, fontSize = 12.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Button(onClick = { submitError = null }) { Text("Tekrar Dene") }
+                }
+            }
+        }
+    }
+    if (isSubmitting) {
+        Dialog(onDismissRequest = {}) {
+            Surface(shape = RoundedCornerShape(18.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 8.dp) {
+                Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator()
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text("İş kapatılıyor…", fontWeight = FontWeight.Bold)
+                    Text("Servis fişi, finans ve stok bilgileri kaydediliyor.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -651,6 +706,7 @@ private fun Step2JobDetailsView(
     warrantyMonths: String,
     onWarrantyMonthsChange: (String) -> Unit,
     usedParts: MutableList<UsedPart>,
+    stockItems: List<StockItem>,
     serviceFee: String,
     onServiceFeeChange: (String) -> Unit,
     otherFee: String,
@@ -658,7 +714,16 @@ private fun Step2JobDetailsView(
     createExpenseRecord: Boolean,
     onCreateExpenseRecordChange: (Boolean) -> Unit
 ) {
+    val partsTotal = usedParts.sumOf { it.quantity * it.price }
+    val serviceTotal = partsTotal + (serviceFee.replace(",", ".").toDoubleOrNull() ?: 0.0) + (otherFee.replace(",", ".").toDoubleOrNull() ?: 0.0)
     Column {
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .35f))) {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) { Text("Servis fişi toplamı", fontSize = 11.sp); Text("Parça + servis + diğer ücret", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                Text("₺%.2f".format(serviceTotal).replace('.', ','), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = deviceBrand,
@@ -718,12 +783,14 @@ private fun Step2JobDetailsView(
             Spacer(modifier = Modifier.weight(1f))
             OutlinedButton(
                 onClick = {
+                    val stock = stockItems.firstOrNull()
                     usedParts.add(
                         UsedPart(
                             id = UUID.randomUUID().toString(),
-                            name = "Yedek Parça / Malzeme",
+                            name = stock?.name ?: "Yedek Parça / Malzeme",
                             quantity = 1,
-                            price = 350.0
+                            price = stock?.salePrice ?: 350.0,
+                            stockItemId = stock?.id
                         )
                     )
                 },
@@ -846,6 +913,7 @@ private fun Step3SignAndPhotosView(
     warrantyMonths: String,
     onWarrantyMonthsChange: (String) -> Unit,
     usedParts: MutableList<UsedPart>,
+    stockItems: List<StockItem>,
     serviceFee: String,
     onServiceFeeChange: (String) -> Unit,
     otherFee: String,
@@ -854,6 +922,20 @@ private fun Step3SignAndPhotosView(
     onCreateExpenseRecordChange: (Boolean) -> Unit
 ) {
     Column {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .35f))
+        ) {
+            Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Servis fişi toplamı", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Parça + servis + diğer ücret", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Text("₺%.2f".format(serviceTotal).replace('.', ','), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+            }
+        }
+        Spacer(modifier = Modifier.height(10.dp))
         Row(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = deviceBrand,
@@ -913,12 +995,14 @@ private fun Step3SignAndPhotosView(
             Spacer(modifier = Modifier.weight(1f))
             OutlinedButton(
                 onClick = {
+                    val stock = stockItems.firstOrNull()
                     usedParts.add(
                         UsedPart(
                             id = UUID.randomUUID().toString(),
-                            name = "Yedek Parça / Malzeme",
+                            name = stock?.name ?: "Yedek Parça / Malzeme",
                             quantity = 1,
-                            price = 350.0
+                            price = stock?.salePrice ?: 350.0,
+                            stockItemId = stock?.id
                         )
                     )
                 },
@@ -953,6 +1037,15 @@ private fun Step3SignAndPhotosView(
                             },
                             label = { Text("Parça") },
                             modifier = Modifier.weight(1.5f),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        OutlinedTextField(
+                            value = part.quantity.toString(),
+                            onValueChange = { quantity -> usedParts[index] = part.copy(quantity = quantity.toIntOrNull()?.coerceAtLeast(1) ?: 1) },
+                            label = { Text("Adet") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(58.dp),
                             singleLine = true
                         )
                         Spacer(modifier = Modifier.width(6.dp))

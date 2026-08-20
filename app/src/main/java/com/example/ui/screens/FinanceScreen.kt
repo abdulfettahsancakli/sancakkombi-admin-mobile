@@ -794,7 +794,7 @@ private fun IbanManagementTab(
             }
         } else {
             bankAccounts.forEach { acc ->
-                WalletStyleIbanCard(colors = colors, account = acc, context = context)
+                WalletStyleIbanCard(colors = colors, account = acc, context = context, onEdit = onOpenEditSheet)
                 Spacer(modifier = Modifier.height(12.dp))
             }
         }
@@ -806,7 +806,8 @@ private fun IbanManagementTab(
 private fun WalletStyleIbanCard(
     colors: FinanceThemeColors,
     account: BankAccount,
-    context: Context
+    context: Context,
+    onEdit: () -> Unit
 ) {
     val brandAccentColor = when {
         account.bankName.contains("YAPI", ignoreCase = true) -> Color(0xFF0047BB)
@@ -911,29 +912,16 @@ private fun WalletStyleIbanCard(
                         Text("Kopyala", fontSize = 12.sp)
                     }
 
-                    // WhatsApp Share Button
-                    Button(
-                        onClick = {
-                            val shareMessage = """
-                                SANCAK KOMBİ TEKNİK SERVİS
-                                Banka: ${account.bankName}
-                                Alıcı: ${account.accountHolder}
-                                IBAN: ${account.iban}
-                            """.trimIndent()
-
-                            val intent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareMessage)
-                            }
-                            context.startActivity(Intent.createChooser(intent, "IBAN Bilgisini Paylaş"))
-                        },
+                    OutlinedButton(
+                        onClick = onEdit,
                         modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
                     ) {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(14.dp), tint = Color.White)
+                        Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("WhatsApp", fontSize = 12.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                        Text("Düzenle", fontSize = 12.sp)
                     }
                 }
             }
@@ -1165,6 +1153,7 @@ private fun QuickEntryAndHistoryTab(
                                 status = "Ödendi",
                                 source = if (noteText.isNotBlank()) noteText else selectedCategory,
                                 note = selectedCategory,
+                                category = selectedCategory,
                                 receiptNo = "SK-202608-" + UUID.randomUUID().toString().take(6).uppercase()
                             )
                             onAddFinanceRecord(record)
@@ -1231,6 +1220,8 @@ private fun TransactionRow(
 ) {
     val isIncome = record.type == FinanceType.GELIR
     val isAds = record.source.contains("Google Ads", ignoreCase = true) || record.id.startsWith("ads_")
+    val displaySource = record.source.takeUnless { it.equals("appointment", ignoreCase = true) || it.isBlank() }
+        ?: if (isIncome) "Servis Tahsilatı" else "Finans Kaydı"
 
     OledCard(
         colors = colors,
@@ -1268,7 +1259,7 @@ private fun TransactionRow(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = record.source,
+                        text = displaySource,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = colors.textPrimary,
@@ -1295,9 +1286,6 @@ private fun TransactionRow(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(text = record.date, fontSize = 11.sp, color = colors.textSecondary)
-                    if (record.note.isNotBlank()) {
-                        Text(text = " • ${record.note}", fontSize = 11.sp, color = colors.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
                 }
             }
 
@@ -1851,6 +1839,22 @@ private fun IbanEditBottomSheet(
 
 // TAB 3: Gelir / Gider Analiz & İstatistikler
 @Composable
+private fun normalizedFinanceCategory(record: FinanceRecord): String {
+    val explicit = record.category.trim()
+    if (explicit.isNotBlank()) {
+        return if (explicit.equals("esanjör", true) || explicit.equals("eşanjör", true)) "Eşanjör" else explicit
+    }
+    val legacy = record.note.trim()
+    return when {
+        legacy.contains("eşanjör", true) || legacy.contains("esanjör", true) -> "Servis Tahsilatı"
+        legacy.contains("gelecek sefer", true) || legacy.contains("kontrol et", true) -> "Servis Tahsilatı"
+        legacy.isNotBlank() && legacy.length < 40 -> legacy
+        record.source.isNotBlank() && !record.source.equals("appointment", true) -> record.source
+        record.type == FinanceType.GELIR -> "Diğer Gelir"
+        else -> "Diğer Gider"
+    }
+}
+
 private fun FinanceAnalyticsTab(
     colors: FinanceThemeColors,
     financeRecords: List<FinanceRecord>
@@ -1874,11 +1878,11 @@ private fun FinanceAnalyticsTab(
 
     // Category grouping
     val incomeByCategory = incomeRecords.groupBy {
-        if (it.note.isNotBlank()) it.note else if (it.source.isNotBlank()) it.source else "Diğer Gelir"
+        normalizedFinanceCategory(it)
     }.mapValues { entry -> entry.value.sumOf { it.amount } }
 
     val expenseByCategory = expenseRecords.groupBy {
-        if (it.note.isNotBlank()) it.note else if (it.source.isNotBlank()) it.source else "Diğer Gider"
+        normalizedFinanceCategory(it)
     }.mapValues { entry -> entry.value.sumOf { it.amount } }
 
     var selectedAnalysisCategoryType by remember { mutableStateOf(true) } // true: Gelir, false: Gider

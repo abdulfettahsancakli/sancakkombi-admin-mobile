@@ -169,7 +169,7 @@ fun ServiceReceiptScreen(
     } else {
         receiptDetail?.customerName?.ifBlank { null } ?: record?.source?.ifBlank { null } ?: if (isExpense) "Tedarikçi / Kurum" else "Müşteri"
     }
-    val customerPhone = if (isGoogleAds) "0850 390 20 60" else (receiptDetail?.customerPhone?.ifBlank { null } ?: if (isExpense) "-" else "0537 691 73 61")
+    val customerPhone = if (isGoogleAds) "0850 390 20 60" else (receiptDetail?.customerPhone?.ifBlank { null } ?: "-")
 
     val district = receiptDetail?.customerDistrict?.trim() ?: ""
     val address = receiptDetail?.customerAddress?.trim() ?: ""
@@ -179,10 +179,10 @@ fun ServiceReceiptScreen(
         district.isNotBlank() -> district
         address.isNotBlank() -> address
         isExpense -> "İşletme Gideri"
-        else -> "Bayrampaşa / İstanbul"
+        else -> "Adres bilgisi yok"
     }
 
-    val dateStr = receiptDetail?.date?.ifBlank { null } ?: record?.date?.ifBlank { null } ?: "17.08.2026"
+    val dateStr = receiptDetail?.date?.ifBlank { null } ?: record?.date?.ifBlank { null } ?: "-"
     val amountVal = if ((receiptDetail?.amount ?: 0.0) > 0.0) receiptDetail!!.amount else (record?.amount ?: 0.0)
     val amountStr = "₺%.2f".format(amountVal).replace(".", ",")
 
@@ -192,7 +192,7 @@ fun ServiceReceiptScreen(
         ?: if (record?.note?.isNotBlank() == true) record.note
         else if (isGoogleAds) "Google Ads arama ağı ve harita reklam harcaması (Günlük Senkronize Gider)"
         else if (isExpense) "İşletme gider ödemesi kaydı."
-        else "Teknik servis ve tahsilat işlemi."
+        else "Servis notu bulunmuyor."
 
     val paymentMethod = if (isGoogleAds) "Otomatik Çekim (Kredi Kartı)" else (receiptDetail?.paymentMethod?.ifBlank { null } ?: "Banka / Kasa")
     val statusRaw = receiptDetail?.status?.ifBlank { null } ?: record?.status ?: "Ödendi"
@@ -201,7 +201,7 @@ fun ServiceReceiptScreen(
         "partial", "kısmi" -> "Kısmi Ödendi"
         else -> "Ödeme Bekliyor"
     }
-    val warrantyMonths = receiptDetail?.warrantyMonths ?: 12
+    val warrantyMonths = receiptDetail?.warrantyMonths
     val serviceTitle = if (isGoogleAds) {
         "GOOGLE ADS REKLAM GİDER DEKONTU"
     } else if (isExpense) {
@@ -508,7 +508,7 @@ fun ServiceReceiptScreen(
                                     Spacer(modifier = Modifier.height(4.dp))
                                     Text("$deviceBrand $deviceModel", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
                                     Text("Kombi Bakım & Onarım", fontSize = 11.sp, color = Color.DarkGray)
-                                    Text("Garanti Süresi: $warrantyMonths Ay", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                    Text(if (warrantyMonths != null) "Garanti Süresi: $warrantyMonths Ay" else "Garanti süresi belirtilmedi", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
                                 }
                             }
                         }
@@ -594,6 +594,27 @@ fun ServiceReceiptScreen(
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
+
+                    if (!isExpense && receiptDetail?.usedParts?.isNotEmpty() == true) {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(6.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text("KULLANILAN PARÇALAR", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                                receiptDetail!!.usedParts.forEach { part ->
+                                    Row(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                                        Text("${part.name} x${part.quantity}", fontSize = 11.sp, color = Color.Black)
+                                        Spacer(modifier = Modifier.weight(1f))
+                                        Text("₺%.2f".format(part.quantity * part.unitPrice).replace('.', ','), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                                    }
+                                }
+                            }
+                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                    }
 
                     // Ödeme / Harcama Bilgileri
                     Card(

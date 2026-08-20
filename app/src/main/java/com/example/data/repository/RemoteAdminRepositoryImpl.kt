@@ -8,6 +8,9 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.BankAccount
 import com.example.data.model.Customer
+import com.example.data.model.CatalogItem
+import com.example.data.model.StockItem
+import com.example.data.model.StockMovement
 import com.example.data.model.CustomerMessagingSettings
 import com.example.data.model.DashboardStats
 import com.example.data.model.FinanceRecord
@@ -82,6 +85,8 @@ class RemoteAdminRepositoryImpl(
     private val customersTrigger = MutableStateFlow(0)
     private val financeTrigger = MutableStateFlow(0)
     private val bankAccountsTrigger = MutableStateFlow(0)
+    private val catalogTrigger = MutableStateFlow(0)
+    private val stockTrigger = MutableStateFlow(0)
     private val proposalsTrigger = MutableStateFlow(0)
     private val messagingTrigger = MutableStateFlow(0)
     private val customerSettingsTrigger = MutableStateFlow(0)
@@ -252,6 +257,8 @@ class RemoteAdminRepositoryImpl(
         customersTrigger.value += 1
         financeTrigger.value += 1
         bankAccountsTrigger.value += 1
+        catalogTrigger.value += 1
+        stockTrigger.value += 1
         proposalsTrigger.value += 1
         messagingTrigger.value += 1
         customerSettingsTrigger.value += 1
@@ -446,7 +453,7 @@ class RemoteAdminRepositoryImpl(
                 res
             },
             apiAction = { token ->
-                val response = api.deleteCustomer(authHeader(token), id)
+                val response = api.archiveCustomer(authHeader(token), id)
                 if (response.isSuccessful) {
                     fallback.deleteCustomer(id)
                     customersTrigger.value += 1
@@ -470,6 +477,52 @@ class RemoteAdminRepositoryImpl(
         } catch (e: Exception) {
             fallback.getDeviceHistory(customerId)
         }
+    }
+
+    override fun getCatalogItems(): Flow<List<CatalogItem>> =
+        authedFlow(catalogTrigger, fallback.getCatalogItems()) { token ->
+            val response = api.getCatalogItems(authHeader(token))
+            if (response.isSuccessful) response.body() else null
+        }
+
+    override suspend fun saveCatalogItem(item: CatalogItem): Result<Unit> = requireToken { token ->
+        val response = api.saveCatalogItem(authHeader(token), item)
+        if (response.isSuccessful) {
+            catalogTrigger.value += 1
+            try { fallback.saveCatalogItem(item) } catch (_: Exception) {}
+            Result.success(Unit)
+        } else Result.failure(IllegalStateException(errorMessage(response)))
+    }
+
+    override fun getStockItems(): Flow<List<StockItem>> =
+        authedFlow(stockTrigger, fallback.getStockItems()) { token ->
+            val response = api.getStockItems(authHeader(token))
+            if (response.isSuccessful) response.body() else null
+        }
+
+    override fun getStockMovements(): Flow<List<StockMovement>> =
+        authedFlow(stockTrigger, fallback.getStockMovements()) { token ->
+            val response = api.getStockMovements(authHeader(token))
+            if (response.isSuccessful) response.body() else null
+        }
+
+    override suspend fun saveStockItem(item: StockItem): Result<Unit> = requireToken { token ->
+        val response = api.saveStockItem(authHeader(token), item)
+        if (response.isSuccessful) {
+            stockTrigger.value += 1
+            try { fallback.saveStockItem(item) } catch (_: Exception) {}
+            Result.success(Unit)
+        } else Result.failure(IllegalStateException(errorMessage(response)))
+    }
+
+    override suspend fun createStockMovement(movement: StockMovement): Result<Unit> = requireToken { token ->
+        val response = api.createStockMovement(authHeader(token), movement)
+        if (response.isSuccessful) {
+            stockTrigger.value += 1
+            financeTrigger.value += 1
+            try { fallback.createStockMovement(movement) } catch (_: Exception) {}
+            Result.success(Unit)
+        } else Result.failure(IllegalStateException(errorMessage(response)))
     }
 
     // Finans
