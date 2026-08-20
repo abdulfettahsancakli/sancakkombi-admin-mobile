@@ -364,6 +364,7 @@ class RemoteAdminRepositoryImpl(
         val response = api.deleteAppointment(authHeader(token), id)
         if (response.isSuccessful) {
             appointmentsTrigger.value += 1
+            financeTrigger.value += 1
             try { fallback.deleteAppointment(id) } catch (_: Exception) {}
             Result.success(Unit)
         } else {
