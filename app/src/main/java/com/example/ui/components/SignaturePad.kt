@@ -79,6 +79,7 @@ fun saveBitmapToCache(context: Context, bitmap: Bitmap, prefix: String): String 
 fun SignaturePad(
     title: String,
     lines: SnapshotStateList<Line>,
+    hasExistingSignature: Boolean = false,
     onCanvasSizeChanged: (IntSize) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -98,10 +99,10 @@ fun SignaturePad(
                 .clip(RoundedCornerShape(10.dp))
                 .border(
                     width = 1.5.dp,
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    color = if (hasExistingSignature && lines.isEmpty()) Color(0xFF86EFAC) else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
                     shape = RoundedCornerShape(10.dp)
                 )
-                .background(Color.White)
+                .background(if (hasExistingSignature && lines.isEmpty()) Color(0xFFF0FDF4) else Color.White)
                 .testTag("signature_pad_canvas")
         ) {
             Canvas(
@@ -153,13 +154,34 @@ fun SignaturePad(
             }
 
             if (lines.isEmpty()) {
-                Text(
-                    text = "✍️ Buraya parmağınızla imzalayın",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF94A3B8),
-                    modifier = Modifier.align(Alignment.Center)
-                )
+                if (hasExistingSignature) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.align(Alignment.Center)
+                    ) {
+                        Text(
+                            text = "✓ Kayıtlı Dijital İmza Mevcut",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF15803D)
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = "Yeniden imzalamak için parmağınızla çizin",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Normal,
+                            color = Color(0xFF64748B)
+                        )
+                    }
+                } else {
+                    Text(
+                        text = "✍️ Buraya parmağınızla imzalayın",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = Color(0xFF94A3B8),
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
         }
 

@@ -275,6 +275,8 @@ fun CompleteJobDialog(
                             photoUris = photoUris,
                             customerSignatureLines = customerSignatureLines,
                             technicianSignatureLines = technicianSignatureLines,
+                            hasCustomerSignature = !existingReport?.customerSignaturePath.isNullOrBlank(),
+                            hasTechnicianSignature = !existingReport?.technicianSignaturePath.isNullOrBlank(),
                             deviceTested = deviceTested,
                             onDeviceTestedChange = { deviceTested = it },
                             sendWhatsappPdf = sendWhatsappPdf,
@@ -838,6 +840,203 @@ private fun Step3SignAndPhotosView(
     deviceTested: Boolean,
     onDeviceTestedChange: (Boolean) -> Unit,
     sendWhatsappPdf: Boolean,
+    onDeviceModelChange: (String) -> Unit,
+    workDoneNote: String,
+    onWorkDoneNoteChange: (String) -> Unit,
+    warrantyMonths: String,
+    onWarrantyMonthsChange: (String) -> Unit,
+    usedParts: MutableList<UsedPart>,
+    serviceFee: String,
+    onServiceFeeChange: (String) -> Unit,
+    otherFee: String,
+    onOtherFeeChange: (String) -> Unit,
+    createExpenseRecord: Boolean,
+    onCreateExpenseRecordChange: (Boolean) -> Unit
+) {
+    Column {
+        Row(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = deviceBrand,
+                onValueChange = onDeviceBrandChange,
+                label = { Text("Cihaz Markası") },
+                placeholder = { Text("Demirdöküm, Vaillant...") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            OutlinedTextField(
+                value = deviceModel,
+                onValueChange = onDeviceModelChange,
+                label = { Text("Cihaz Modeli") },
+                placeholder = { Text("Örn: Nitron Plus") },
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+            value = workDoneNote,
+            onValueChange = onWorkDoneNoteChange,
+            label = { Text("Yapılan İş / Servis Açıklaması *") },
+            placeholder = { Text("Yapılan işlemleri ve kontrolleri yazın...") },
+            modifier = Modifier.fillMaxWidth(),
+            minLines = 2
+        )
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        OutlinedTextField(
+            value = warrantyMonths,
+            onValueChange = onWarrantyMonthsChange,
+            label = { Text("Verilen Garanti Süresi (Ay)") },
+            placeholder = { Text("Örn: 12") },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Kullanılan Parçalar
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Kullanılan Parçalar (${usedParts.size})",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            OutlinedButton(
+                onClick = {
+                    usedParts.add(
+                        UsedPart(
+                            id = UUID.randomUUID().toString(),
+                            name = "Yedek Parça / Malzeme",
+                            quantity = 1,
+                            price = 350.0
+                        )
+                    )
+                },
+                shape = RoundedCornerShape(8.dp)
+            ) {
+                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Parça Ekle", fontSize = 11.sp)
+            }
+        }
+
+        if (usedParts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            usedParts.forEachIndexed { index, part ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = part.name,
+                            onValueChange = { newName ->
+                                usedParts[index] = part.copy(name = newName)
+                            },
+                            label = { Text("Parça") },
+                            modifier = Modifier.weight(1.5f),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        OutlinedTextField(
+                            value = if (part.price > 0) part.price.toInt().toString() else "",
+                            onValueChange = { newPriceStr ->
+                                val p = newPriceStr.toDoubleOrNull() ?: 0.0
+                                usedParts[index] = part.copy(price = p)
+                            },
+                            label = { Text("₺") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(72.dp),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { usedParts.removeAt(index) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Sil", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        // Ücret Dağılımı
+        Row(modifier = Modifier.fillMaxWidth()) {
+            OutlinedTextField(
+                value = serviceFee,
+                onValueChange = onServiceFeeChange,
+                label = { Text("Servis / İşçilik (₺)") },
+                placeholder = { Text("Örn: 800") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.width(10.dp))
+            OutlinedTextField(
+                value = otherFee,
+                onValueChange = onOtherFeeChange,
+                label = { Text("Diğer Ücretler (₺)") },
+                placeholder = { Text("Örn: 400") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.weight(1f),
+                singleLine = true
+            )
+        }
+
+        Spacer(modifier = Modifier.height(10.dp))
+
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCreateExpenseRecordChange(!createExpenseRecord) }
+                .padding(vertical = 4.dp)
+        ) {
+            Checkbox(
+                checked = createExpenseRecord,
+                onCheckedChange = onCreateExpenseRecordChange,
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Column {
+                Text(text = "Bu iş için malzeme/parça gider kaydı aç", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = "Kullanılan parçaların maliyeti gider tablosuna işlenir.", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Step3SignAndPhotosView(
+    photoUris: MutableList<String>,
+    customerSignatureLines: SnapshotStateList<Line>,
+    technicianSignatureLines: SnapshotStateList<Line>,
+    hasCustomerSignature: Boolean = false,
+    hasTechnicianSignature: Boolean = false,
+    deviceTested: Boolean,
+    onDeviceTestedChange: (Boolean) -> Unit,
+    sendWhatsappPdf: Boolean,
     onSendWhatsappPdfChange: (Boolean) -> Unit,
     onCustomerSizeChanged: (IntSize) -> Unit,
     onTechnicianSizeChanged: (IntSize) -> Unit
@@ -874,6 +1073,7 @@ private fun Step3SignAndPhotosView(
                 SignaturePad(
                     title = "Müşteri Dijital İmzası",
                     lines = customerSignatureLines,
+                    hasExistingSignature = hasCustomerSignature,
                     onCanvasSizeChanged = onCustomerSizeChanged
                 )
             }
@@ -924,6 +1124,7 @@ private fun Step3SignAndPhotosView(
                 SignaturePad(
                     title = "Firma Yetkilisi / Usta İmzası",
                     lines = technicianSignatureLines,
+                    hasExistingSignature = hasTechnicianSignature,
                     onCanvasSizeChanged = onTechnicianSizeChanged
                 )
             }
