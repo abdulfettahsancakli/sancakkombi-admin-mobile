@@ -77,6 +77,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.Appointment
+import com.example.data.model.AppointmentStatus
 import com.example.data.model.BankAccount
 import com.example.data.model.JobReport
 import com.example.data.model.UsedPart
