@@ -510,7 +510,13 @@ fun AppointmentsScreen(
                                 onComplete = { completingAppointment = appt },
                                 onSendIban = { bankTransferAppointment = appt },
                                 onCancel = { onUpdateStatus(appt.id, AppointmentStatus.IPTAL) },
-                                onEdit = { editingAppointment = appt },
+                                onEdit = {
+                                    if (appt.status == AppointmentStatus.TAMAMLANDI) {
+                                        completingAppointment = appt
+                                    } else {
+                                        editingAppointment = appt
+                                    }
+                                },
                                 onDelete = { onDeleteAppointment(appt.id) }
                             )
                         }
@@ -521,7 +527,13 @@ fun AppointmentsScreen(
                 ModernMobileCalendarView(
                     appointments = appointments,
                     selectedStatusFilter = selectedStatusFilter,
-                    onAppointmentClick = { editingAppointment = it },
+                    onAppointmentClick = {
+                        if (it.status == AppointmentStatus.TAMAMLANDI) {
+                            completingAppointment = it
+                        } else {
+                            editingAppointment = it
+                        }
+                    },
                     onNewAppointmentForDate = { showNewDialog = true },
                     modifier = Modifier.weight(1f)
                 )
@@ -912,7 +924,6 @@ private fun AppointmentCard(
                                     Text("✓ Onayla", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
-
                             if (appointment.status != AppointmentStatus.TAMAMLANDI && appointment.status != AppointmentStatus.IPTAL) {
                                 Button(
                                     onClick = onComplete,
@@ -924,6 +935,20 @@ private fun AppointmentCard(
                                         .testTag("complete_job_button")
                                 ) {
                                     Text("✓ İş Kapanış & İmza", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                }
+                            } else if (appointment.status == AppointmentStatus.TAMAMLANDI) {
+                                Button(
+                                    onClick = onComplete,
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .height(36.dp)
+                                        .testTag("edit_completed_job_button")
+                                ) {
+                                    Icon(imageVector = Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Servis Fişini Düzenle", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
 
