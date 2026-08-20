@@ -186,16 +186,7 @@ fun EditAppointmentDialog(
                     )
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
 
-                // E-posta
-                OutlinedTextField(
-                    value = email,
-                    onValueChange = { email = it },
-                    label = { Text("E-posta") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
 
                 Spacer(modifier = Modifier.height(10.dp))
 
