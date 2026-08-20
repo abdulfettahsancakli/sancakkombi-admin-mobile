@@ -8,6 +8,7 @@ import android.graphics.Paint as AndroidPaint
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -93,14 +94,14 @@ fun SignaturePad(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(110.dp)
-                .clip(RoundedCornerShape(8.dp))
+                .height(130.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .border(
-                    width = 1.dp,
-                    color = MaterialTheme.colorScheme.outline,
-                    shape = RoundedCornerShape(8.dp)
+                    width = 1.5.dp,
+                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                    shape = RoundedCornerShape(10.dp)
                 )
-                .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                .background(Color.White)
                 .testTag("signature_pad_canvas")
         ) {
             Canvas(
@@ -108,17 +109,34 @@ fun SignaturePad(
                     .fillMaxSize()
                     .onSizeChanged(onCanvasSizeChanged)
                     .pointerInput(Unit) {
-                        detectDragGestures(
-                            onDragStart = { offset: Offset ->
-                                val newPath = Path().apply { moveTo(offset.x, offset.y) }
-                                lines.add(Line(newPath))
-                            },
-                            onDrag = { change, _ ->
-                                change.consume()
-                                val currentPath = lines.lastOrNull()?.path
-                                currentPath?.lineTo(change.position.x, change.position.y)
+                        awaitPointerEventScope {
+                            while (true) {
+                                val down = awaitFirstDown(requireUnconsumed = false)
+                                val newPath = Path().apply { moveTo(down.position.x, down.position.y) }
+                                lines.add(Line(newPath, strokeWidth = 5.5f))
+                                down.consume()
+
+                                var lastX = down.position.x
+                                var lastY = down.position.y
+
+                                while (true) {
+                                    val event = awaitPointerEvent()
+                                    val drag = event.changes.firstOrNull() ?: break
+                                    if (!drag.pressed) break
+
+                                    drag.consume()
+                                    val newX = drag.position.x
+                                    val newY = drag.position.y
+
+                                    val currentPath = lines.lastOrNull()?.path
+                                    // Smooth quadratic bezier curve between touch points
+                                    currentPath?.quadraticTo(lastX, lastY, (lastX + newX) / 2f, (lastY + newY) / 2f)
+
+                                    lastX = newX
+                                    lastY = newY
+                                }
                             }
-                        )
+                        }
                     }
             ) {
                 lines.forEach { line ->
@@ -136,9 +154,10 @@ fun SignaturePad(
 
             if (lines.isEmpty()) {
                 Text(
-                    text = "Buraya imzalayın",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    text = "✍️ Buraya parmağınızla imzalayın",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF94A3B8),
                     modifier = Modifier.align(Alignment.Center)
                 )
             }

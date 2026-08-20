@@ -99,7 +99,7 @@ fun CompleteJobDialog(
     var showIbanDialog by remember { mutableStateOf(false) }
 
     // Basic Form State
-    var technicianName by remember { mutableStateOf("Ahmet Usta") }
+    var technicianName by remember { mutableStateOf("Fatih Sancaklı") }
     var notifyCustomerMessage by remember { mutableStateOf(true) }
     var sendWhatsappPdf by remember { mutableStateOf(true) }
 
@@ -120,7 +120,7 @@ fun CompleteJobDialog(
     val usedParts = remember { mutableStateListOf<UsedPart>() }
     var serviceFee by remember { mutableStateOf("") }
     var otherFee by remember { mutableStateOf("") }
-    var deviceTested by remember { mutableStateOf(false) }
+    var deviceTested by remember { mutableStateOf(true) }
     var createExpenseRecord by remember { mutableStateOf(false) }
 
     // Photo & Signature State
@@ -133,7 +133,7 @@ fun CompleteJobDialog(
 
     // Dropdown state
     var expandedTech by remember { mutableStateOf(false) }
-    val techList = listOf("Ahmet Usta", "Mehmet Usta", "Ali Usta", "Caner Usta")
+    val techList = listOf("Fatih Sancaklı", "Abdullah Sancaklı")
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -256,8 +256,6 @@ fun CompleteJobDialog(
                             onServiceFeeChange = { serviceFee = it },
                             otherFee = otherFee,
                             onOtherFeeChange = { otherFee = it },
-                            deviceTested = deviceTested,
-                            onDeviceTestedChange = { deviceTested = it },
                             createExpenseRecord = createExpenseRecord,
                             onCreateExpenseRecordChange = { createExpenseRecord = it }
                         )
@@ -266,6 +264,8 @@ fun CompleteJobDialog(
                             photoUris = photoUris,
                             customerSignatureLines = customerSignatureLines,
                             technicianSignatureLines = technicianSignatureLines,
+                            deviceTested = deviceTested,
+                            onDeviceTestedChange = { deviceTested = it },
                             sendWhatsappPdf = sendWhatsappPdf,
                             onSendWhatsappPdfChange = { sendWhatsappPdf = it },
                             onCustomerSizeChanged = { customerSignatureCanvasSize = it },
@@ -619,10 +619,10 @@ private fun Step1FinanceView(
         OutlinedTextField(
             value = revenueNote,
             onValueChange = onRevenueNoteChange,
-            label = { Text("Gelir / Ödeme Notu") },
-            placeholder = { Text("Örn: Nakit tahsil edildi, fiş kesildi") },
+            label = { Text("Servis / Usta Notu (Gelecek İçin Not)") },
+            placeholder = { Text("Örn: Gelecek sefere eşanjör temizlenecek, petek vanası gevşek") },
             modifier = Modifier.fillMaxWidth(),
-            singleLine = true
+            minLines = 2
         )
     }
 }
@@ -642,8 +642,6 @@ private fun Step2JobDetailsView(
     onServiceFeeChange: (String) -> Unit,
     otherFee: String,
     onOtherFeeChange: (String) -> Unit,
-    deviceTested: Boolean,
-    onDeviceTestedChange: (Boolean) -> Unit,
     createExpenseRecord: Boolean,
     onCreateExpenseRecordChange: (Boolean) -> Unit
 ) {
@@ -685,6 +683,7 @@ private fun Step2JobDetailsView(
             value = warrantyMonths,
             onValueChange = onWarrantyMonthsChange,
             label = { Text("Verilen Garanti Süresi (Ay)") },
+            placeholder = { Text("Örn: 12") },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
@@ -723,36 +722,50 @@ private fun Step2JobDetailsView(
             }
         }
 
-        Spacer(modifier = Modifier.height(4.dp))
-
-        usedParts.forEachIndexed { idx, part ->
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 3.dp),
-                shape = RoundedCornerShape(8.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+        if (usedParts.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(6.dp))
+            usedParts.forEachIndexed { index, part ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 3.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
                 ) {
-                    Text(
-                        text = "${idx + 1}. ${part.name} - ₺${part.price}",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.weight(1f)
-                    )
-                    IconButton(
-                        onClick = { usedParts.removeAt(idx) },
-                        modifier = Modifier.size(24.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Sil",
-                            tint = Color(0xFFD32F2F),
-                            modifier = Modifier.size(16.dp)
+                        OutlinedTextField(
+                            value = part.name,
+                            onValueChange = { newName ->
+                                usedParts[index] = part.copy(name = newName)
+                            },
+                            label = { Text("Parça") },
+                            modifier = Modifier.weight(1.5f),
+                            singleLine = true
                         )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        OutlinedTextField(
+                            value = if (part.price > 0) part.price.toInt().toString() else "",
+                            onValueChange = { newPriceStr ->
+                                val p = newPriceStr.toDoubleOrNull() ?: 0.0
+                                usedParts[index] = part.copy(price = p)
+                            },
+                            label = { Text("₺") },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            modifier = Modifier.width(72.dp),
+                            singleLine = true
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        IconButton(
+                            onClick = { usedParts.removeAt(index) },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(imageVector = Icons.Default.Delete, contentDescription = "Sil", tint = Color(0xFFE53935), modifier = Modifier.size(16.dp))
+                        }
                     }
                 }
             }
@@ -760,11 +773,13 @@ private fun Step2JobDetailsView(
 
         Spacer(modifier = Modifier.height(10.dp))
 
+        // Ücret Dağılımı
         Row(modifier = Modifier.fillMaxWidth()) {
             OutlinedTextField(
                 value = serviceFee,
                 onValueChange = onServiceFeeChange,
-                label = { Text("Servis İşçilik (₺)") },
+                label = { Text("Servis / İşçilik (₺)") },
+                placeholder = { Text("Örn: 800") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
                 singleLine = true
@@ -774,6 +789,7 @@ private fun Step2JobDetailsView(
                 value = otherFee,
                 onValueChange = onOtherFeeChange,
                 label = { Text("Diğer Ücretler (₺)") },
+                placeholder = { Text("Örn: 400") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.weight(1f),
                 singleLine = true
@@ -782,22 +798,23 @@ private fun Step2JobDetailsView(
 
         Spacer(modifier = Modifier.height(10.dp))
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = deviceTested,
-                onCheckedChange = onDeviceTestedChange,
-                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-            )
-            Text(text = "Cihaz test edildi, sorunsuz çalışıyor", fontSize = 12.sp)
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onCreateExpenseRecordChange(!createExpenseRecord) }
+                .padding(vertical = 4.dp)
+        ) {
             Checkbox(
                 checked = createExpenseRecord,
                 onCheckedChange = onCreateExpenseRecordChange,
                 colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
             )
-            Text(text = "Bu iş için malzeme/parça gider kaydı aç", fontSize = 12.sp)
+            Spacer(modifier = Modifier.width(4.dp))
+            Column {
+                Text(text = "Bu iş için malzeme/parça gider kaydı aç", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(text = "Kullanılan parçaların maliyeti gider tablosuna işlenir.", fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
     }
 }
@@ -807,6 +824,8 @@ private fun Step3SignAndPhotosView(
     photoUris: MutableList<String>,
     customerSignatureLines: SnapshotStateList<Line>,
     technicianSignatureLines: SnapshotStateList<Line>,
+    deviceTested: Boolean,
+    onDeviceTestedChange: (Boolean) -> Unit,
     sendWhatsappPdf: Boolean,
     onSendWhatsappPdfChange: (Boolean) -> Unit,
     onCustomerSizeChanged: (IntSize) -> Unit,
@@ -849,6 +868,38 @@ private fun Step3SignAndPhotosView(
             }
         }
 
+        Spacer(modifier = Modifier.height(6.dp))
+
+        // Cihaz Test Edildi Onay Kutusu (Müşteri İmzasının Altında)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .clickable { onDeviceTestedChange(!deviceTested) }
+                .padding(vertical = 4.dp, horizontal = 4.dp)
+        ) {
+            Checkbox(
+                checked = deviceTested,
+                onCheckedChange = onDeviceTestedChange,
+                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Column {
+                Text(
+                    text = "Cihaz test edildi, sorunsuz çalışır teslim alındı",
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Müşteri cihazın çalışır durumda olduğunu kontrol edip onayladı.",
+                    fontSize = 10.5.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // Firma Yetkilisi İmzası
@@ -869,11 +920,11 @@ private fun Step3SignAndPhotosView(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        // WhatsApp PDF Gönderim Seçeneği
+        // WhatsApp PDF Gönderim Seçeneği (Theme-Adaptive)
         Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = Color(0xFF25D366).copy(alpha = 0.1f),
-            border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.35f)),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
@@ -881,25 +932,25 @@ private fun Step3SignAndPhotosView(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { onSendWhatsappPdfChange(!sendWhatsappPdf) }
-                    .padding(horizontal = 10.dp, vertical = 8.dp)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Checkbox(
                     checked = sendWhatsappPdf,
                     onCheckedChange = onSendWhatsappPdfChange,
-                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF25D366))
+                    colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 Column {
                     Text(
                         text = "Servis fişini WhatsApp'tan PDF at",
-                        fontSize = 12.5.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1B5E20)
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
                         text = "İş kapatıldığında müşteriye resmi A4 PDF onay bağlantısı iletilir.",
-                        fontSize = 10.5.sp,
-                        color = Color(0xFF2E7D32)
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
