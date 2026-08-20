@@ -53,6 +53,7 @@ fun EditAppointmentDialog(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val initialDistrict = appointment.district.ifBlank { "Bayrampaşa" }
     val allNeighborhoods = remember(initialDistrict) { IstanbulLocationData.getNeighborhoods(initialDistrict) }
 
