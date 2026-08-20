@@ -98,10 +98,12 @@ fun CompleteJobDialog(
     // IBAN Sending Dialog State
     var showIbanDialog by remember { mutableStateOf(false) }
 
+    val isEditMode = appointment.status == AppointmentStatus.TAMAMLANDI
+
     // Basic Form State
     var technicianName by remember { mutableStateOf("Fatih Sancaklı") }
-    var notifyCustomerMessage by remember { mutableStateOf(true) }
-    var sendWhatsappPdf by remember { mutableStateOf(true) }
+    var notifyCustomerMessage by remember { mutableStateOf(!isEditMode) }
+    var sendWhatsappPdf by remember { mutableStateOf(!isEditMode) }
 
     // Revenue Section State
     var addRevenueRecord by remember { mutableStateOf(true) }
@@ -159,16 +161,15 @@ fun CompleteJobDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "İş Kapanış & Dijital İmza",
-                            style = MaterialTheme.typography.titleLarge,
+                            text = if (isEditMode) "Servis Fişini Düzenle" else "İş Kapanış & Dijital İmza",
                             fontWeight = FontWeight.Bold,
+                            fontSize = 17.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "${appointment.customerName} • ${appointment.district}",
+                            text = if (isEditMode) "Servis raporunu ve detayları güncelleyin" else "Servis raporunu ve tahsilatı tamamlayın",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.primary
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     IconButton(onClick = onDismiss) {
@@ -352,14 +353,14 @@ fun CompleteJobDialog(
                                 onComplete(report)
                             },
                             shape = RoundedCornerShape(10.dp),
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                            colors = ButtonDefaults.buttonColors(containerColor = if (isEditMode) MaterialTheme.colorScheme.primary else Color(0xFF2E7D32)),
                             modifier = Modifier
                                 .height(44.dp)
                                 .testTag("submit_complete_job")
                         ) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("İşi Kapat & Kaydet", fontWeight = FontWeight.Bold)
+                            Text(if (isEditMode) "Fişi Güncelle & Kaydet" else "İşi Kapat & Kaydet", fontWeight = FontWeight.Bold)
                         }
                     }
                 }
