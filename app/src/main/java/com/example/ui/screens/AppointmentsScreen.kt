@@ -927,18 +927,20 @@ private fun AppointmentCard(
                                 }
                             }
 
-                            OutlinedButton(
-                                onClick = onSendIban,
-                                shape = RoundedCornerShape(8.dp),
-                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                                modifier = Modifier
-                                    .height(36.dp)
-                                    .testTag("send_iban_button")
-                            ) {
-                                Icon(imageVector = Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(14.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("IBAN", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            if (appointment.status != AppointmentStatus.TAMAMLANDI && appointment.status != AppointmentStatus.IPTAL) {
+                                OutlinedButton(
+                                    onClick = onSendIban,
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 0.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier
+                                        .height(36.dp)
+                                        .testTag("send_iban_button")
+                                ) {
+                                    Icon(imageVector = Icons.Default.AccountBalance, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("IBAN", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
 
                             Spacer(modifier = Modifier.weight(1f))

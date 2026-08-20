@@ -105,22 +105,22 @@ fun CompleteJobDialog(
 
     // Revenue Section State
     var addRevenueRecord by remember { mutableStateOf(true) }
-    var collectedAmount by remember { mutableStateOf("1200") }
+    var collectedAmount by remember { mutableStateOf("") }
     var paymentStatus by remember { mutableStateOf("Ödendi") }
     var paymentMethod by remember { mutableStateOf("Nakit") }
-    var revenueNote by remember { mutableStateOf("Bakım ücreti, işçilik") }
+    var revenueNote by remember { mutableStateOf("") }
 
     // Job Report Section State
     var addJobReport by remember { mutableStateOf(true) }
-    var deviceBrand by remember { mutableStateOf("Demirdöküm") }
-    var deviceModel by remember { mutableStateOf("Nitron Plus") }
-    var workDoneNote by remember { mutableStateOf("Pilot ateşleyici temizlendi, genleşme tankı havası basıldı, sistem sızdırmazlık testi yapıldı.") }
-    var warrantyMonths by remember { mutableStateOf("12") }
+    var deviceBrand by remember { mutableStateOf("") }
+    var deviceModel by remember { mutableStateOf("") }
+    var workDoneNote by remember { mutableStateOf("") }
+    var warrantyMonths by remember { mutableStateOf("") }
 
     val usedParts = remember { mutableStateListOf<UsedPart>() }
-    var serviceFee by remember { mutableStateOf("800") }
-    var otherFee by remember { mutableStateOf("400") }
-    var deviceTested by remember { mutableStateOf(true) }
+    var serviceFee by remember { mutableStateOf("") }
+    var otherFee by remember { mutableStateOf("") }
+    var deviceTested by remember { mutableStateOf(false) }
     var createExpenseRecord by remember { mutableStateOf(false) }
 
     // Photo & Signature State
@@ -239,10 +239,6 @@ fun CompleteJobDialog(
                             onPaymentStatusChange = { paymentStatus = it },
                             revenueNote = revenueNote,
                             onRevenueNoteChange = { revenueNote = it },
-                            notifyCustomerMessage = notifyCustomerMessage,
-                            onNotifyCustomerChange = { notifyCustomerMessage = it },
-                            sendWhatsappPdf = sendWhatsappPdf,
-                            onSendWhatsappPdfChange = { sendWhatsappPdf = it },
                             onOpenIbanDialog = { showIbanDialog = true }
                         )
 
@@ -270,6 +266,8 @@ fun CompleteJobDialog(
                             photoUris = photoUris,
                             customerSignatureLines = customerSignatureLines,
                             technicianSignatureLines = technicianSignatureLines,
+                            sendWhatsappPdf = sendWhatsappPdf,
+                            onSendWhatsappPdfChange = { sendWhatsappPdf = it },
                             onCustomerSizeChanged = { customerSignatureCanvasSize = it },
                             onTechnicianSizeChanged = { technicianSignatureCanvasSize = it }
                         )
@@ -446,10 +444,6 @@ private fun Step1FinanceView(
     onPaymentStatusChange: (String) -> Unit,
     revenueNote: String,
     onRevenueNoteChange: (String) -> Unit,
-    notifyCustomerMessage: Boolean,
-    onNotifyCustomerChange: (Boolean) -> Unit,
-    sendWhatsappPdf: Boolean,
-    onSendWhatsappPdfChange: (Boolean) -> Unit,
     onOpenIbanDialog: () -> Unit = {}
 ) {
     Column {
@@ -523,6 +517,7 @@ private fun Step1FinanceView(
             value = collectedAmount,
             onValueChange = onCollectedAmountChange,
             label = { Text("Tahsil Edilen Tutar") },
+            placeholder = { Text("Örn: 1200") },
             prefix = { Text("₺ ", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color(0xFF2E7D32)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             modifier = Modifier.fillMaxWidth(),
@@ -629,27 +624,6 @@ private fun Step1FinanceView(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true
         )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Checkboxes
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = notifyCustomerMessage,
-                onCheckedChange = onNotifyCustomerChange,
-                colors = CheckboxDefaults.colors(checkedColor = MaterialTheme.colorScheme.primary)
-            )
-            Text(text = "Müşteriye SMS/Bildirim gönder", fontSize = 12.sp)
-        }
-
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(
-                checked = sendWhatsappPdf,
-                onCheckedChange = onSendWhatsappPdfChange,
-                colors = CheckboxDefaults.colors(checkedColor = Color(0xFF25D366))
-            )
-            Text(text = "Servis fişini WhatsApp'tan PDF at", fontSize = 12.sp, fontWeight = FontWeight.Medium)
-        }
     }
 }
 
@@ -833,6 +807,8 @@ private fun Step3SignAndPhotosView(
     photoUris: MutableList<String>,
     customerSignatureLines: SnapshotStateList<Line>,
     technicianSignatureLines: SnapshotStateList<Line>,
+    sendWhatsappPdf: Boolean,
+    onSendWhatsappPdfChange: (Boolean) -> Unit,
     onCustomerSizeChanged: (IntSize) -> Unit,
     onTechnicianSizeChanged: (IntSize) -> Unit
 ) {
@@ -888,6 +864,44 @@ private fun Step3SignAndPhotosView(
                     lines = technicianSignatureLines,
                     onCanvasSizeChanged = onTechnicianSizeChanged
                 )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(14.dp))
+
+        // WhatsApp PDF Gönderim Seçeneği
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = Color(0xFF25D366).copy(alpha = 0.1f),
+            border = BorderStroke(1.dp, Color(0xFF25D366).copy(alpha = 0.35f)),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onSendWhatsappPdfChange(!sendWhatsappPdf) }
+                    .padding(horizontal = 10.dp, vertical = 8.dp)
+            ) {
+                Checkbox(
+                    checked = sendWhatsappPdf,
+                    onCheckedChange = onSendWhatsappPdfChange,
+                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFF25D366))
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Column {
+                    Text(
+                        text = "Servis fişini WhatsApp'tan PDF at",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1B5E20)
+                    )
+                    Text(
+                        text = "İş kapatıldığında müşteriye resmi A4 PDF onay bağlantısı iletilir.",
+                        fontSize = 10.5.sp,
+                        color = Color(0xFF2E7D32)
+                    )
+                }
             }
         }
     }
