@@ -53,14 +53,42 @@ fun EditAppointmentDialog(
     onDelete: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    val initialDistrict = appointment.district.ifBlank { "Bayrampaşa" }
+    val allNeighborhoods = remember(initialDistrict) { IstanbulLocationData.getNeighborhoods(initialDistrict) }
+
+    // Smart neighborhood detection
+    val initialNeighborhood = remember(appointment) {
+        if (appointment.neighborhood.isNotBlank() && allNeighborhoods.contains(appointment.neighborhood)) {
+            appointment.neighborhood
+        } else {
+            allNeighborhoods.firstOrNull { nh ->
+                val cleanNh = nh.replace(" Mah.", "").replace(" Mahallesi", "").trim()
+                appointment.addressDetail.contains(cleanNh, ignoreCase = true)
+            } ?: appointment.neighborhood.ifBlank { allNeighborhoods.firstOrNull() ?: "" }
+        }
+    }
+
+    // Smart street extraction: strip neighborhood prefix if already included in addressDetail
+    val initialStreet = remember(appointment, initialNeighborhood) {
+        if (appointment.streetDoorNo.isNotBlank()) {
+            appointment.streetDoorNo
+        } else if (initialNeighborhood.isNotBlank()) {
+            val cleanNh = initialNeighborhood.replace(" Mah.", "").replace(" Mahallesi", "").trim()
+            val raw = appointment.addressDetail
+            val regex = Regex("""^(${Regex.escape(initialNeighborhood)}|${Regex.escape(cleanNh)}\s*(Mah\.|Mahallesi|Mah\.?|Mh\.?))\s*[,.-]?\s*""", RegexOption.IGNORE_CASE)
+            val stripped = raw.replace(regex, "").trim()
+            stripped.ifBlank { raw }
+        } else {
+            appointment.addressDetail
+        }
+    }
 
     var customerName by remember { mutableStateOf(appointment.customerName) }
     var phone by remember { mutableStateOf(appointment.phone) }
     var email by remember { mutableStateOf(appointment.email) }
-    var district by remember { mutableStateOf(appointment.district) }
-    var neighborhood by remember { mutableStateOf(IstanbulLocationData.getNeighborhoods(district).firstOrNull() ?: "") }
-    var streetDoorNo by remember { mutableStateOf(appointment.addressDetail) }
+    var district by remember { mutableStateOf(initialDistrict) }
+    var neighborhood by remember { mutableStateOf(initialNeighborhood) }
+    var streetDoorNo by remember { mutableStateOf(initialStreet) }
     var date by remember { mutableStateOf(appointment.date) }
     var timeSlot by remember { mutableStateOf(appointment.timeSlot) }
     var serviceType by remember { mutableStateOf(appointment.serviceType) }
@@ -435,32 +463,38 @@ fun EditAppointmentDialog(
 
                     Spacer(modifier = Modifier.width(10.dp))
 
-                    Button(
-                        onClick = {
-                            val fullAddress = if (neighborhood.isNotBlank()) "$neighborhood $streetDoorNo".trim() else streetDoorNo
-                            val updated = appointment.copy(
-                                customerName = customerName,
-                                phone = phone,
-                                email = email,
-                                district = district,
-                                date = date,
-                                timeSlot = timeSlot,
-                                serviceType = serviceType,
-                                status = status,
-                                addressDetail = fullAddress,
-                                problemNote = problemNote
-                            )
-                            onSave(updated)
-                        },
-                        enabled = customerName.isNotBlank() && phone.isNotBlank(),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = MaterialTheme.colorScheme.primary
-                        ),
-                        modifier = Modifier.testTag("submit_edit_appointment")
-                    ) {
-                        Text("Kaydet", fontWeight = FontWeight.Bold)
-                    }
+                        Button(
+                            onClick = {
+                                val fullAddress = if (neighborhood.isNotBlank()) {
+                                    if (streetDoorNo.contains(neighborhood, ignoreCase = true)) streetDoorNo else "$neighborhood, $streetDoorNo".trim()
+                                } else {
+                                    streetDoorNo
+                                }
+                                val updated = appointment.copy(
+                                    customerName = customerName.trim(),
+                                    phone = phone.trim(),
+                                    email = email.trim(),
+                                    district = district,
+                                    neighborhood = neighborhood,
+                                    streetDoorNo = streetDoorNo.trim(),
+                                    date = date,
+                                    timeSlot = timeSlot,
+                                    serviceType = serviceType,
+                                    status = status,
+                                    addressDetail = fullAddress,
+                                    problemNote = problemNote.trim()
+                                )
+                                onSave(updated)
+                            },
+                            enabled = customerName.isNotBlank() && phone.isNotBlank(),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary
+                            ),
+                            modifier = Modifier.testTag("submit_edit_appointment")
+                        ) {
+                            Text("Kaydet", fontWeight = FontWeight.Bold)
+                        }
                 }
             }
         }
