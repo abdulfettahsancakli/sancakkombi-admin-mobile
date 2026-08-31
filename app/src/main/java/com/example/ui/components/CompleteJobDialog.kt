@@ -84,6 +84,7 @@ import com.example.data.model.JobReport
 import com.example.data.model.StockItem
 import com.example.data.model.UsedPart
 import com.example.ui.screens.SendBankTransferDialog
+import com.example.utils.parseLocalizedDouble
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -106,15 +107,16 @@ fun CompleteJobDialog(
     val existingReport = appointment.jobReport
 
     // Basic Form State
-    var technicianName by remember { mutableStateOf(existingReport?.technicianName?.ifBlank { "Fatih Sancaklı" } ?: "Fatih Sancaklı") }
+    var technicianName by remember { mutableStateOf(existingReport?.technicianName?.trim().orEmpty()) }
     var notifyCustomerMessage by remember { mutableStateOf(!isEditMode) }
     var sendWhatsappPdf by remember { mutableStateOf(!isEditMode) }
 
     // Revenue Section State
     var addRevenueRecord by remember { mutableStateOf(existingReport?.addRevenueRecord ?: true) }
     var collectedAmount by remember { mutableStateOf(existingReport?.collectedAmount ?: "") }
-    var paymentStatus by remember { mutableStateOf(existingReport?.paymentStatus?.ifBlank { "Ödendi" } ?: "Ödendi") }
-    var paymentMethod by remember { mutableStateOf(existingReport?.paymentMethod?.ifBlank { "Nakit" } ?: "Nakit") }
+    var paymentStatus by remember { mutableStateOf(existingReport?.paymentStatus?.ifBlank { "Bekliyor" } ?: "Bekliyor") }
+    var paymentMethod by remember { mutableStateOf(existingReport?.paymentMethod?.trim().orEmpty()) }
+    var paymentPromiseDate by remember { mutableStateOf(existingReport?.paymentPromiseDate?.trim().orEmpty()) }
     var revenueNote by remember { mutableStateOf(existingReport?.revenueNote ?: "") }
 
     // Job Report Section State
@@ -131,7 +133,7 @@ fun CompleteJobDialog(
     }
     var serviceFee by remember { mutableStateOf(existingReport?.serviceFee ?: "") }
     var otherFee by remember { mutableStateOf(existingReport?.otherFee ?: "") }
-    var deviceTested by remember { mutableStateOf(existingReport?.deviceTested ?: true) }
+    var deviceTested by remember { mutableStateOf(existingReport?.deviceTested ?: false) }
     var createExpenseRecord by remember { mutableStateOf(existingReport?.createExpenseRecord ?: false) }
     var isSubmitting by remember { mutableStateOf(false) }
     var submitError by remember { mutableStateOf<String?>(null) }
@@ -254,6 +256,8 @@ fun CompleteJobDialog(
                             onPaymentMethodChange = { paymentMethod = it },
                             paymentStatus = paymentStatus,
                             onPaymentStatusChange = { paymentStatus = it },
+                            paymentPromiseDate = paymentPromiseDate,
+                            onPaymentPromiseDateChange = { paymentPromiseDate = it },
                             revenueNote = revenueNote,
                             onRevenueNoteChange = { revenueNote = it },
                             onOpenIbanDialog = { showIbanDialog = true }
@@ -355,6 +359,7 @@ fun CompleteJobDialog(
                                     collectedAmount = collectedAmount,
                                     paymentStatus = paymentStatus,
                                     paymentMethod = paymentMethod,
+                                    paymentPromiseDate = paymentPromiseDate,
                                     revenueNote = revenueNote,
                                     addJobReport = addJobReport,
                                     deviceBrand = deviceBrand,
@@ -510,6 +515,8 @@ private fun Step1FinanceView(
     onPaymentMethodChange: (String) -> Unit,
     paymentStatus: String,
     onPaymentStatusChange: (String) -> Unit,
+    paymentPromiseDate: String,
+    onPaymentPromiseDateChange: (String) -> Unit,
     revenueNote: String,
     onRevenueNoteChange: (String) -> Unit,
     onOpenIbanDialog: () -> Unit = {}
@@ -669,17 +676,33 @@ private fun Step1FinanceView(
         Text(text = "Tahsilat Durumu:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(4.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Ödendi", "Bekliyor").forEach { st ->
+            listOf("Ödendi", "Kısmi", "Bekliyor").forEach { st ->
                 FilterChip(
                     selected = paymentStatus == st,
                     onClick = { onPaymentStatusChange(st) },
                     label = { Text(st, fontSize = 11.sp) },
                     colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = if (st == "Ödendi") Color(0xFF2E7D32) else Color(0xFFF59E0B),
+                        selectedContainerColor = when (st) {
+                            "Ödendi" -> Color(0xFF2E7D32)
+                            "Kısmi" -> Color(0xFF2563EB)
+                            else -> Color(0xFFF59E0B)
+                        },
                         selectedLabelColor = Color.White
                     )
                 )
             }
+        }
+
+        if (paymentStatus != "Ödendi") {
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = paymentPromiseDate,
+                onValueChange = onPaymentPromiseDateChange,
+                label = { Text("Ödeme Sözü Tarihi (GG.AA.YYYY)") },
+                placeholder = { Text("Tahsilat tarihi") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
         }
 
         Spacer(modifier = Modifier.height(10.dp))
@@ -715,7 +738,7 @@ private fun Step2JobDetailsView(
     onCreateExpenseRecordChange: (Boolean) -> Unit
 ) {
     val partsTotal = usedParts.sumOf { it.quantity * it.price }
-    val serviceTotal = partsTotal + (serviceFee.replace(",", ".").toDoubleOrNull() ?: 0.0) + (otherFee.replace(",", ".").toDoubleOrNull() ?: 0.0)
+    val serviceTotal = partsTotal + (parseLocalizedDouble(serviceFee) ?: 0.0) + (parseLocalizedDouble(otherFee) ?: 0.0)
     Column {
         Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = .35f))) {
             Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -783,17 +806,18 @@ private fun Step2JobDetailsView(
             Spacer(modifier = Modifier.weight(1f))
             OutlinedButton(
                 onClick = {
-                    val stock = stockItems.firstOrNull()
+                    val stock = stockItems.firstOrNull() ?: return@OutlinedButton
                     usedParts.add(
                         UsedPart(
                             id = UUID.randomUUID().toString(),
-                            name = stock?.name ?: "Yedek Parça / Malzeme",
+                            name = stock.name,
                             quantity = 1,
-                            price = stock?.salePrice ?: 350.0,
-                            stockItemId = stock?.id
+                            price = stock.salePrice,
+                            stockItemId = stock.id
                         )
                     )
                 },
+                enabled = stockItems.isNotEmpty(),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -831,7 +855,7 @@ private fun Step2JobDetailsView(
                         OutlinedTextField(
                             value = if (part.price > 0) part.price.toInt().toString() else "",
                             onValueChange = { newPriceStr ->
-                                val p = newPriceStr.toDoubleOrNull() ?: 0.0
+                                val p = parseLocalizedDouble(newPriceStr) ?: 0.0
                                 usedParts[index] = part.copy(price = p)
                             },
                             label = { Text("₺") },
@@ -907,6 +931,10 @@ private fun Step3SignAndPhotosView(
     deviceTested: Boolean,
     onDeviceTestedChange: (Boolean) -> Unit,
     sendWhatsappPdf: Boolean,
+    serviceTotal: Double = 0.0,
+    deviceBrand: String = "",
+    onDeviceBrandChange: (String) -> Unit = {},
+    deviceModel: String = "",
     onDeviceModelChange: (String) -> Unit,
     workDoneNote: String,
     onWorkDoneNoteChange: (String) -> Unit,
@@ -995,17 +1023,18 @@ private fun Step3SignAndPhotosView(
             Spacer(modifier = Modifier.weight(1f))
             OutlinedButton(
                 onClick = {
-                    val stock = stockItems.firstOrNull()
+                    val stock = stockItems.firstOrNull() ?: return@OutlinedButton
                     usedParts.add(
                         UsedPart(
                             id = UUID.randomUUID().toString(),
-                            name = stock?.name ?: "Yedek Parça / Malzeme",
+                            name = stock.name,
                             quantity = 1,
-                            price = stock?.salePrice ?: 350.0,
-                            stockItemId = stock?.id
+                            price = stock.salePrice,
+                            stockItemId = stock.id
                         )
                     )
                 },
+                enabled = stockItems.isNotEmpty(),
                 shape = RoundedCornerShape(8.dp)
             ) {
                 Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(14.dp))
@@ -1052,7 +1081,7 @@ private fun Step3SignAndPhotosView(
                         OutlinedTextField(
                             value = if (part.price > 0) part.price.toInt().toString() else "",
                             onValueChange = { newPriceStr ->
-                                val p = newPriceStr.toDoubleOrNull() ?: 0.0
+                                val p = parseLocalizedDouble(newPriceStr) ?: 0.0
                                 usedParts[index] = part.copy(price = p)
                             },
                             label = { Text("₺") },

@@ -7,7 +7,7 @@ data class Customer(
     val id: String = "",
     val name: String = "",
     val phone: String = "",
-    val district: String = "Bayrampaşa",
+    val district: String = "",
     val address: String = "",
     val appointmentCount: Int = 0,
     val activeAppointmentCount: Int = 0,

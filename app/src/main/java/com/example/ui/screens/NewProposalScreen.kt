@@ -50,6 +50,7 @@ import com.example.data.model.Proposal
 import com.example.data.model.ProposalItem
 import com.example.data.model.ProposalStatus
 import com.example.data.model.CatalogItem
+import com.example.utils.parseLocalizedDouble
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -68,7 +69,7 @@ fun NewProposalScreen(
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
     var customerEmail by remember { mutableStateOf("") }
-    var customerDistrict by remember { mutableStateOf("Bayrampaşa") }
+    var customerDistrict by remember { mutableStateOf("") }
     var customerAddress by remember { mutableStateOf("") }
     var deviceBrand by remember { mutableStateOf("") }
     var deviceModel by remember { mutableStateOf("") }
@@ -81,9 +82,9 @@ fun NewProposalScreen(
     }
 
     var downPayment by remember { mutableStateOf("") }
-    var remainingPaymentType by remember { mutableStateOf("Kredi Kartı (Tek Çekim)") }
-    var validUntilDate by remember { mutableStateOf("18.08.2026") }
-    var preparedBy by remember { mutableStateOf("Fatih Sancaklı") }
+    var remainingPaymentType by remember { mutableStateOf("") }
+    var validUntilDate by remember { mutableStateOf("") }
+    var preparedBy by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var discount by remember { mutableStateOf("0") }
 
@@ -92,8 +93,10 @@ fun NewProposalScreen(
     }
 
     val subtotal = items.sumOf { it.totalPrice }
-    val discountVal = discount.toDoubleOrNull() ?: 0.0
+    val discountVal = parseLocalizedDouble(discount) ?: 0.0
     val grandTotal = (subtotal - discountVal).coerceAtLeast(0.0)
+    val validItems = items.filter { it.title.isNotBlank() && it.quantity > 0 && it.unitPrice >= 0.0 }
+    val canCreateProposal = customerName.isNotBlank() && validItems.isNotEmpty()
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -308,7 +311,7 @@ fun NewProposalScreen(
                                     value = priceStr,
                                     onValueChange = {
                                         priceStr = it
-                                        val p = it.toDoubleOrNull() ?: 0.0
+                                        val p = parseLocalizedDouble(it) ?: 0.0
                                         items[index] = items[index].copy(unitPrice = p)
                                     },
                                     label = { Text("Birim Fiyat") },
@@ -450,7 +453,7 @@ fun NewProposalScreen(
 
             Button(
                 onClick = {
-                    if (customerName.isNotBlank()) {
+                    if (canCreateProposal) {
                         val newProposal = Proposal(
                             id = "TF-202608-" + UUID.randomUUID().toString().take(6).uppercase(),
                             customerName = customerName,
@@ -465,16 +468,18 @@ fun NewProposalScreen(
                             preparedBy = preparedBy,
                             note = note,
                             status = ProposalStatus.PENDING,
-                            items = items.filter { it.title.isNotBlank() },
-                            downPayment = downPayment.toDoubleOrNull() ?: 0.0,
+                             items = validItems,
+                            downPayment = parseLocalizedDouble(downPayment) ?: 0.0,
                             remainingPaymentType = remainingPaymentType,
                             discount = discountVal
                         )
                         onCreateProposal(newProposal)
                         Toast.makeText(context, "Yeni Teklif Oluşturuldu", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(context, "Müşteri ve en az bir geçerli ürün/hizmet girin", Toast.LENGTH_SHORT).show()
                     }
                 },
-                enabled = customerName.isNotBlank(),
+                enabled = canCreateProposal,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))

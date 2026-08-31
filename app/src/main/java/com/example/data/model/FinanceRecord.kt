@@ -13,7 +13,7 @@ data class FinanceRecord(
     val totalAmount: Double = amount,
     val collectedAmount: Double = amount,
     val note: String = "",
-    val receiptNo: String = "SK-202606-6A6F7A",
+    val receiptNo: String = "",
     val appointmentId: String? = null,
     val category: String = ""
 )
@@ -35,7 +35,7 @@ data class BankAccount(
 
 @JsonClass(generateAdapter = true)
 data class FinanceSummary(
-    val totalIncome: Double = 8870.00,
-    val totalExpense: Double = 500.00,
-    val outstandingReceivable: Double = 500.00
+    val totalIncome: Double = 0.0,
+    val totalExpense: Double = 0.0,
+    val outstandingReceivable: Double = 0.0
 )

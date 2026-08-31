@@ -40,6 +40,12 @@ interface AdminApiService {
     @POST("api/admin/auth/login")
     suspend fun login(@Body request: LoginRequestDto): Response<LoginResponseDto>
 
+    @POST("api/admin/voice/parse")
+    suspend fun parseVoiceAppointment(
+        @Header("Authorization") auth: String,
+        @Body request: VoiceParseRequestDto
+    ): Response<VoiceParseResponseDto>
+
     @GET("api/admin/dashboard")
     suspend fun getDashboardStats(@Header("Authorization") auth: String): Response<DashboardStatsDto>
 
@@ -113,7 +119,7 @@ interface AdminApiService {
     suspend fun getStockItems(@Header("Authorization") auth: String): Response<List<StockItem>>
 
     @POST("api/admin/inventory/items")
-    suspend fun saveStockItem(@Header("Authorization") auth: String, @Body item: StockItem): Response<SuccessResponseDto>
+    suspend fun saveStockItem(@Header("Authorization") auth: String, @Body item: StockItem): Response<InventoryItemResponseDto>
 
     @GET("api/admin/inventory/movements")
     suspend fun getStockMovements(@Header("Authorization") auth: String): Response<List<StockMovement>>
@@ -136,6 +142,13 @@ interface AdminApiService {
 
     @DELETE("api/admin/finance/records/{id}")
     suspend fun deleteFinanceRecord(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
+
+    @PATCH("api/admin/finance/records/{id}")
+    suspend fun updateFinanceRecordStatus(
+        @Header("Authorization") auth: String,
+        @Path("id") id: String,
+        @Body body: FinanceStatusUpdateRequestDto
+    ): Response<SuccessResponseDto>
 
     @GET("api/admin/finance/summary")
     suspend fun getFinanceSummary(@Header("Authorization") auth: String): Response<FinanceSummary>

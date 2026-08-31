@@ -35,6 +35,7 @@ import com.example.data.remote.AdsStatsDto
 import com.example.data.remote.AdminApiService
 import com.example.data.remote.CompleteJobRequestDto
 import com.example.data.remote.DashboardStatsDto
+import com.example.data.remote.FinanceStatusUpdateRequestDto
 import com.example.data.remote.LoginRequestDto
 import com.example.data.remote.StatusUpdateRequestDto
 import kotlinx.coroutines.CancellationException
@@ -42,10 +43,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
@@ -71,15 +74,12 @@ private fun errorMessage(response: Response<*>): String {
     return match?.groupValues?.get(1) ?: "Sunucu hatası (${response.code()})"
 }
 
-// Faz 1-7: tüm modüller gerçek API'ye bağlı. Backend henüz kurulmamışsa (ör. yeni bir uç nokta
-// eklenmemişse) mock'a delege edilebilir diye fallback parametresi tutuluyor, ama şu an
-// kullanılmıyor.
+// Tüm modüller gerçek API'ye bağlıdır. Sunucu cevap vermediğinde uygulama sahte veri göstermez.
 class RemoteAdminRepositoryImpl(
     private val api: AdminApiService,
     private val tokenStore: TokenStore,
     private val context: Context,
-    private val fallback: AdminRepository = MockAdminRepositoryImpl()
-) : AdminRepository by fallback {
+) : AdminRepository {
 
     private val appointmentsTrigger = MutableStateFlow(0)
     private val customersTrigger = MutableStateFlow(0)
@@ -96,11 +96,7 @@ class RemoteAdminRepositoryImpl(
     private val googleAdsCampaignsTrigger = MutableStateFlow(0)
     private val deletedFinanceIds = java.util.concurrent.ConcurrentHashMap.newKeySet<String>()
 
-    private suspend fun currentToken(): String {
-        val stored = tokenStore.tokenFlow.first()
-        if (!stored.isNullOrBlank()) return stored
-        return "5b930b8e7a1e6412b77fc01b09293de8e43a3ee19aa8ffa799d2ab63e03730e5"
-    }
+    private suspend fun currentToken(): String? = tokenStore.tokenFlow.first()
 
     private suspend fun uploadBytes(token: String, bytes: ByteArray, mimeType: String, folder: String): String? {
         return try {
@@ -138,56 +134,28 @@ class RemoteAdminRepositoryImpl(
 
     override fun getAuthToken(): Flow<String?> = tokenStore.tokenFlow
 
+    override fun getWhatsAppConnected(): Flow<Boolean> = getWhatsAppStatus().map { it.isConnected }
+
     private fun authHeader(token: String) = "Bearer $token"
 
     @OptIn(ExperimentalCoroutinesApi::class)
     private fun <T> authedFlow(
         refreshTrigger: MutableStateFlow<Int>,
-        fallbackFlow: Flow<T>,
         fetch: suspend (token: String) -> T?
     ): Flow<T> =
         combine(tokenStore.tokenFlow, refreshTrigger) { token, _ -> token }
             .flatMapLatest { token ->
-                val activeToken = if (!token.isNullOrBlank()) token else "5b930b8e7a1e6412b77fc01b09293de8e43a3ee19aa8ffa799d2ab63e03730e5"
+                if (token.isNullOrBlank()) return@flatMapLatest emptyFlow()
                 flow {
                     try {
-                        val result = fetch(activeToken)
-                        if (result != null) {
-                            emit(result)
-                        } else {
-                            fallbackFlow.collect { emit(it) }
-                        }
+                        fetch(token)?.let { emit(it) }
                     } catch (e: CancellationException) {
                         throw e
                     } catch (e: Exception) {
                         Log.e("RemoteAdminRepo", "authedFlow API error: ${e.message}", e)
-                        fallbackFlow.collect { emit(it) }
                     }
                 }
             }
-
-    private suspend fun <T> executeWithFallback(
-        fallbackAction: suspend () -> Result<T>,
-        apiAction: suspend (String) -> Result<T>
-    ): Result<T> {
-        val token = currentToken()
-        if (token.isNullOrBlank()) {
-            return fallbackAction()
-        }
-        return try {
-            val result = apiAction(token)
-            if (result.isSuccess) {
-                try { fallbackAction() } catch (_: Exception) {}
-                result
-            } else {
-                fallbackAction()
-            }
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            fallbackAction()
-        }
-    }
 
     private suspend fun <T> requireToken(
         onMissing: suspend () -> Result<T> = { Result.failure(IllegalStateException("Oturum bulunamadı, lütfen tekrar giriş yapın.")) },
@@ -222,8 +190,6 @@ class RemoteAdminRepositoryImpl(
             if (response.isSuccessful) {
                 val token = response.body()?.token
                 if (!token.isNullOrBlank()) {
-                    val preview = if (token.length >= 8) token.take(8) else token
-                    Log.d("Auth", "login: SUCCESS (200 OK), tokenStore write: $preview... (len=${token.length})")
                     tokenStore.saveToken(token)
                     Result.success(token)
                 } else {
@@ -270,7 +236,7 @@ class RemoteAdminRepositoryImpl(
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun getDashboardStats(): Flow<DashboardStats> =
-        authedFlow(appointmentsTrigger, fallback.getDashboardStats()) { token ->
+        authedFlow(appointmentsTrigger) { token ->
             val response = api.getDashboardStats(authHeader(token))
             if (response.isSuccessful) response.body()?.toDomain() else null
         }
@@ -278,7 +244,7 @@ class RemoteAdminRepositoryImpl(
     // Randevular
 
     override fun getAppointments(): Flow<List<Appointment>> =
-        authedFlow(appointmentsTrigger, fallback.getAppointments()) { token ->
+        authedFlow(appointmentsTrigger) { token ->
             val response = api.getAppointments(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -288,7 +254,6 @@ class RemoteAdminRepositoryImpl(
         if (response.isSuccessful) {
             appointmentsTrigger.value += 1
             customersTrigger.value += 1
-            try { fallback.addAppointment(appointment) } catch (_: Exception) {}
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
@@ -299,7 +264,6 @@ class RemoteAdminRepositoryImpl(
         val response = api.updateAppointment(authHeader(token), appointment.id, appointment)
         if (response.isSuccessful) {
             appointmentsTrigger.value += 1
-            try { fallback.updateAppointment(appointment) } catch (_: Exception) {}
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
@@ -310,7 +274,6 @@ class RemoteAdminRepositoryImpl(
         val response = api.updateAppointmentStatus(authHeader(token), id, StatusUpdateRequestDto(status = status.name))
         if (response.isSuccessful) {
             appointmentsTrigger.value += 1
-            try { fallback.updateAppointmentStatus(id, status) } catch (_: Exception) {}
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
@@ -372,7 +335,6 @@ class RemoteAdminRepositoryImpl(
         if (response.isSuccessful) {
             appointmentsTrigger.value += 1
             financeTrigger.value += 1
-            try { fallback.deleteAppointment(id) } catch (_: Exception) {}
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
@@ -382,105 +344,67 @@ class RemoteAdminRepositoryImpl(
     // Müşteriler
 
     override fun getCustomers(): Flow<List<Customer>> =
-        authedFlow(customersTrigger, fallback.getCustomers()) { token ->
+        authedFlow(customersTrigger) { token ->
             val response = api.getCustomers(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
-    override suspend fun addCustomer(customer: Customer): Result<Unit> =
-        executeWithFallback(
-            fallbackAction = {
-                val res = fallback.addCustomer(customer)
-                customersTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                val response = api.addCustomer(authHeader(token), customer)
-                if (response.isSuccessful) {
-                    customersTrigger.value += 1
-                    Result.success(Unit)
-                } else {
-                    Result.failure(IllegalStateException(errorMessage(response)))
-                }
-            }
-        )
+    override suspend fun addCustomer(customer: Customer): Result<Unit> = requireToken { token ->
+        val response = api.addCustomer(authHeader(token), customer)
+        if (response.isSuccessful) {
+            customersTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
 
-    override suspend fun addCustomers(customers: List<Customer>): Result<Unit> =
-        executeWithFallback(
-            fallbackAction = {
-                val res = fallback.addCustomers(customers)
-                customersTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                customers.chunked(50).forEach { chunk ->
-                    chunk.forEach { cust ->
-                        try {
-                            api.addCustomer(authHeader(token), cust)
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-                customersTrigger.value += 1
-                Result.success(Unit)
+    override suspend fun addCustomers(customers: List<Customer>): Result<Unit> = requireToken { token ->
+        customers.forEach { customer ->
+            val response = api.addCustomer(authHeader(token), customer)
+            if (!response.isSuccessful) {
+                return@requireToken Result.failure(IllegalStateException(errorMessage(response)))
             }
-        )
+        }
+        customersTrigger.value += 1
+        Result.success(Unit)
+    }
 
-    override suspend fun updateCustomer(customer: Customer): Result<Unit> =
-        executeWithFallback(
-            fallbackAction = {
-                val res = fallback.updateCustomer(customer)
-                customersTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                val response = api.updateCustomer(authHeader(token), customer.id, customer)
-                if (response.isSuccessful) {
-                    customersTrigger.value += 1
-                    Result.success(Unit)
-                } else {
-                    Result.failure(IllegalStateException(errorMessage(response)))
-                }
-            }
-        )
+    override suspend fun updateCustomer(customer: Customer): Result<Unit> = requireToken { token ->
+        val response = api.updateCustomer(authHeader(token), customer.id, customer)
+        if (response.isSuccessful) {
+            customersTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
 
-    override suspend fun deleteCustomer(id: String): Result<Unit> =
-        executeWithFallback(
-            fallbackAction = {
-                val res = fallback.deleteCustomer(id)
-                customersTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                val response = api.archiveCustomer(authHeader(token), id)
-                if (response.isSuccessful) {
-                    fallback.deleteCustomer(id)
-                    customersTrigger.value += 1
-                    Result.success(Unit)
-                } else {
-                    Result.failure(IllegalStateException(errorMessage(response)))
-                }
-            }
-        )
+    override suspend fun deleteCustomer(id: String): Result<Unit> = requireToken { token ->
+        val response = api.archiveCustomer(authHeader(token), id)
+        if (response.isSuccessful) {
+            customersTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
 
-    override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> = requireToken(
-        onMissing = { fallback.getDeviceHistory(customerId) }
-    ) { token ->
+    override suspend fun getDeviceHistory(customerId: String): Result<com.example.data.remote.DeviceHistoryDto> = requireToken { token ->
         try {
             val response = api.getDeviceHistory(authHeader(token), customerId)
             if (response.isSuccessful && response.body() != null) {
                 Result.success(response.body()!!)
             } else {
-                fallback.getDeviceHistory(customerId)
+                Result.failure(IllegalStateException(errorMessage(response)))
             }
         } catch (e: Exception) {
-            fallback.getDeviceHistory(customerId)
+            Result.failure(IllegalStateException("Cihaz gecmisi alinamadi: ${e.message}"))
         }
     }
 
     override fun getCatalogItems(): Flow<List<CatalogItem>> =
-        authedFlow(catalogTrigger, fallback.getCatalogItems()) { token ->
+        authedFlow(catalogTrigger) { token ->
             val response = api.getCatalogItems(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -489,29 +413,28 @@ class RemoteAdminRepositoryImpl(
         val response = api.saveCatalogItem(authHeader(token), item)
         if (response.isSuccessful) {
             catalogTrigger.value += 1
-            try { fallback.saveCatalogItem(item) } catch (_: Exception) {}
             Result.success(Unit)
         } else Result.failure(IllegalStateException(errorMessage(response)))
     }
 
     override fun getStockItems(): Flow<List<StockItem>> =
-        authedFlow(stockTrigger, fallback.getStockItems()) { token ->
+        authedFlow(stockTrigger) { token ->
             val response = api.getStockItems(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
     override fun getStockMovements(): Flow<List<StockMovement>> =
-        authedFlow(stockTrigger, fallback.getStockMovements()) { token ->
+        authedFlow(stockTrigger) { token ->
             val response = api.getStockMovements(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
-    override suspend fun saveStockItem(item: StockItem): Result<Unit> = requireToken { token ->
+    override suspend fun saveStockItem(item: StockItem): Result<StockItem> = requireToken { token ->
         val response = api.saveStockItem(authHeader(token), item)
         if (response.isSuccessful) {
             stockTrigger.value += 1
-            try { fallback.saveStockItem(item) } catch (_: Exception) {}
-            Result.success(Unit)
+            response.body()?.data?.let { Result.success(it) }
+                ?: Result.failure(IllegalStateException("Stok ürünü kaydedildi ancak sunucu ürün kimliğini döndürmedi."))
         } else Result.failure(IllegalStateException(errorMessage(response)))
     }
 
@@ -520,7 +443,6 @@ class RemoteAdminRepositoryImpl(
         if (response.isSuccessful) {
             stockTrigger.value += 1
             financeTrigger.value += 1
-            try { fallback.createStockMovement(movement) } catch (_: Exception) {}
             Result.success(Unit)
         } else Result.failure(IllegalStateException(errorMessage(response)))
     }
@@ -528,7 +450,7 @@ class RemoteAdminRepositoryImpl(
     // Finans
 
     override fun getFinanceRecords(): Flow<List<FinanceRecord>> =
-        authedFlow(financeTrigger, fallback.getFinanceRecords()) { token ->
+        authedFlow(financeTrigger) { token ->
             val response = api.getFinanceRecords(authHeader(token))
             if (response.isSuccessful) {
                 response.body()?.filterNot { it.id in deletedFinanceIds }
@@ -536,13 +458,13 @@ class RemoteAdminRepositoryImpl(
         }
 
     override fun getFinanceSummary(): Flow<FinanceSummary> =
-        authedFlow(financeTrigger, fallback.getFinanceSummary()) { token ->
+        authedFlow(financeTrigger) { token ->
             val response = api.getFinanceSummary(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
     override fun getBankAccounts(): Flow<List<BankAccount>> =
-        authedFlow(bankAccountsTrigger, fallback.getBankAccounts()) { token ->
+        authedFlow(bankAccountsTrigger) { token ->
             val response = api.getBankAccounts(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -562,63 +484,55 @@ class RemoteAdminRepositoryImpl(
 
     override suspend fun deleteFinanceRecord(id: String): Result<Unit> {
         deletedFinanceIds.add(id)
-        return executeWithFallback(
-            fallbackAction = {
-                val res = fallback.deleteFinanceRecord(id)
+        return requireToken { token ->
+            val response = api.deleteFinanceRecord(authHeader(token), id)
+            if (response.isSuccessful) {
                 financeTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                try {
-                    val response = api.deleteFinanceRecord(authHeader(token), id)
-                    fallback.deleteFinanceRecord(id)
-                    financeTrigger.value += 1
-                    if (response.isSuccessful) Result.success(Unit) else Result.success(Unit)
-                } catch (e: Exception) {
-                    fallback.deleteFinanceRecord(id)
-                    financeTrigger.value += 1
-                    Result.success(Unit)
-                }
+                Result.success(Unit)
+            } else {
+                deletedFinanceIds.remove(id)
+                Result.failure(IllegalStateException(errorMessage(response)))
             }
-        )
+        }
     }
 
-    override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> =
-        executeWithFallback(
-            fallbackAction = {
-                val res = fallback.updateBankAccounts(accounts)
-                bankAccountsTrigger.value += 1
-                res
-            },
-            apiAction = { token ->
-                try {
-                    val response = api.updateBankAccounts(authHeader(token), accounts)
-                    fallback.updateBankAccounts(accounts)
-                    bankAccountsTrigger.value += 1
-                    if (response.isSuccessful) Result.success(Unit) else Result.success(Unit)
-                } catch (e: Exception) {
-                    fallback.updateBankAccounts(accounts)
-                    bankAccountsTrigger.value += 1
-                    Result.success(Unit)
-                }
-            }
+    override suspend fun updateFinanceRecordStatus(id: String, status: String): Result<Unit> = requireToken { token ->
+        val response = api.updateFinanceRecordStatus(
+            authHeader(token),
+            id,
+            FinanceStatusUpdateRequestDto(status)
         )
+        if (response.isSuccessful && response.body()?.success == true) {
+            financeTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
 
-    override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> = requireToken(
-        onMissing = { fallback.getReceiptDetail(entryId) }
-    ) { token ->
+    override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> = requireToken { token ->
+        val response = api.updateBankAccounts(authHeader(token), accounts)
+        if (response.isSuccessful) {
+            bankAccountsTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto> = requireToken { token ->
         val response = api.getReceiptDetail(authHeader(token), entryId)
         if (response.isSuccessful && response.body() != null) {
             Result.success(response.body()!!)
         } else {
-            fallback.getReceiptDetail(entryId)
+            Result.failure(IllegalStateException(errorMessage(response)))
         }
     }
 
     // Teklifler
 
     override fun getProposals(): Flow<List<Proposal>> =
-        authedFlow(proposalsTrigger, fallback.getProposals()) { token ->
+        authedFlow(proposalsTrigger) { token ->
             val response = api.getProposals(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -656,13 +570,13 @@ class RemoteAdminRepositoryImpl(
     // Mesajlaşma
 
     override fun getMessagingStats(): Flow<MessagingStats> =
-        authedFlow(messagingTrigger, fallback.getMessagingStats()) { token ->
+        authedFlow(messagingTrigger) { token ->
             val response = api.getMessagingStats(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
     override fun getCustomerMessagingSettings(): Flow<CustomerMessagingSettings> =
-        authedFlow(customerSettingsTrigger, fallback.getCustomerMessagingSettings()) { token ->
+        authedFlow(customerSettingsTrigger) { token ->
             val response = api.getCustomerMessagingSettings(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -678,7 +592,7 @@ class RemoteAdminRepositoryImpl(
     }
 
     override fun getStaffMessagingSettings(): Flow<StaffMessagingSettings> =
-        authedFlow(staffSettingsTrigger, fallback.getStaffMessagingSettings()) { token ->
+        authedFlow(staffSettingsTrigger) { token ->
             val response = api.getStaffMessagingSettings(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -694,7 +608,7 @@ class RemoteAdminRepositoryImpl(
     }
 
     override fun getMessageTemplates(): Flow<List<MessageTemplate>> =
-        authedFlow(templatesTrigger, fallback.getMessageTemplates()) { token ->
+        authedFlow(templatesTrigger) { token ->
             val response = api.getMessageTemplates(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -710,7 +624,7 @@ class RemoteAdminRepositoryImpl(
     }
 
     override fun getMessageJobs(): Flow<List<MessageJob>> =
-        authedFlow(messagingTrigger, fallback.getMessageJobs()) { token ->
+        authedFlow(messagingTrigger) { token ->
             val response = api.getMessageJobs(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -726,7 +640,7 @@ class RemoteAdminRepositoryImpl(
     }
 
     override fun getMessageLogs(): Flow<List<MessageLog>> =
-        authedFlow(messagingTrigger, fallback.getMessageLogs()) { token ->
+        authedFlow(messagingTrigger) { token ->
             val response = api.getMessageLogs(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -734,13 +648,13 @@ class RemoteAdminRepositoryImpl(
     // Bakım
 
     override fun getMaintenanceStats(): Flow<MaintenanceStats> =
-        authedFlow(maintenanceTrigger, fallback.getMaintenanceStats()) { token ->
+        authedFlow(maintenanceTrigger) { token ->
             val response = api.getMaintenanceStats(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
     override fun getMaintenanceRules(): Flow<List<MaintenanceRule>> =
-        authedFlow(maintenanceTrigger, fallback.getMaintenanceRules()) { token ->
+        authedFlow(maintenanceTrigger) { token ->
             val response = api.getMaintenanceRules(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
@@ -837,13 +751,13 @@ class RemoteAdminRepositoryImpl(
     }
 
     override fun getGoogleAdsStats(): Flow<GoogleAdsStats> =
-        authedFlow(googleAdsCampaignsTrigger, fallback.getGoogleAdsStats()) { token ->
+        authedFlow(googleAdsCampaignsTrigger) { token ->
             val response = api.getGoogleAdsStats(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }
 
     override fun getGoogleAdsCampaigns(): Flow<List<GoogleAdsCampaign>> =
-        authedFlow(googleAdsCampaignsTrigger, fallback.getGoogleAdsCampaigns()) { token ->
+        authedFlow(googleAdsCampaignsTrigger) { token ->
             val response = api.getGoogleAdsCampaigns(authHeader(token))
             if (response.isSuccessful) response.body() else null
         }

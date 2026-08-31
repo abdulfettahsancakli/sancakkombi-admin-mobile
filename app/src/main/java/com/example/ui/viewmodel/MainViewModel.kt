@@ -25,7 +25,6 @@ import com.example.data.model.MessageTemplate
 import com.example.data.model.MessagingStats
 import com.example.data.model.StaffMessagingSettings
 import com.example.data.repository.AdminRepository
-import com.example.data.repository.MockAdminRepositoryImpl
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -33,10 +32,10 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 class MainViewModel(
-    private val repository: AdminRepository = MockAdminRepositoryImpl()
+    private val repository: AdminRepository
 ) : ViewModel() {
 
-    private val _isLoggedIn = MutableStateFlow(true)
+    private val _isLoggedIn = MutableStateFlow(false)
     val isLoggedIn: StateFlow<Boolean> = _isLoggedIn.asStateFlow()
 
     private val _authToken = MutableStateFlow<String?>(null)
@@ -171,12 +170,9 @@ class MainViewModel(
 
     init {
         viewModelScope.launch {
-            repository.login("SancakKombi2026")
-        }
-        viewModelScope.launch {
             repository.getAuthToken().collect { token ->
                 _authToken.value = token
-                _isLoggedIn.value = true
+                _isLoggedIn.value = !token.isNullOrBlank()
                 if (!token.isNullOrBlank()) {
                     fetchAdsData()
                 }
@@ -301,20 +297,19 @@ class MainViewModel(
                 repository.refreshAll()
                 fetchAdsData()
             }.onFailure { error ->
-                _isLoggedIn.value = true
-                _loginError.value = null
-                _currentRoute.value = "dashboard"
+                _isLoggedIn.value = false
+                _loginError.value = error.message ?: "Giriş başarısız."
             }
         }
     }
 
     fun logout() {
-        // Refresh session seamlessly without breaking direct access
         viewModelScope.launch {
             repository.logout()
-            login("SancakKombi2026")
+            _authToken.value = null
+            _isLoggedIn.value = false
         }
-        _currentRoute.value = "dashboard"
+        _currentRoute.value = "login"
         _selectedModule.value = null
     }
 
@@ -323,7 +318,7 @@ class MainViewModel(
     }
 
     fun navigateTo(route: String, module: AdminModule? = null) {
-        _currentRoute.value = if (route == "login") "dashboard" else route
+        _currentRoute.value = route
         _selectedModule.value = module
         repository.refreshAll()
         if (route in listOf("ads", "google_ads", "googleads", "reklamlar")) {
@@ -503,6 +498,21 @@ class MainViewModel(
         }
     }
 
+    fun updateFinanceRecordStatus(
+        id: String,
+        status: String,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        if (status !in setOf("paid", "partial", "unpaid")) {
+            onResult(Result.failure(IllegalArgumentException("Geçersiz finans durumu.")))
+            return
+        }
+
+        viewModelScope.launch {
+            onResult(repository.updateFinanceRecordStatus(id, status))
+        }
+    }
+
     fun updateBankAccounts(accounts: List<BankAccount>) {
         viewModelScope.launch {
             _bankAccounts.value = accounts
@@ -516,7 +526,7 @@ class MainViewModel(
         }
     }
 
-    fun saveStockItem(item: StockItem, onResult: (Result<Unit>) -> Unit = {}) {
+    fun saveStockItem(item: StockItem, onResult: (Result<StockItem>) -> Unit = {}) {
         viewModelScope.launch {
             onResult(repository.saveStockItem(item))
         }

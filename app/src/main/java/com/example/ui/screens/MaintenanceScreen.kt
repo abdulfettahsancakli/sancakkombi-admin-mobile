@@ -232,14 +232,17 @@ fun MaintenanceScreen(
 
     // Add Maintenance Rule Dialog
     if (showAddDialog) {
-        var selectedCustomerName by remember { mutableStateOf(customers.firstOrNull()?.name ?: "Fettah Sancaklı") }
+        var selectedCustomerName by remember { mutableStateOf("") }
         var customerExpanded by remember { mutableStateOf(false) }
 
-        var serviceType by remember { mutableStateOf("Kombi Bakımı") }
+        var serviceType by remember { mutableStateOf("") }
         var serviceExpanded by remember { mutableStateOf(false) }
         val serviceOptions = listOf("Kombi Bakımı", "Genel Servis", "doğalgaz-tesisatı", "Petek Temizliği")
 
-        var dateText by remember { mutableStateOf("13.04.2027") }
+        var dateText by remember { mutableStateOf("") }
+        val canCreateRule = selectedCustomerName.isNotBlank() &&
+                serviceType.isNotBlank() &&
+                Regex("^\\d{2}\\.\\d{2}\\.\\d{4}$").matches(dateText)
 
         AlertDialog(
             onDismissRequest = { showAddDialog = false },
@@ -315,6 +318,7 @@ fun MaintenanceScreen(
             },
             confirmButton = {
                 Button(
+                    enabled = canCreateRule,
                     onClick = {
                         val newRule = MaintenanceRule(
                             id = "m_${UUID.randomUUID().toString().take(6)}",

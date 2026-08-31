@@ -47,6 +47,7 @@ import com.example.data.model.CatalogItemType
 import com.example.data.model.StockItem
 import com.example.data.model.StockMovement
 import com.example.data.model.StockMovementType
+import com.example.utils.parseLocalizedDouble
 import java.util.UUID
 
 @Composable
@@ -56,7 +57,7 @@ fun StockScreen(
     movements: List<StockMovement>,
     onBackClick: () -> Unit,
     onSaveCatalogItem: (CatalogItem, (Result<Unit>) -> Unit) -> Unit,
-    onSaveStockItem: (StockItem, (Result<Unit>) -> Unit) -> Unit,
+    onSaveStockItem: (StockItem, (Result<StockItem>) -> Unit) -> Unit,
     onCreateMovement: (StockMovement, (Result<Unit>) -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -75,26 +76,39 @@ fun StockScreen(
         LazyColumn(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             item {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    OutlinedButton(onClick = onBackClick) { Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri", Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Geri") }
+                    OutlinedButton(onClick = onBackClick) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, "Geri", Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Geri")
+                    }
                     Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) { Text("Stok ve Katalog", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Parça, hizmet ve ürün hareketlerini yönetin.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                    Column(Modifier.weight(1f)) {
+                        Text("Stok ve Katalog", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                        Text("Par\u00e7a, hizmet ve \u00fcr\u00fcn hareketlerini y\u00f6netin.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("Stoktakiler", "Fiyat Kataloğu", "Hareketler").forEachIndexed { index, title -> FilterChip(selected = activeTab == index, onClick = { activeTab = index }, label = { Text(title) }) }
+                    listOf("Stoktakiler", "Fiyat Katalo\u011fu", "Hareketler").forEachIndexed { index, title ->
+                        FilterChip(selected = activeTab == index, onClick = { activeTab = index }, label = { Text(title) })
+                    }
                 }
             }
             if (activeTab == 0) {
                 item {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Button(onClick = { showStockForm = !showStockForm }, modifier = Modifier.weight(1f)) { Icon(Icons.Default.Add, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Stok Ürünü") }
+                        Button(onClick = { showStockForm = !showStockForm }, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.Add, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Stok \u00dcr\u00fcn\u00fc")
+                        }
                         OutlinedButton(onClick = { showCatalogForm = !showCatalogForm }, modifier = Modifier.weight(1f)) { Text("Katalog Kalemi") }
                     }
                 }
                 if (showStockForm) item {
-                    FormCard(title = "Yeni / Güncel Stok Ürünü") {
-                        OutlinedTextField(stockName, { stockName = it }, label = { Text("Ürün adı") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                    FormCard(title = "Yeni / G\u00fcncel Stok \u00dcr\u00fcn\u00fc") {
+                        OutlinedTextField(stockName, { stockName = it }, label = { Text("\u00dcr\u00fcn ad\u0131") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(stockSku, { stockSku = it }, label = { Text("Stok kodu") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(stockQuantity, { stockQuantity = it }, label = { Text("Mevcut adet") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), singleLine = true)
@@ -102,20 +116,44 @@ fun StockScreen(
                         }
                         Button(onClick = {
                             if (stockName.isBlank()) return@Button
-                            val item = StockItem(UUID.randomUUID().toString(), stockName.trim(), stockSku.trim(), quantity = stockQuantity.toDoubleOrNull() ?: 0.0, minimumQuantity = minimumQuantity.toDoubleOrNull() ?: 0.0)
-                            onSaveStockItem(item) { result -> result.onSuccess { Toast.makeText(context, "Stok ürünü kaydedildi.", Toast.LENGTH_SHORT).show(); showStockForm = false }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() } }
-                        }) { Icon(Icons.Default.Save, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Kaydet") }
+                            val initialQuantity = parseLocalizedDouble(stockQuantity)?.coerceAtLeast(0.0) ?: 0.0
+                            // Yeni kayitta ID'yi backend uretir; miktar merkezi hareket RPC'siyle yazilir.
+                            val item = StockItem(name = stockName.trim(), sku = stockSku.trim(), quantity = 0.0, minimumQuantity = parseLocalizedDouble(minimumQuantity)?.coerceAtLeast(0.0) ?: 0.0)
+                            onSaveStockItem(item) { result ->
+                                result.onSuccess { savedItem ->
+                                    if (initialQuantity > 0) {
+                                        onCreateMovement(StockMovement(UUID.randomUUID().toString(), savedItem.id, initialQuantity, StockMovementType.IN, "\u0130lk stok giri\u015fi")) { movementResult ->
+                                            movementResult.onSuccess {
+                                                Toast.makeText(context, "Stok \u00fcr\u00fcn\u00fc ve ba\u015flang\u0131\u00e7 miktar\u0131 kaydedildi.", Toast.LENGTH_SHORT).show()
+                                                showStockForm = false
+                                            }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() }
+                                        }
+                                    } else {
+                                        Toast.makeText(context, "Stok \u00fcr\u00fcn\u00fc kaydedildi.", Toast.LENGTH_SHORT).show()
+                                        showStockForm = false
+                                    }
+                                }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() }
+                            }
+                        }) {
+                            Icon(Icons.Default.Save, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Kaydet")
+                        }
                     }
                 }
                 if (showCatalogForm) item {
                     FormCard(title = "Katalog Kalemi") {
-                        OutlinedTextField(catalogName, { catalogName = it }, label = { Text("Hizmet / ürün adı") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
-                        OutlinedTextField(catalogPrice, { catalogPrice = it }, label = { Text("Varsayılan fiyat") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(catalogName, { catalogName = it }, label = { Text("Hizmet / \u00fcr\u00fcn ad\u0131") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(catalogPrice, { catalogPrice = it }, label = { Text("Varsay\u0131lan fiyat") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.fillMaxWidth(), singleLine = true)
                         Button(onClick = {
                             if (catalogName.isBlank()) return@Button
-                            val item = CatalogItem(UUID.randomUUID().toString(), catalogName.trim(), CatalogItemType.PRODUCT, defaultPrice = catalogPrice.toDoubleOrNull() ?: 0.0)
+                            val item = CatalogItem(UUID.randomUUID().toString(), catalogName.trim(), CatalogItemType.PRODUCT, defaultPrice = parseLocalizedDouble(catalogPrice) ?: 0.0)
                             onSaveCatalogItem(item) { result -> result.onSuccess { Toast.makeText(context, "Katalog kalemi kaydedildi.", Toast.LENGTH_SHORT).show(); showCatalogForm = false }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() } }
-                        }) { Icon(Icons.Default.Save, null, Modifier.size(16.dp)); Spacer(Modifier.width(4.dp)); Text("Kaydet") }
+                        }) {
+                            Icon(Icons.Default.Save, null, Modifier.size(16.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Kaydet")
+                        }
                     }
                 }
                 items(stockItems, key = { it.id }) { stock ->
@@ -123,12 +161,23 @@ fun StockScreen(
                         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Default.Inventory2, null, tint = if (stock.isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                             Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) { Text(stock.name, fontWeight = FontWeight.Bold); Text("${stock.sku.ifBlank { "Kod yok" }} • Kritik: ${stock.minimumQuantity}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                            Column(Modifier.weight(1f)) {
+                                Text(stock.name, fontWeight = FontWeight.Bold)
+                                Text("${stock.sku.ifBlank { "Kod yok" }} \u2022 Kritik: ${stock.minimumQuantity}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
                             Column(horizontalAlignment = Alignment.End) {
                                 Text("${stock.quantity} ${stock.unit}", fontWeight = FontWeight.Bold, color = if (stock.isLowStock) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    OutlinedButton(onClick = { onCreateMovement(StockMovement(UUID.randomUUID().toString(), stock.id, 1.0, StockMovementType.IN, "Manuel stok girişi")) {} }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("+1", fontSize = 10.sp) }
-                                    OutlinedButton(onClick = { onCreateMovement(StockMovement(UUID.randomUUID().toString(), stock.id, 1.0, StockMovementType.OUT, "Manuel stok çıkışı")) {} }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("-1", fontSize = 10.sp) }
+                                    OutlinedButton(onClick = {
+                                        onCreateMovement(StockMovement(UUID.randomUUID().toString(), stock.id, 1.0, StockMovementType.IN, "Manuel stok giri\u015fi")) { result ->
+                                            result.onFailure { Toast.makeText(context, it.message ?: "Stok giri\u015fi ba\u015far\u0131s\u0131z.", Toast.LENGTH_LONG).show() }
+                                        }
+                                    }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("+1", fontSize = 10.sp) }
+                                    OutlinedButton(onClick = {
+                                        onCreateMovement(StockMovement(UUID.randomUUID().toString(), stock.id, 1.0, StockMovementType.OUT, "Manuel stok \u00e7\u0131k\u0131\u015f\u0131")) { result ->
+                                            result.onFailure { Toast.makeText(context, it.message ?: "Stok \u00e7\u0131k\u0131\u015f\u0131 ba\u015far\u0131s\u0131z.", Toast.LENGTH_LONG).show() }
+                                        }
+                                    }, contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 6.dp, vertical = 0.dp)) { Text("-1", fontSize = 10.sp) }
                                 }
                             }
                         }
@@ -139,12 +188,12 @@ fun StockScreen(
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(16.dp)) {
                         Row(Modifier.fillMaxWidth().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                             Column(Modifier.weight(1f)) { Text(item.name, fontWeight = FontWeight.Bold); Text(item.type.name, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-                            Text("₺%.2f".format(item.defaultPrice).replace('.', ','), fontWeight = FontWeight.Bold)
+                            Text("\u20ba%.2f".format(item.defaultPrice).replace('.', ','), fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             } else {
-                if (movements.isEmpty()) item { Text("Henüz stok hareketi bulunmuyor.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (movements.isEmpty()) item { Text("Hen\u00fcz stok hareketi bulunmuyor.", color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 items(movements, key = { it.id }) { movement ->
                     Card(colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(14.dp)) {
                         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {

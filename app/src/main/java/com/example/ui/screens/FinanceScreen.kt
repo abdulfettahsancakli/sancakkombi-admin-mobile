@@ -95,6 +95,7 @@ import com.example.data.model.BankAccount
 import com.example.data.model.FinanceRecord
 import com.example.data.model.FinanceSummary
 import com.example.data.model.FinanceType
+import com.example.utils.parseLocalizedDouble
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -166,6 +167,7 @@ fun FinanceScreen(
     onBackClick: () -> Unit,
     onAddFinanceRecord: (FinanceRecord) -> Unit,
     onDeleteFinanceRecord: (String) -> Unit = {},
+    onUpdateFinanceRecordStatus: (String, String, (Result<Unit>) -> Unit) -> Unit,
     onUpdateBankAccounts: (List<BankAccount>) -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
     modifier: Modifier = Modifier
@@ -175,7 +177,7 @@ fun FinanceScreen(
     var selectedTab by remember { mutableIntStateOf(0) } // 0: Özet & Alacaklar, 1: IBAN & Banka, 2: Hızlı Gelir/Gider
 
     // BottomSheet states
-    var showReceivableSheet by remember { mutableStateOf(false) }
+    var selectedReceivable by remember { mutableStateOf<FinanceRecord?>(null) }
     var showIbanEditSheet by remember { mutableStateOf(false) }
     var recordToDelete by remember { mutableStateOf<FinanceRecord?>(null) }
 
@@ -307,7 +309,7 @@ fun FinanceScreen(
                         colors = colors,
                         summary = summary,
                         financeRecords = financeRecords,
-                        onReceivableClick = { showReceivableSheet = true },
+                        onReceivableClick = { record -> selectedReceivable = record },
                         onViewReceipt = onViewReceipt,
                         onDeleteRecord = { rec -> recordToDelete = rec },
                         onGoToQuickEntry = { selectedTab = 2 }
@@ -336,26 +338,23 @@ fun FinanceScreen(
     }
 
     // Modal BottomSheet for Receivable Action
-    if (showReceivableSheet) {
+    val receivable = selectedReceivable
+    if (receivable != null) {
         ReceivableActionBottomSheet(
             colors = colors,
             context = context,
             bankAccounts = bankAccounts,
-            onDismiss = { showReceivableSheet = false },
+            record = receivable,
+            onDismiss = { selectedReceivable = null },
             onMarkCollected = {
-                val rec = FinanceRecord(
-                    id = UUID.randomUUID().toString(),
-                    date = currentDateStr,
-                    type = FinanceType.GELIR,
-                    amount = 500.0,
-                    status = "Ödendi",
-                    source = "Fettah Sancaklı - Alacak Tahsilatı",
-                    note = "Açık alacak kapatıldı",
-                    receiptNo = "SK-202608-" + UUID.randomUUID().toString().take(6).uppercase()
-                )
-                onAddFinanceRecord(rec)
-                showReceivableSheet = false
-                Toast.makeText(context, "500,00 ₺ alacak tahsil edilerek Gelir olarak kaydedildi!", Toast.LENGTH_LONG).show()
+                onUpdateFinanceRecordStatus(receivable.id, "paid") { result ->
+                    result.onSuccess {
+                        selectedReceivable = null
+                        Toast.makeText(context, "Alacak tahsil edildi olarak güncellendi.", Toast.LENGTH_LONG).show()
+                    }.onFailure { error ->
+                        Toast.makeText(context, "Alacak güncellenemedi: ${error.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
             }
         )
     }
@@ -457,11 +456,18 @@ private fun SummaryAndReceivablesTab(
     colors: FinanceThemeColors,
     summary: FinanceSummary,
     financeRecords: List<FinanceRecord>,
-    onReceivableClick: () -> Unit,
+    onReceivableClick: (FinanceRecord) -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
     onDeleteRecord: (FinanceRecord) -> Unit,
     onGoToQuickEntry: () -> Unit
 ) {
+    val outstandingRecords = financeRecords.filter { record ->
+        record.type == FinanceType.GELIR &&
+            record.status in setOf("Kısmi", "Bekliyor") &&
+            (record.totalAmount - record.collectedAmount).coerceAtLeast(0.0) > 0.0
+    }
+    val featuredReceivable = outstandingRecords.firstOrNull()
+
     Column(modifier = Modifier.fillMaxWidth()) {
         // KPI Bento Cards (3 Cards)
         // Card 1: Toplam Gelir
@@ -583,7 +589,7 @@ private fun SummaryAndReceivablesTab(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = "1 Bekleyen",
+                            text = "${outstandingRecords.size} Bekleyen",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = colors.warningColor
@@ -608,7 +614,7 @@ private fun SummaryAndReceivablesTab(
             )
             Spacer(modifier = Modifier.weight(1f))
             Text(
-                text = "1 Bekliyor",
+                text = "${outstandingRecords.size} Bekliyor",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = colors.warningColor,
@@ -621,86 +627,102 @@ private fun SummaryAndReceivablesTab(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Modern Glass/Executive Receivable Card
-        OledCard(
-            colors = colors,
-            borderColor = colors.warningColor.copy(alpha = 0.3f),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { onReceivableClick() }
-        ) {
-            Row(
+        // Gerçek backend kayıtlarından oluşturulan alacak kartı
+        if (featuredReceivable == null) {
+            OledCard(
+                colors = colors,
+                borderColor = colors.cardBorder,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    text = "Açık alacak bulunmuyor.",
+                    fontSize = 13.sp,
+                    color = colors.textSecondary,
+                    modifier = Modifier.padding(16.dp)
+                )
+            }
+        } else {
+            val remainingAmount = (featuredReceivable.totalAmount - featuredReceivable.collectedAmount).coerceAtLeast(0.0)
+            OledCard(
+                colors = colors,
+                borderColor = colors.warningColor.copy(alpha = 0.3f),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(0.dp)
+                    .clickable { onReceivableClick(featuredReceivable) }
             ) {
-                // Vertical Warning Accent Bar on the left
-                Box(
-                    modifier = Modifier
-                        .width(5.dp)
-                        .height(84.dp)
-                        .background(colors.warningColor)
-                )
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
+                        .padding(0.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(colors.warningColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                            .width(5.dp)
+                            .height(84.dp)
+                            .background(colors.warningColor)
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Warning,
-                            contentDescription = null,
-                            tint = colors.warningColor,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Fettah Sancaklı",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = "Vade: 18.05.2026 • GECİKMİŞ • Kısmi",
-                            fontSize = 11.sp,
-                            color = colors.warningColor
-                        )
-                        Text(
-                            text = "Dokun: Tahsil Et / WhatsApp'tan Hatırlat",
-                            fontSize = 10.sp,
-                            color = colors.textSecondary
-                        )
-                    }
-
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(
-                            text = "₺500,00",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = colors.dangerColor
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(colors.inputBg)
-                                .border(1.dp, colors.cardBorder, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(colors.warningColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Aksiyon Al →", fontSize = 10.sp, color = colors.textPrimary)
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = colors.warningColor,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = featuredReceivable.source.ifBlank { "Müşteri / açıklama belirtilmedi" },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Durum: ${featuredReceivable.status} • Tarih: ${featuredReceivable.date}",
+                                fontSize = 11.sp,
+                                color = colors.warningColor
+                            )
+                            Text(
+                                text = "Dokun: Tahsil Et / WhatsApp'tan Hatırlat",
+                                fontSize = 10.sp,
+                                color = colors.textSecondary
+                            )
+                        }
+
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                text = "₺%.2f".format(remainingAmount).replace(".", ","),
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.dangerColor
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(colors.inputBg)
+                                    .border(1.dp, colors.cardBorder, RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text("Aksiyon Al →", fontSize = 10.sp, color = colors.textPrimary)
+                            }
                         }
                     }
                 }
@@ -852,13 +874,13 @@ private fun WalletStyleIbanCard(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = account.bankName.ifBlank { "BANKA HESABI" },
+                            text = account.bankName.ifBlank { "Banka adı belirtilmedi" },
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = brandAccentColor
                         )
                         Text(
-                            text = account.accountHolder,
+                            text = account.accountHolder.ifBlank { "Hesap sahibi belirtilmedi" },
                             fontSize = 14.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = colors.textPrimary
@@ -878,7 +900,7 @@ private fun WalletStyleIbanCard(
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                 ) {
                     Text(
-                        text = account.iban.ifBlank { "TR00 0000 0000 0000 0000 0000 00" },
+                        text = account.iban.ifBlank { "IBAN belirtilmedi" },
                         fontFamily = FontFamily.Monospace,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
@@ -903,6 +925,7 @@ private fun WalletStyleIbanCard(
                             Toast.makeText(context, "${account.bankName} IBAN Panoya Kopyalandı", Toast.LENGTH_SHORT).show()
                         },
                         modifier = Modifier.weight(1f),
+                        enabled = account.isReady && account.iban.isNotBlank(),
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = colors.textPrimary),
                         border = androidx.compose.foundation.BorderStroke(1.dp, colors.cardBorder)
@@ -1143,7 +1166,7 @@ private fun QuickEntryAndHistoryTab(
                 // Submit Button
                 Button(
                     onClick = {
-                        val amt = tutarText.replace(",", ".").toDoubleOrNull() ?: 0.0
+                        val amt = parseLocalizedDouble(tutarText) ?: 0.0
                         if (amt > 0) {
                             val record = FinanceRecord(
                                 id = UUID.randomUUID().toString(),
@@ -1415,9 +1438,18 @@ private fun ReceivableActionBottomSheet(
     colors: FinanceThemeColors,
     context: Context,
     bankAccounts: List<BankAccount>,
+    record: FinanceRecord,
     onDismiss: () -> Unit,
     onMarkCollected: () -> Unit
 ) {
+    val paymentAccount = bankAccounts.firstOrNull { account ->
+        account.isReady &&
+            account.bankName.isNotBlank() &&
+            account.accountHolder.isNotBlank() &&
+            account.iban.isNotBlank()
+    }
+    val remainingAmount = (record.totalAmount - record.collectedAmount).coerceAtLeast(0.0)
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         containerColor = colors.bottomSheetBg,
@@ -1452,9 +1484,9 @@ private fun ReceivableActionBottomSheet(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(modifier = Modifier.padding(14.dp)) {
-                    Text("Müşteri: Fettah Sancaklı", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
-                    Text("Durum: Vade 18.05.2026 • GECİKMİŞ", fontSize = 12.sp, color = colors.warningColor)
-                    Text("Kalan Alacak Tutar: ₺500,00", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.dangerColor)
+                    Text("Müşteri / açıklama: ${record.source.ifBlank { "Belirtilmedi" }}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+                    Text("Durum: ${record.status} • Tarih: ${record.date}", fontSize = 12.sp, color = colors.warningColor)
+                    Text("Kalan Alacak Tutar: ₺%.2f".format(remainingAmount).replace(".", ","), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.dangerColor)
                 }
             }
 
@@ -1463,17 +1495,21 @@ private fun ReceivableActionBottomSheet(
             // Action 1: WhatsApp Reminder
             Button(
                 onClick = {
-                    val defaultIban = bankAccounts.firstOrNull()?.iban ?: "TR33 0006 7010 0000 0012 3456 78"
+                    val account = paymentAccount
+                    if (account == null) {
+                        Toast.makeText(context, "Geçerli banka hesabı bulunamadı.", Toast.LENGTH_LONG).show()
+                        return@Button
+                    }
                     val reminderText = """
-                        Sayın Fettah Sancaklı,
-                        Sancak Kombi Teknik Servis hizmetinize ait ₺500,00 tutarındaki ödemenizi hatırlatırız.
+                        Sayın ${record.source.ifBlank { "müşterimiz" }},
+                        Sancak Kombi hizmetinize ait ₺%.2f tutarındaki ödemenizi hatırlatırız.
                         
                         Banka Hesabımız:
-                        ${bankAccounts.firstOrNull()?.bankName ?: "Yapı Kredi"} - ${bankAccounts.firstOrNull()?.accountHolder ?: "Fatih Sancaklı"}
-                        IBAN: $defaultIban
+                        ${account.bankName} - ${account.accountHolder}
+                        IBAN: ${account.iban}
                         
                         Anlayışınız için teşekkür ederiz.
-                    """.trimIndent()
+                    """.trimIndent().format(remainingAmount)
 
                     val intent = Intent(Intent.ACTION_SEND).apply {
                         type = "text/plain"
@@ -1482,6 +1518,7 @@ private fun ReceivableActionBottomSheet(
                     context.startActivity(Intent.createChooser(intent, "WhatsApp'tan Ödeme Hatırlatması Gönder"))
                 },
                 modifier = Modifier.fillMaxWidth(),
+                enabled = paymentAccount != null,
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366))
             ) {
@@ -1501,7 +1538,7 @@ private fun ReceivableActionBottomSheet(
             ) {
                 Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tahsil Edildi Olarak İşaretle (+500 ₺)", color = Color.White, fontWeight = FontWeight.Bold)
+                Text("Tahsil Edildi Olarak İşaretle", color = Color.White, fontWeight = FontWeight.Bold)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -1551,9 +1588,9 @@ private fun IbanEditBottomSheet(
             }
         } else {
             listOf(
-                EditableBankAccountItem("b1", "YAPI KREDİ", "Fatih Sancaklı", "TR33 0006 7010 0000 0012 3456 78"),
-                EditableBankAccountItem("b2", "AKBANK", "Abdulfettah Sancaklı", "TR62 0004 6001 2345 6789 0123 45"),
-                EditableBankAccountItem("b3", "KUVEYT TÜRK", "Abdullah Sancaklı", "TR12 0020 5000 0012 3456 7890 12")
+                EditableBankAccountItem("fatih", "", "", ""),
+                EditableBankAccountItem("fettah", "", "", ""),
+                EditableBankAccountItem("abdullah", "", "", "")
             )
         }
         mutableStateListOf<EditableBankAccountItem>().apply { addAll(initial) }
@@ -1715,7 +1752,7 @@ private fun IbanEditBottomSheet(
                             onValueChange = { newHolder ->
                                 items[index] = item.copy(accountHolder = newHolder)
                             },
-                            placeholder = { Text("Örn: Fatih Sancaklı", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
+                            placeholder = { Text("Hesap sahibinin adı", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
                             leadingIcon = {
                                 Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.warningColor)
                             },
@@ -1746,7 +1783,7 @@ private fun IbanEditBottomSheet(
                             onValueChange = { newIban ->
                                 items[index] = item.copy(iban = newIban)
                             },
-                            placeholder = { Text("TR00 0000 0000 0000 0000 0000 00", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
+                            placeholder = { Text("TR ile başlayan IBAN", fontSize = 13.sp, color = colors.textSecondary.copy(alpha = 0.6f)) },
                             leadingIcon = {
                                 Icon(Icons.Default.CreditCard, contentDescription = null, modifier = Modifier.size(16.dp), tint = colors.dangerColor)
                             },
@@ -1768,15 +1805,13 @@ private fun IbanEditBottomSheet(
             // Yeni Banka Ekle Butonu
             OutlinedButton(
                 onClick = {
-                    val nextId = "b_${System.currentTimeMillis()}"
-                    items.add(
-                        EditableBankAccountItem(
-                            id = nextId,
-                            bankName = "",
-                            accountHolder = "",
-                            iban = "TR"
-                        )
-                    )
+                    val supportedIds = listOf("fatih", "fettah", "abdullah")
+                    val nextId = supportedIds.firstOrNull { id -> items.none { it.id == id } }
+                    if (nextId == null) {
+                        Toast.makeText(context, "Tanımlanabilecek tüm hesap alanları zaten mevcut.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        items.add(EditableBankAccountItem(nextId, "", "", ""))
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
@@ -1792,20 +1827,24 @@ private fun IbanEditBottomSheet(
 
             Button(
                 onClick = {
-                    val validList = items.filter { it.bankName.isNotBlank() || it.iban.isNotBlank() }
+                    val validList = items.filter {
+                        it.bankName.isNotBlank() && it.accountHolder.isNotBlank() && it.iban.isNotBlank()
+                    }
                     if (validList.isEmpty()) {
-                        Toast.makeText(context, "Lütfen en az bir banka bilgisi giriniz.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Lütfen en az bir banka, hesap sahibi ve IBAN bilgisi giriniz.", Toast.LENGTH_SHORT).show()
                         return@Button
                     }
-                    val updated = validList.map {
-                        val bankTitle = it.bankName.trim().ifBlank { "BANKA HESABI" }
+                    val updated = items.map {
+                        val bankTitle = it.bankName.trim()
+                        val holder = it.accountHolder.trim()
+                        val iban = it.iban.trim()
                         BankAccount(
                             id = it.id,
                             cardTitle = bankTitle.uppercase(java.util.Locale.getDefault()),
-                            accountHolder = it.accountHolder.trim().ifBlank { "Sancak Kombi Yetkilisi" },
+                            accountHolder = holder,
                             bankName = bankTitle.uppercase(java.util.Locale.getDefault()),
-                            iban = it.iban.trim(),
-                            isReady = true
+                            iban = iban,
+                            isReady = bankTitle.isNotBlank() && holder.isNotBlank() && iban.isNotBlank()
                         )
                     }
                     onSave(updated)
@@ -1855,6 +1894,7 @@ private fun normalizedFinanceCategory(record: FinanceRecord): String {
     }
 }
 
+@Composable
 private fun FinanceAnalyticsTab(
     colors: FinanceThemeColors,
     financeRecords: List<FinanceRecord>

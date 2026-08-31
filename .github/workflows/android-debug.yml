@@ -1,0 +1,39 @@
+name: Android debug validation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
+      - name: Run unit tests and build debug APK
+        run: ./gradlew testDebugUnitTest assembleDebug --no-daemon --no-configuration-cache
+
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: sancak-kombi-admin-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error

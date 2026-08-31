@@ -82,6 +82,7 @@ import com.example.data.model.BankAccount
 import com.example.data.model.Customer
 import com.example.data.model.FinanceRecord
 import com.example.data.model.FinanceType
+import com.example.utils.parseLocalizedDouble
 import java.net.URLEncoder
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -102,21 +103,22 @@ fun QuickIbanScreen(
 ) {
     val context = LocalContext.current
 
-    // Default Bank Accounts if none provided
+    // Only use accounts received from the backend. Never invent or fall back to
+    // a hardcoded IBAN on a payment screen.
     val activeBankAccounts = remember(bankAccounts) {
-        if (bankAccounts.isNotEmpty()) bankAccounts
-        else listOf(
-            BankAccount("b1", "YAPI KREDİ", "Fatih Sancakli", "YAPI KREDİ", "TR120006200001000000123457"),
-            BankAccount("b2", "AKBANK", "Abdulfettah Sancaklı", "AKBANK", "TR620004600123456789012345"),
-            BankAccount("b3", "KUVEYT TÜRK", "Abdullah Sancaklı", "KUVEYT TÜRK", "TR120020500000123456789012")
-        )
+        bankAccounts.filter { account ->
+            account.isReady &&
+                account.bankName.isNotBlank() &&
+                account.accountHolder.isNotBlank() &&
+                account.iban.isNotBlank()
+        }
     }
 
     // State
     var customerName by remember { mutableStateOf("") }
     var customerPhone by remember { mutableStateOf("") }
     var serviceTitle by remember { mutableStateOf("Kombi Bakım & Servis") }
-    var amountText by remember { mutableStateOf("2000") }
+    var amountText by remember { mutableStateOf("") }
     var selectedBankIndex by remember { mutableStateOf(0) }
     var showCustomerPicker by remember { mutableStateOf(false) }
     var customerSearchQuery by remember { mutableStateOf("") }
@@ -140,7 +142,7 @@ fun QuickIbanScreen(
 
     // Format Amount Display
     val formattedAmountDisplay = remember(amountText) {
-        val parsed = amountText.toDoubleOrNull() ?: 0.0
+        val parsed = parseLocalizedDouble(amountText) ?: 0.0
         val nf = NumberFormat.getCurrencyInstance(Locale("tr", "TR"))
         nf.format(parsed)
     }
@@ -148,9 +150,9 @@ fun QuickIbanScreen(
     // Generate WhatsApp Message text exactly in user's requested template
     val generatedMessage = remember(customerName, serviceTitle, formattedAmountDisplay, selectedBank) {
         val namePart = if (customerName.isNotBlank()) customerName.trim() else "Müşterimiz"
-        val bankNamePart = selectedBank?.bankName?.ifBlank { selectedBank.cardTitle } ?: "YAPI KREDİ"
-        val holderPart = selectedBank?.accountHolder?.ifBlank { "Fatih Sancakli" } ?: "Fatih Sancakli"
-        val ibanPart = selectedBank?.iban?.ifBlank { "TR120006200001000000123457" } ?: "TR120006200001000000123457"
+        val bankNamePart = selectedBank?.bankName?.ifBlank { selectedBank.cardTitle } ?: "Banka hesabı seçilmedi"
+        val holderPart = selectedBank?.accountHolder?.ifBlank { "Belirtilmedi" } ?: "Belirtilmedi"
+        val ibanPart = selectedBank?.iban?.ifBlank { "Belirtilmedi" } ?: "Belirtilmedi"
 
         """
 Merhaba $namePart, Sancak Kombi'yi tercih ettiğiniz için teşekkür ederiz.
@@ -168,8 +170,31 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
         """.trimIndent()
     }
 
+    fun validatePaymentDetails(): Double? {
+        val account = selectedBank
+        if (account == null) {
+            Toast.makeText(context, "Önce backend'den geçerli bir banka hesabı yüklenmelidir.", Toast.LENGTH_LONG).show()
+            return null
+        }
+
+        if (serviceTitle.isBlank()) {
+            Toast.makeText(context, "Lütfen hizmet açıklamasını girin.", Toast.LENGTH_SHORT).show()
+            return null
+        }
+
+        val amount = parseLocalizedDouble(amountText)
+        if (amount == null || !amount.isFinite() || amount <= 0) {
+            Toast.makeText(context, "Lütfen 0'dan büyük geçerli bir tutar girin.", Toast.LENGTH_SHORT).show()
+            return null
+        }
+
+        return amount
+    }
+
     // Send WhatsApp Action
     fun sendWhatsApp() {
+        if (validatePaymentDetails() == null) return
+
         val cleanDigits = customerPhone.filter { it.isDigit() }
         val finalPhone = when {
             cleanDigits.startsWith("90") -> cleanDigits
@@ -204,6 +229,8 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
 
     // Copy Action
     fun copyToClipboard() {
+        if (validatePaymentDetails() == null) return
+
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Sancak Kombi IBAN", generatedMessage)
         clipboard.setPrimaryClip(clip)
@@ -317,7 +344,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                                         if (appt.serviceType.isNotBlank()) {
                                             serviceTitle = appt.serviceType
                                         }
-                                        val collected = appt.jobReport?.collectedAmount?.toDoubleOrNull()
+                                        val collected = appt.jobReport?.collectedAmount?.let(::parseLocalizedDouble)
                                         if (collected != null && collected > 0) {
                                             amountText = collected.toInt().toString()
                                         }
@@ -436,7 +463,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                         value = customerName,
                         onValueChange = { customerName = it },
                         label = { Text("Müşteri Adı Soyadı") },
-                        placeholder = { Text("Örn: Fettah Sancaklı") },
+                        placeholder = { Text("Müşterinin adı soyadı") },
                         leadingIcon = {
                             Icon(Icons.Default.Person, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         },
@@ -596,7 +623,14 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                     Spacer(modifier = Modifier.height(12.dp))
 
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        activeBankAccounts.forEachIndexed { index, bank ->
+                        if (activeBankAccounts.isEmpty()) {
+                            Text(
+                                text = "Kullanılabilir ödeme hesabı bulunamadı. Önce web yönetim panelinden hesapları tanımlayın.",
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        } else {
+                            activeBankAccounts.forEachIndexed { index, bank ->
                             val isSelected = selectedBankIndex == index
                             val bankColor = when {
                                 bank.bankName.contains("YAPI", ignoreCase = true) -> Color(0xFF0047BB)
@@ -669,6 +703,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                                         )
                                     }
                                 }
+                            }
                             }
                         }
                     }
@@ -743,18 +778,21 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
             // 1. DEV YEŞİL WHATSAPP BUTONU (TEK DOKUNUŞLA CLOUD API İLE GÖNDER)
             Button(
                 onClick = {
+                    val parsedAmt = validatePaymentDetails() ?: return@Button
                     val cleanDigits = customerPhone.filter { it.isDigit() }
                     if (cleanDigits.length < 10) {
                         Toast.makeText(context, "Lütfen geçerli bir telefon numarası girin veya yukarıdan bir randevu seçin.", Toast.LENGTH_LONG).show()
                         return@Button
                     }
 
-                    val parsedAmt = amountText.toDoubleOrNull() ?: 2000.0
-                    val accountKey = when {
-                        selectedBank?.bankName?.contains("YAPI", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Fatih", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Fatih", ignoreCase = true) == true -> "fatih"
-                        selectedBank?.bankName?.contains("AKBANK", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Fettah", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Fettah", ignoreCase = true) == true -> "fettah"
-                        selectedBank?.bankName?.contains("KUVEYT", ignoreCase = true) == true || selectedBank?.cardTitle?.contains("Abdullah", ignoreCase = true) == true || selectedBank?.accountHolder?.contains("Abdullah", ignoreCase = true) == true -> "abdullah"
-                        else -> "fatih"
+                    val accountKey = when (selectedBank?.id?.lowercase(Locale.ROOT)) {
+                        "fatih" -> "fatih"
+                        "fettah" -> "fettah"
+                        "abdullah" -> "abdullah"
+                        else -> {
+                            Toast.makeText(context, "Seçilen banka hesabı web sisteminde tanımlı değil.", Toast.LENGTH_LONG).show()
+                            return@Button
+                        }
                     }
 
                     val targetApptId = selectedAppointmentId
@@ -823,11 +861,7 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
             if (onAddFinanceRecord != null) {
                 OutlinedButton(
                     onClick = {
-                        val parsedAmt = amountText.toDoubleOrNull() ?: 0.0
-                        if (parsedAmt <= 0) {
-                            Toast.makeText(context, "Lütfen geçerli bir tutar girin", Toast.LENGTH_SHORT).show()
-                            return@OutlinedButton
-                        }
+                        val parsedAmt = validatePaymentDetails() ?: return@OutlinedButton
                         val todayStr = SimpleDateFormat("dd.MM.yyyy", Locale.getDefault()).format(Date())
                         val rec = FinanceRecord(
                             id = "iban_req_${System.currentTimeMillis()}",

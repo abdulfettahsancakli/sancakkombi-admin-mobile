@@ -945,14 +945,16 @@ private fun CompactBentoModuleCard(
     onClick: () -> Unit
 ) {
     val (moduleAccent, badgeText) = when (module) {
-        AdminModule.MUSTERILER -> Color(0xFF0288D1) to "123 Kayıtlı"
+        AdminModule.MUSTERILER -> Color(0xFF0288D1) to "Müşteri listesi"
         AdminModule.RANDEVULAR -> Color(0xFF10B981) to "${stats.bugunkuRandevu} Bugünkü"
         AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6) to "WhatsApp"
         AdminModule.ISTATISTIKLER -> Color(0xFF3B82F6) to "Raporlar"
         AdminModule.FINANS -> Color(0xFF059669) to stats.acikAlacak
-        AdminModule.TEKLIFLER -> Color(0xFF6366F1) to "3 Aktif"
-        AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899) to "2 Yaklaşan"
-        AdminModule.GOOGLE_ADS -> Color(0xFFEA4335) to "%98 Performans"
+        AdminModule.TEKLIFLER -> Color(0xFF6366F1) to
+            if (stats.bekleyenOnay > 0) "${stats.bekleyenOnay} Bekleyen" else "Bekleyen yok"
+        AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899) to "Bakım listesi"
+        AdminModule.GOOGLE_ADS -> Color(0xFFEA4335) to "Reklam paneli"
+        AdminModule.STOK -> Color(0xFF0EA5E9) to "Stok hareketleri"
         AdminModule.HIZLI_IBAN -> Color(0xFF22C55E) to "Hızlı Gönder"
     }
 
@@ -1047,7 +1049,7 @@ fun ModuleCard(
 ) {
     CompactBentoModuleCard(
         module = module,
-        stats = DashboardStats(1, 2, 14, "₺500", 28, "₺8.870"),
+        stats = DashboardStats(0, 0, 0, "₺0", 0, "₺0"),
         onClick = onClick
     )
 }

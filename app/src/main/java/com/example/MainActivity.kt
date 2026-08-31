@@ -49,7 +49,7 @@ class MainActivity : ComponentActivity() {
                 val tokenStore = TokenStore(applicationContext)
                 MainViewModel(
                     repository = RemoteAdminRepositoryImpl(
-                        api = NetworkModule.adminApiService,
+                        api = NetworkModule.createAdminApiService(tokenStore),
                         tokenStore = tokenStore,
                         context = applicationContext
                     )
@@ -113,8 +113,16 @@ class MainActivity : ComponentActivity() {
             }
 
             SancakKombiTheme(darkTheme = isDarkTheme) {
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
+                if (!isLoggedIn) {
+                    LoginScreen(
+                        isLoading = isLoading,
+                        errorMessage = loginError,
+                        onLogin = { password -> viewModel.login(password) },
+                        modifier = Modifier.fillMaxSize()
+                    )
+                } else {
+                    Scaffold(
+                        modifier = Modifier.fillMaxSize(),
                     topBar = {
                         TopHeaderBar(
                             isDarkTheme = isDarkTheme,
@@ -133,12 +141,12 @@ class MainActivity : ComponentActivity() {
                             }
                         )
                     }
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(innerPadding)
-                    ) {
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(innerPadding)
+                        ) {
                         when (currentRoute) {
                             "dashboard" -> {
                                     DashboardScreen(
@@ -190,6 +198,9 @@ class MainActivity : ComponentActivity() {
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddFinanceRecord = { record -> viewModel.addFinanceRecord(record) },
                                         onDeleteFinanceRecord = { id -> viewModel.deleteFinanceRecord(id) },
+                                        onUpdateFinanceRecordStatus = { id, status, onResult ->
+                                            viewModel.updateFinanceRecordStatus(id, status, onResult)
+                                        },
                                         onUpdateBankAccounts = { accs -> viewModel.updateBankAccounts(accs) },
                                         onViewReceipt = { record ->
                                             viewModel.selectFinanceRecordForReceipt(record)
@@ -339,3 +350,4 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+}

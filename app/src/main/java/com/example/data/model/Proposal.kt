@@ -27,18 +27,18 @@ data class Proposal(
     val customerName: String,
     val customerPhone: String = "",
     val customerEmail: String = "",
-    val customerDistrict: String = "Bayrampaşa",
+    val customerDistrict: String = "",
     val customerAddress: String = "",
     val deviceBrand: String = "",
     val deviceModel: String = "",
     val date: String,
     val validUntilDate: String = "",
-    val preparedBy: String = "Fatih Sancaklı",
+    val preparedBy: String = "",
     val note: String = "",
     val status: ProposalStatus = ProposalStatus.PENDING,
     val items: List<ProposalItem> = emptyList(),
     val downPayment: Double = 0.0,
-    val remainingPaymentType: String = "Kredi Kartı (Tek Çekim)",
+    val remainingPaymentType: String = "",
     val discount: Double = 0.0
 ) {
     val subtotal: Double

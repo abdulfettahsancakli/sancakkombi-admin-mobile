@@ -10,18 +10,18 @@ enum class ReportTimeRange(val label: String) {
 
 @JsonClass(generateAdapter = true)
 data class AppointmentReportData(
-    val totalAppointments: Int = 18,
-    val pendingCount: Int = 3,
-    val approvedCount: Int = 5,
-    val completedCount: Int = 9,
-    val cancelledCount: Int = 1
+    val totalAppointments: Int = 0,
+    val pendingCount: Int = 0,
+    val approvedCount: Int = 0,
+    val completedCount: Int = 0,
+    val cancelledCount: Int = 0
 )
 
 @JsonClass(generateAdapter = true)
 data class FinanceReportData(
-    val totalIncome: Double = 148500.0,
-    val totalExpense: Double = 32400.0,
-    val netProfit: Double = 116100.0
+    val totalIncome: Double = 0.0,
+    val totalExpense: Double = 0.0,
+    val netProfit: Double = 0.0
 )
 
 @JsonClass(generateAdapter = true)

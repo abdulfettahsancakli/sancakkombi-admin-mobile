@@ -175,7 +175,6 @@ fun CustomersScreen(
 
     val filteredCustomers = remember(customers, searchQuery, filterOnlyActiveAppointments) {
         customers.filter { cust ->
-            !cust.isArchived &&
             val matchesSearch = searchQuery.isBlank() ||
                     cust.name.contains(searchQuery, ignoreCase = true) ||
                     cust.phone.contains(searchQuery) ||
@@ -183,7 +182,7 @@ fun CustomersScreen(
 
             val matchesActiveFilter = !filterOnlyActiveAppointments || cust.activeAppointmentCount > 0
 
-            matchesSearch && matchesActiveFilter
+            !cust.isArchived && matchesSearch && matchesActiveFilter
         }
     }
 

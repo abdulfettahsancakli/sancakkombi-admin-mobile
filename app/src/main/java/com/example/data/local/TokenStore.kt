@@ -1,40 +1,92 @@
 package com.example.data.local
 
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
 import android.content.Context
-import android.util.Log
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.nio.charset.StandardCharsets
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
 
 private val Context.adminDataStore by preferencesDataStore(name = "admin_prefs")
 
 class TokenStore(private val context: Context) {
-    private val tokenKey = stringPreferencesKey("admin_auth_token")
-
-    private val defaultAdminToken = "5b930b8e7a1e6412b77fc01b09293de8e43a3ee19aa8ffa799d2ab63e03730e5"
+    private val tokenKey = stringPreferencesKey("admin_auth_token_v1")
+    private val legacyTokenKey = stringPreferencesKey("admin_auth_token")
 
     val tokenFlow: Flow<String?> = context.adminDataStore.data.map { prefs ->
-        val token = prefs[tokenKey]
-        if (!token.isNullOrBlank()) {
-            val preview = if (token.length >= 8) token.take(8) else token
-            Log.d("TokenStore", "tokenFlow read: $preview... (total length=${token.length})")
-            token
-        } else {
-            Log.d("TokenStore", "tokenFlow read empty, using default verified token")
-            defaultAdminToken
-        }
+        prefs[tokenKey]?.takeIf { it.isNotBlank() }?.let(::decryptToken)
     }
 
     suspend fun saveToken(token: String) {
-        val preview = if (token.length >= 8) token.take(8) else token
-        Log.d("TokenStore", "saveToken to DataStore: $preview... (total length=${token.length})")
-        context.adminDataStore.edit { prefs -> prefs[tokenKey] = token }
+        require(token.isNotBlank()) { "Admin token must not be blank." }
+        context.adminDataStore.edit { prefs ->
+            prefs[tokenKey] = encryptToken(token)
+            prefs.remove(legacyTokenKey)
+        }
     }
 
     suspend fun clearToken() {
-        Log.d("TokenStore", "clearToken from DataStore")
-        context.adminDataStore.edit { prefs -> prefs.remove(tokenKey) }
+        context.adminDataStore.edit { prefs ->
+            prefs.remove(tokenKey)
+            prefs.remove(legacyTokenKey)
+        }
+    }
+
+    private fun encryptToken(token: String): String {
+        val cipher = Cipher.getInstance(TRANSFORMATION)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        val encrypted = cipher.doFinal(token.toByteArray(StandardCharsets.UTF_8))
+        val iv = Base64.encodeToString(cipher.iv, Base64.NO_WRAP)
+        val payload = Base64.encodeToString(encrypted, Base64.NO_WRAP)
+        return "$FORMAT_PREFIX$iv:$payload"
+    }
+
+    private fun decryptToken(value: String): String? {
+        if (!value.startsWith(FORMAT_PREFIX)) return null
+
+        return runCatching {
+            val encoded = value.removePrefix(FORMAT_PREFIX).split(':', limit = 2)
+            require(encoded.size == 2)
+            val iv = Base64.decode(encoded[0], Base64.NO_WRAP)
+            val payload = Base64.decode(encoded[1], Base64.NO_WRAP)
+            val cipher = Cipher.getInstance(TRANSFORMATION)
+            cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), GCMParameterSpec(TAG_LENGTH_BITS, iv))
+            String(cipher.doFinal(payload), StandardCharsets.UTF_8).takeIf { it.isNotBlank() }
+        }.getOrNull()
+    }
+
+    @Synchronized
+    private fun getOrCreateKey(): SecretKey {
+        val keyStore = java.security.KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
+        (keyStore.getKey(KEY_ALIAS, null) as? SecretKey)?.let { return it }
+
+        val generator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
+        generator.init(
+            KeyGenParameterSpec.Builder(
+                KEY_ALIAS,
+                KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT,
+            )
+                .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setRandomizedEncryptionRequired(true)
+                .build()
+        )
+        return generator.generateKey()
+    }
+
+    private companion object {
+        const val ANDROID_KEYSTORE = "AndroidKeyStore"
+        const val KEY_ALIAS = "sancak_kombi_admin_token_v1"
+        const val TRANSFORMATION = "AES/GCM/NoPadding"
+        const val TAG_LENGTH_BITS = 128
+        const val FORMAT_PREFIX = "v1:"
     }
 }

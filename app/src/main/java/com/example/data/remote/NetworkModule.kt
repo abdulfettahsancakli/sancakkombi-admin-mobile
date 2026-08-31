@@ -1,8 +1,11 @@
 package com.example.data.remote
 
+import android.util.Log
 import com.example.BuildConfig
+import com.example.data.local.TokenStore
 import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -61,20 +64,29 @@ object NetworkModule {
         .add(KotlinJsonAdapterFactory())
         .build()
 
-    private val okHttpClient: OkHttpClient by lazy {
-        OkHttpClient.Builder()
+    private fun okHttpClient(tokenStore: TokenStore): OkHttpClient {
+        return OkHttpClient.Builder()
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
-                    level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BODY else HttpLoggingInterceptor.Level.NONE
+                    // Do not write passwords, bearer tokens, or uploaded file contents to Logcat.
+                    level = if (BuildConfig.DEBUG) HttpLoggingInterceptor.Level.BASIC else HttpLoggingInterceptor.Level.NONE
                 }
             )
+            .addInterceptor { chain ->
+                val response = chain.proceed(chain.request())
+                if (response.code == 401) {
+                    Log.w("NetworkModule", "Admin API session is invalid or expired; clearing local session.")
+                    runBlocking { tokenStore.clearToken() }
+                }
+                response
+            }
             .build()
     }
 
-    val adminApiService: AdminApiService by lazy {
-        Retrofit.Builder()
+    fun createAdminApiService(tokenStore: TokenStore): AdminApiService {
+        return Retrofit.Builder()
             .baseUrl(BuildConfig.API_BASE_URL)
-            .client(okHttpClient)
+            .client(okHttpClient(tokenStore))
             .addConverterFactory(MoshiConverterFactory.create(moshi))
             .build()
             .create(AdminApiService::class.java)

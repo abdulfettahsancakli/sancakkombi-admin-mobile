@@ -3,6 +3,7 @@ package com.example.data.remote
 import com.example.data.model.FinanceRecord
 import com.example.data.model.MaintenanceRule
 import com.example.data.model.Proposal
+import com.example.data.model.StockItem
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
@@ -14,6 +15,26 @@ data class LoginRequestDto(
 data class LoginResponseDto(
     val token: String? = null,
     val error: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class VoiceParseRequestDto(
+    val voiceText: String
+)
+
+@JsonClass(generateAdapter = true)
+data class VoiceParseResponseDto(
+    val customerName: String = "",
+    val phone: String = "",
+    val district: String = "",
+    val neighborhood: String = "",
+    val streetDoorNo: String = "",
+    val date: String = "",
+    val timeSlot: String = "",
+    val serviceType: String = "",
+    val problemNote: String = "",
+    val missingFields: List<String> = emptyList(),
+    val aiSummaryMessage: String = "Form sesli komut ile dolduruldu."
 )
 
 @JsonClass(generateAdapter = true)
@@ -34,6 +55,13 @@ data class SuccessResponseDto(
     val status: String? = null,
     val active: Boolean? = null,
     val channel: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class InventoryItemResponseDto(
+    val success: Boolean = false,
+    val error: String? = null,
+    val data: StockItem? = null
 )
 
 @JsonClass(generateAdapter = true)
@@ -59,6 +87,11 @@ data class FinanceRecordCreateResponseDto(
     val success: Boolean = false,
     val error: String? = null,
     val data: FinanceRecord? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class FinanceStatusUpdateRequestDto(
+    val status: String
 )
 
 @JsonClass(generateAdapter = true)
@@ -166,8 +199,8 @@ data class AdsStatsDto(
 data class AdsCampaignDto(
     val id: String = "",
     val name: String = "",
-    val status: String = "PAUSED",          // "ACTIVE" | "PAUSED"
-    val servingStatus: String = "UNKNOWN",  // SERVING | NONE | ENDED | PENDING | SUSPENDED | UNKNOWN
+    val status: String = "PAUSED",
+    val servingStatus: String = "UNKNOWN",
     val dailyBudget: Double = 0.0,
     val spend: Double = 0.0,
     val clicks: Int = 0,
@@ -183,4 +216,3 @@ data class AdsToggleResponseDto(
     val success: Boolean = false,
     val status: String = "PAUSED"
 )
-

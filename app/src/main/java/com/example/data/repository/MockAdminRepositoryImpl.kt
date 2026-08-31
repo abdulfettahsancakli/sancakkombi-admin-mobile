@@ -630,7 +630,7 @@ class MockAdminRepositoryImpl : AdminRepository {
                     stockItemId = part.stockItemId!!,
                     quantity = part.quantity.toDouble(),
                     type = StockMovementType.REVERSAL,
-                    reason = "Randevu silindi: ${appointment.customerName}",
+                    reason = "Randevu silindi: ${appointment?.customerName.orEmpty()}",
                     appointmentId = id
                 )
             )
@@ -733,7 +733,6 @@ class MockAdminRepositoryImpl : AdminRepository {
         val model = completedAppts.firstOrNull()?.deviceModel ?: ""
 
         val mockDto = com.example.data.remote.DeviceHistoryDto(
-            customerId = customerId,
             deviceBrand = brand,
             deviceModel = model,
             deviceNotes = cust?.notes ?: "",
@@ -754,10 +753,11 @@ class MockAdminRepositoryImpl : AdminRepository {
 
     override fun getStockMovements(): Flow<List<StockMovement>> = _stockMovements.asStateFlow()
 
-    override suspend fun saveStockItem(item: StockItem): Result<Unit> {
+    override suspend fun saveStockItem(item: StockItem): Result<StockItem> {
         delay(150)
-        _stockItems.value = listOf(item) + _stockItems.value.filterNot { it.id == item.id }
-        return Result.success(Unit)
+        val savedItem = if (item.id.isBlank()) item.copy(id = "mock-stock-${System.currentTimeMillis()}") else item
+        _stockItems.value = listOf(savedItem) + _stockItems.value.filterNot { it.id == savedItem.id }
+        return Result.success(savedItem)
     }
 
     override suspend fun createStockMovement(movement: StockMovement): Result<Unit> {
@@ -810,6 +810,27 @@ class MockAdminRepositoryImpl : AdminRepository {
         delay(100)
         val newList = _financeRecords.value.filterNot { it.id == id || it.id.trim() == id.trim() }
         _financeRecords.value = newList
+        recalculateStats()
+        return Result.success(Unit)
+    }
+
+    override suspend fun updateFinanceRecordStatus(id: String, status: String): Result<Unit> {
+        delay(150)
+        val nextStatus = when (status) {
+            "paid" -> "Ödendi"
+            "partial" -> "Kısmi"
+            else -> "Bekliyor"
+        }
+        _financeRecords.value = _financeRecords.value.map { record ->
+            if (record.id != id) return@map record
+            val total = record.totalAmount.takeIf { it > 0 } ?: record.amount
+            val collected = when (status) {
+                "paid" -> total
+                "unpaid" -> 0.0
+                else -> record.collectedAmount.coerceIn(0.0, total)
+            }
+            record.copy(status = nextStatus, collectedAmount = collected)
+        }
         recalculateStats()
         return Result.success(Unit)
     }

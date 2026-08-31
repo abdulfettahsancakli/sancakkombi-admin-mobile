@@ -62,7 +62,7 @@ fun LoginScreen(
     onLogin: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var password by remember { mutableStateOf("SancakKombi2026") }
+    var password by remember { mutableStateOf("") }
     var isPasswordVisible by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -230,7 +230,7 @@ fun LoginScreen(
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Otomatik Giriş Yapılıyor...", color = Color.White)
+                            Text("Giriş yapılıyor...", color = Color.White)
                         } else {
                             Icon(
                                 imageVector = Icons.Default.ArrowForward,
@@ -270,7 +270,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Otomatik giriş aktif (SancakKombi2026). Şifreyi her açılışta tekrar girmeniz gerekmez.",
+                        text = "Yönetici şifreniz sunucu üzerinde doğrulanır; uygulama içinde sabit şifre tutulmaz.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp

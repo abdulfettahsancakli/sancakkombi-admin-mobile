@@ -63,7 +63,7 @@ interface AdminRepository {
     suspend fun saveCatalogItem(item: CatalogItem): Result<Unit>
     fun getStockItems(): Flow<List<StockItem>>
     fun getStockMovements(): Flow<List<StockMovement>>
-    suspend fun saveStockItem(item: StockItem): Result<Unit>
+    suspend fun saveStockItem(item: StockItem): Result<StockItem>
     suspend fun createStockMovement(movement: StockMovement): Result<Unit>
 
     // Finance
@@ -72,6 +72,7 @@ interface AdminRepository {
     fun getBankAccounts(): Flow<List<BankAccount>>
     suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit>
     suspend fun deleteFinanceRecord(id: String): Result<Unit>
+    suspend fun updateFinanceRecordStatus(id: String, status: String): Result<Unit>
     suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit>
     suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto>
 

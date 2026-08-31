@@ -101,6 +101,7 @@ import com.example.data.model.JobReport
 import com.example.ui.components.CompleteJobDialog
 import com.example.ui.components.EditAppointmentDialog
 import com.example.ui.components.NewAppointmentDialog
+import com.example.utils.parseLocalizedDouble
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -1569,18 +1570,12 @@ fun SendBankTransferDialog(
     val context = LocalContext.current
 
     val accountOptions = remember(bankAccounts) {
-        if (bankAccounts.isNotEmpty()) {
-            bankAccounts.map { acc -> acc.id to "${acc.cardTitle} - ${acc.bankName} (${acc.accountHolder})" }
-        } else {
-            listOf(
-                "fatih" to "Fatih Sancaklı - Ziraat Bankası",
-                "fettah" to "Fettah Sancaklı - Vakıfbank",
-                "abdullah" to "Abdullah Sancaklı - İş Bankası"
-            )
-        }
+        bankAccounts
+            .filter { it.isReady && it.bankName.isNotBlank() && it.accountHolder.isNotBlank() && it.iban.isNotBlank() }
+            .map { acc -> acc.id to "${acc.cardTitle} - ${acc.bankName} (${acc.accountHolder})" }
     }
 
-    var selectedAccountKey by remember { mutableStateOf(accountOptions.first().first) }
+    var selectedAccountKey by remember { mutableStateOf(accountOptions.firstOrNull()?.first.orEmpty()) }
     var expandedAccountDropdown by remember { mutableStateOf(false) }
     var amountText by remember { mutableStateOf(initialAmount) }
     var promisedDateText by remember { mutableStateOf("") }
@@ -1688,13 +1683,17 @@ fun SendBankTransferDialog(
 
                 ExposedDropdownMenuBox(
                     expanded = expandedAccountDropdown,
-                    onExpandedChange = { expandedAccountDropdown = !expandedAccountDropdown }
+                    onExpandedChange = {
+                        if (accountOptions.isNotEmpty()) expandedAccountDropdown = !expandedAccountDropdown
+                    }
                 ) {
-                    val currentLabel = accountOptions.find { it.first == selectedAccountKey }?.second ?: selectedAccountKey
+                    val currentLabel = accountOptions.find { it.first == selectedAccountKey }?.second
+                        ?: "Tanımlı ve hazır banka hesabı yok"
                     OutlinedTextField(
                         value = currentLabel,
                         onValueChange = {},
                         readOnly = true,
+                        enabled = accountOptions.isNotEmpty(),
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expandedAccountDropdown) },
                         colors = OutlinedTextFieldDefaults.colors(
                             unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
@@ -1721,6 +1720,15 @@ fun SendBankTransferDialog(
                             )
                         }
                     }
+                }
+
+                if (accountOptions.isEmpty()) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    Text(
+                        text = "Gönderim için web yönetim panelinde eksiksiz bir banka hesabı tanımlanmalı.",
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 12.sp
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -1830,7 +1838,7 @@ fun SendBankTransferDialog(
                 ) {
                     OutlinedButton(
                         onClick = { if (!isLoading) onDismiss() },
-                        enabled = !isLoading,
+                        enabled = !isLoading && accountOptions.isNotEmpty(),
                         shape = RoundedCornerShape(10.dp)
                     ) {
                         Text("İptal")
@@ -1842,7 +1850,7 @@ fun SendBankTransferDialog(
                         onClick = {
                             isLoading = true
                             errorMessage = null
-                            val amountVal = amountText.trim().replace(",", ".").toDoubleOrNull()
+                            val amountVal = parseLocalizedDouble(amountText)
                             val dateVal = promisedDateText.trim().ifBlank { null }
 
                             onSend(selectedAccountKey, amountVal, dateVal) { result ->

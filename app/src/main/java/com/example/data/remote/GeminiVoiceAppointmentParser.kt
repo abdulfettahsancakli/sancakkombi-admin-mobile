@@ -1,240 +1,180 @@
 package com.example.data.remote
 
-import android.util.Log
-import com.example.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.toRequestBody
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 import java.util.Locale
-import java.util.concurrent.TimeUnit
+
+private val turkishLocale = Locale.forLanguageTag("tr-TR")
 
 data class ParsedVoiceAppointment(
     val customerName: String = "",
     val phone: String = "",
-    val district: String = "Bayrampaşa",
+    val district: String = "",
     val neighborhood: String = "",
     val streetDoorNo: String = "",
     val date: String = "",
-    val timeSlot: String = "13:00 - 15:00",
-    val serviceType: String = "Kombi Bakım & Servis",
+    val timeSlot: String = "",
+    val serviceType: String = "",
     val problemNote: String = "",
     val missingFields: List<String> = emptyList(),
     val aiSummaryMessage: String = ""
 )
 
+/**
+ * Voice parsing goes through the authenticated web API. The Gemini key is
+ * deliberately absent from the Android build, because anything in an APK
+ * can be extracted. The local parser is only a no-secret offline fallback.
+ */
 object GeminiVoiceAppointmentParser {
+    private const val MAX_INPUT_LENGTH = 4000
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
-        .build()
+    suspend fun parseVoiceText(
+        voiceText: String,
+        api: AdminApiService,
+        authHeader: String
+    ): ParsedVoiceAppointment = withContext(Dispatchers.IO) {
+        val text = voiceText.trim().take(MAX_INPUT_LENGTH)
+        if (text.isBlank()) return@withContext fallbackLocalParser("")
 
-    suspend fun parseVoiceText(voiceText: String): ParsedVoiceAppointment = withContext(Dispatchers.IO) {
-        val apiKey = try {
-            BuildConfig.GEMINI_API_KEY
-        } catch (e: Exception) {
-            ""
-        }
-
-        if (apiKey.isNotBlank() && apiKey != "MY_GEMINI_API_KEY" && !apiKey.contains("DEFAULT_")) {
-            try {
-                val geminiResult = callGeminiApi(voiceText, apiKey)
-                if (geminiResult != null) {
-                    return@withContext geminiResult
-                }
-            } catch (e: Exception) {
-                Log.e("GeminiVoiceParser", "Gemini API error, falling back to local regex parser", e)
+        try {
+            val response = api.parseVoiceAppointment(authHeader, VoiceParseRequestDto(text))
+            if (response.isSuccessful) {
+                response.body()?.toDomain()?.let { return@withContext it }
             }
+        } catch (_: Exception) {
+            // Offline or temporarily unavailable: continue with the safe local parser.
         }
 
-        // Local Smart Fallback Parser if API Key is placeholder or offline
-        return@withContext fallbackLocalParser(voiceText)
+        fallbackLocalParser(text)
     }
 
-    private fun callGeminiApi(voiceText: String, apiKey: String): ParsedVoiceAppointment? {
-        val todayStr = SimpleDateFormat("dd.MM.yyyy", Locale("tr", "TR")).format(Date())
-
-        val systemPrompt = """
-            Sen Sancak Kombi Yetkili Servis yönetim uygulamasının Yapay Zeka Ses Asistanısın.
-            Kullanıcının Türkçe sesli veya yazılı girdisini analiz edip yeni randevu kayıt bilgilerini çıkaracaksın.
-            
-            Bugünün Tarihi: $todayStr
-            Mevcut İlçeler: Bayrampaşa, Esenler, Gaziosmanpaşa, Zeytinburnu, Fatih, Eyüpsultan
-            Mevcut Saat Aralıkları: 09:00 - 11:00, 11:00 - 13:00, 13:00 - 15:00, 15:00 - 17:00, 17:00 - 19:00
-            Mevcut Hizmet Tipleri: Kombi Bakım & Servis, Genel Servis, Petek Temizliği, Arıza Onarım, Gaz Kaçağı Tespiti
-
-            Aşağıdaki JSON formatında kesin yanıt dön:
-            {
-              "customerName": "Müşteri Ad Soyadı veya boş string",
-              "phone": "05xx... şeklinde telefon veya boş string",
-              "district": "Bayrampaşa, Esenler, Gaziosmanpaşa, Zeytinburnu, Fatih, Eyüpsultan arasından en uygun olanı",
-              "neighborhood": "Mahalle adı veya boş string",
-              "streetDoorNo": "Cadde, sokak veya kapı no",
-              "date": "GG.AA.YYYY formatında tarih (örneğin yarın denmişse yarının tarihi)",
-              "timeSlot": "09:00 - 11:00 / 11:00 - 13:00 / 13:00 - 15:00 / 15:00 - 17:00 / 17:00 - 19:00",
-              "serviceType": "Hizmet tipi",
-              "problemNote": "Kullanıcının belirttiği arıza veya notlar",
-              "missingFields": ["Müşteri Adı", "Telefon", "Tarih" vb. eksik kalan kritik alan isimleri],
-              "aiSummaryMessage": "Kullanıcıya Türkçe kısa bilgilendirme özeti"
-            }
-        """.trimIndent()
-
-        val jsonPayload = JSONObject().apply {
-            put("contents", org.json.JSONArray().apply {
-                put(JSONObject().apply {
-                    put("parts", org.json.JSONArray().apply {
-                        put(JSONObject().put("text", "$systemPrompt\n\nKullanıcı Sesli Mesajı: \"$voiceText\""))
-                    })
-                })
-            })
-            put("generationConfig", JSONObject().apply {
-                put("responseMimeType", "application/json")
-                put("temperature", 0.1)
-            })
-        }
-
-        val request = Request.Builder()
-            .url("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey")
-            .post(jsonPayload.toString().toRequestBody("application/json".toMediaType()))
-            .build()
-
-        val response = client.newCall(request).execute()
-        if (!response.isSuccessful) return null
-
-        val responseBody = response.body?.string() ?: return null
-        val rootJson = JSONObject(responseBody)
-        val candidates = rootJson.optJSONArray("candidates") ?: return null
-        if (candidates.length() == 0) return null
-
-        val content = candidates.getJSONObject(0).optJSONObject("content") ?: return null
-        val parts = content.optJSONArray("parts") ?: return null
-        if (parts.length() == 0) return null
-
-        val rawText = parts.getJSONObject(0).optString("text", "")
-        if (rawText.isBlank()) return null
-
-        val parsedJson = JSONObject(rawText)
-        val missingFieldsList = mutableListOf<String>()
-        val missingArr = parsedJson.optJSONArray("missingFields")
-        if (missingArr != null) {
-            for (i in 0 until missingArr.length()) {
-                missingFieldsList.add(missingArr.getString(i))
-            }
-        }
-
-        return ParsedVoiceAppointment(
-            customerName = parsedJson.optString("customerName", ""),
-            phone = parsedJson.optString("phone", ""),
-            district = parsedJson.optString("district", "Bayrampaşa"),
-            neighborhood = parsedJson.optString("neighborhood", ""),
-            streetDoorNo = parsedJson.optString("streetDoorNo", ""),
-            date = parsedJson.optString("date", todayStr),
-            timeSlot = parsedJson.optString("timeSlot", "13:00 - 15:00"),
-            serviceType = parsedJson.optString("serviceType", "Kombi Bakım & Servis"),
-            problemNote = parsedJson.optString("problemNote", ""),
-            missingFields = missingFieldsList,
-            aiSummaryMessage = parsedJson.optString("aiSummaryMessage", "Form sesli komut ile dolduruldu.")
-        )
+    /** Used by callers that do not have a repository/API instance yet. */
+    suspend fun parseVoiceText(voiceText: String): ParsedVoiceAppointment = withContext(Dispatchers.Default) {
+        fallbackLocalParser(voiceText.trim().take(MAX_INPUT_LENGTH))
     }
+
+    private fun VoiceParseResponseDto.toDomain() = ParsedVoiceAppointment(
+        customerName = customerName,
+        phone = phone,
+        district = if (missingFields.any { it.equals("\u0130l\u00e7e", ignoreCase = true) }) "" else district,
+        neighborhood = neighborhood,
+        streetDoorNo = streetDoorNo,
+        date = if (missingFields.any { it.equals("Tarih", ignoreCase = true) }) "" else date,
+        timeSlot = if (missingFields.any { it.equals("Saat Aral\u0131\u011f\u0131", ignoreCase = true) }) "" else timeSlot,
+        serviceType = if (missingFields.any { it.equals("Hizmet T\u00fcr\u00fc", ignoreCase = true) }) "" else serviceType,
+        problemNote = problemNote,
+        missingFields = missingFields,
+        aiSummaryMessage = aiSummaryMessage
+    )
 
     private fun fallbackLocalParser(text: String): ParsedVoiceAppointment {
-        val lower = text.lowercase(Locale("tr", "TR"))
+        val lower = text.lowercase(turkishLocale)
         val cal = Calendar.getInstance()
-        val dateFormat = SimpleDateFormat("dd.MM.yyyy", Locale("tr", "TR"))
+        val dateFormat = SimpleDateFormat("dd.MM.yyyy", turkishLocale)
+        var dateStr = ""
+        var hasDateSignal = false
 
-        // Date detection
-        var dateStr = dateFormat.format(cal.time)
-        if (lower.contains("yarın")) {
-            cal.add(Calendar.DAY_OF_YEAR, 1)
+        fun setDate() {
             dateStr = dateFormat.format(cal.time)
-        } else if (lower.contains("pazartesi")) {
-            while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) { cal.add(Calendar.DAY_OF_YEAR, 1) }
-            dateStr = dateFormat.format(cal.time)
-        } else if (lower.contains("salı")) {
-            while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.TUESDAY) { cal.add(Calendar.DAY_OF_YEAR, 1) }
-            dateStr = dateFormat.format(cal.time)
-        } else if (lower.contains("çarşamba")) {
-            while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.WEDNESDAY) { cal.add(Calendar.DAY_OF_YEAR, 1) }
-            dateStr = dateFormat.format(cal.time)
-        } else if (lower.contains("perşembe")) {
-            while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.THURSDAY) { cal.add(Calendar.DAY_OF_YEAR, 1) }
-            dateStr = dateFormat.format(cal.time)
-        } else if (lower.contains("cuma")) {
-            while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.FRIDAY) { cal.add(Calendar.DAY_OF_YEAR, 1) }
-            dateStr = dateFormat.format(cal.time)
+            hasDateSignal = true
         }
 
-        // District detection
-        val districts = listOf("Bayrampaşa", "Esenler", "Gaziosmanpaşa", "Zeytinburnu", "Fatih", "Eyüpsultan")
-        var matchedDistrict = "Bayrampaşa"
-        for (d in districts) {
-            if (lower.contains(d.lowercase(Locale("tr", "TR")))) {
-                matchedDistrict = d
-                break
+        when {
+            lower.contains("bug\u00fcn") -> setDate()
+            lower.contains("yar\u0131n") -> {
+                cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
+            }
+            lower.contains("pazartesi") -> {
+                while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.MONDAY) cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
+            }
+            lower.contains("sal\u0131") -> {
+                while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.TUESDAY) cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
+            }
+            lower.contains("\u00e7ar\u015famba") -> {
+                while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.WEDNESDAY) cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
+            }
+            lower.contains("per\u015fembe") -> {
+                while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.THURSDAY) cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
+            }
+            lower.contains("cuma") -> {
+                while (cal.get(Calendar.DAY_OF_WEEK) != Calendar.FRIDAY) cal.add(Calendar.DAY_OF_YEAR, 1)
+                setDate()
             }
         }
 
-        // Phone detection regex
+        val districts = listOf("Bayrampa\u015fa", "Esenler", "Gaziosmanpa\u015fa", "Zeytinburnu", "Fatih", "Ey\u00fcp\u015fsultan")
+        val matchedDistrict = districts.firstOrNull { lower.contains(it.lowercase(turkishLocale)) } ?: ""
+
         val phoneRegex = Regex("""0?5\d{2}\s?\d{3}\s?\d{2}\s?\d{2}|\d{10,11}""")
         val phoneMatch = phoneRegex.find(text)?.value?.replace("\\s".toRegex(), "") ?: ""
 
-        // Service Type detection
-        var serviceType = "Kombi Bakım & Servis"
-        if (lower.contains("petek")) serviceType = "Petek Temizliği"
-        else if (lower.contains("arıza") || lower.contains("çalışmıyor") || lower.contains("su sızdırıyor")) serviceType = "Arıza Onarım"
-        else if (lower.contains("gaz kaçağı")) serviceType = "Gaz Kaçağı Tespiti"
-
-        // Time slot detection
-        var timeSlot = "13:00 - 15:00"
-        if (lower.contains("sabah") || lower.contains("09:") || lower.contains("10:")) timeSlot = "09:00 - 11:00"
-        else if (lower.contains("öğlen") || lower.contains("11:") || lower.contains("12:")) timeSlot = "11:00 - 13:00"
-        else if (lower.contains("öğleden sonra") || lower.contains("14:") || lower.contains("15:")) timeSlot = "13:00 - 15:00"
-        else if (lower.contains("akşamüstü") || lower.contains("16:") || lower.contains("17:")) timeSlot = "15:00 - 17:00"
-
-        // Name extraction heuristics
-        var name = ""
-        val nameWords = text.split(" ").filter { word ->
-            val w = word.lowercase(Locale("tr", "TR"))
-            !w.contains("randevu") && !w.contains("ekle") && !w.contains("kombi") &&
-                    !w.contains("bakım") && !w.contains("yarın") && !w.contains("saat") &&
-                    !w.contains("bayrampaşa") && !w.contains("esenler") && !w.contains("gaziosmanpaşa") &&
-                    !w.contains("telefon") && !w.contains("05")
+        val serviceType = when {
+            lower.contains("petek") -> "Petek Temizli\u011fi"
+            lower.contains("ar\u0131za") || lower.contains("\u00e7al\u0131\u015fm\u0131yor") || lower.contains("su s\u0131zd\u0131r\u0131yor") -> "Ar\u0131za Onar\u0131m"
+            lower.contains("gaz ka\u00e7a\u011f\u0131") -> "Gaz Ka\u00e7a\u011f\u0131 Tespiti"
+            lower.contains("kombi") || lower.contains("bak\u0131m") || lower.contains("servis") -> "Kombi Bak\u0131m & Servis"
+            else -> ""
         }
-        if (nameWords.size >= 2) {
-            name = "${nameWords[0].capitalize(Locale("tr", "TR"))} ${nameWords[1].capitalize(Locale("tr", "TR"))}"
-        } else if (nameWords.isNotEmpty()) {
-            name = nameWords[0].capitalize(Locale("tr", "TR"))
+
+        val timeSlot = when {
+            lower.contains("sabah") || lower.contains("09:") || lower.contains("10:") -> "09:00 - 11:00"
+            lower.contains("\u00f6\u011flen") || lower.contains("11:") || lower.contains("12:") -> "11:00 - 13:00"
+            lower.contains("\u00f6\u011fleden sonra") || lower.contains("14:") || lower.contains("15:") -> "13:00 - 15:00"
+            lower.contains("ak\u015fam\u00fcst\u00fc") || lower.contains("16:") || lower.contains("17:") -> "15:00 - 17:00"
+            else -> ""
+        }
+
+        val nameWords = text.split(Regex("\\s+"))
+            .map { it.trim(',', '.', ':', ';') }
+            .filter { word ->
+                val wordLower = word.lowercase(turkishLocale)
+                word.isNotBlank() &&
+                    !wordLower.contains("randevu") && !wordLower.contains("ekle") && !wordLower.contains("kombi") &&
+                    !wordLower.contains("bak\u0131m") && !wordLower.contains("bug\u00fcn") && !wordLower.contains("yar\u0131n") &&
+                    !wordLower.contains("saat") && !districts.any { district -> wordLower.contains(district.lowercase(turkishLocale)) } &&
+                    !wordLower.contains("telefon") && !wordLower.contains("05")
+            }
+        val name = when {
+            nameWords.size >= 2 -> listOf(nameWords[0].capitalizeTr(), nameWords[1].capitalizeTr()).joinToString(" ")
+            nameWords.size == 1 -> nameWords[0].capitalizeTr()
+            else -> ""
         }
 
         val missingList = mutableListOf<String>()
-        if (name.isBlank()) missingList.add("Müşteri Adı")
-        if (phoneMatch.isBlank()) missingList.add("Telefon Numarası")
+        if (name.isBlank()) missingList.add("M\u00fc\u015fteri Ad\u0131")
+        if (phoneMatch.isBlank()) missingList.add("Telefon Numaras\u0131")
+        if (matchedDistrict.isBlank()) missingList.add("\u0130l\u00e7e")
+        if (!hasDateSignal) missingList.add("Tarih")
+        if (timeSlot.isBlank()) missingList.add("Saat Aral\u0131\u011f\u0131")
+        if (serviceType.isBlank()) missingList.add("Hizmet T\u00fcr\u00fc")
 
         val summary = if (missingList.isEmpty()) {
-            "✅ Tüm bilgiler başarıyla algılandı ve metoda aktarıldı."
+            "T\u00fcm bilgiler alg\u0131land\u0131 ve forma aktar\u0131ld\u0131."
         } else {
-            "💡 Algılananlar dolduruldu. Eksik kalanlar: ${missingList.joinToString(", ")}"
+            "Alg\u0131lanan bilgiler dolduruldu. Eksik kalanlar: " + missingList.joinToString(", ") + "."
         }
 
         return ParsedVoiceAppointment(
-            customerName = if (name.isNotBlank()) name else "Ahmet Yılmaz",
-            phone = if (phoneMatch.isNotBlank()) phoneMatch else "05321112233",
+            customerName = name,
+            phone = phoneMatch,
             district = matchedDistrict,
-            neighborhood = "Merkez Mah.",
-            streetDoorNo = "Atatürk Cad. No:12/A",
             date = dateStr,
             timeSlot = timeSlot,
             serviceType = serviceType,
-            problemNote = "Sesli Asistan: $text",
+            problemNote = text,
             missingFields = missingList,
             aiSummaryMessage = summary
         )
+    }
+
+    private fun String.capitalizeTr(): String = replaceFirstChar { first ->
+        if (first.isLowerCase()) first.titlecase(turkishLocale) else first.toString()
     }
 }
