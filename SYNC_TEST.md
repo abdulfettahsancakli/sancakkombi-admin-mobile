@@ -70,4 +70,8 @@ Mobil repoya push yapildiginda `.github/workflows/android-debug.yml` workflow'u
 Ubuntu ortaminda unit testleri ve debug APK build'ini otomatik calistirir.
 Basarili calismanin APK'si GitHub Actions artifact'i olarak indirilebilir.
 
+Son remote CI kaniti: `c1d3987` commit'i icin run `33446051627` basarili oldu;
+Android SDK kurulumu, `testDebugUnitTest`, `assembleDebug` ve APK artifact
+yuklemesi tamamlandi.
+
 Son yerel dogrulama: `testDebugUnitTest` ve `assembleDebug` basarili.
