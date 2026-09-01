@@ -29,7 +29,17 @@ data class StockItem(
     val minimumQuantity: Double = 0.0,
     val purchasePrice: Double = 0.0,
     val salePrice: Double = 0.0,
-    val active: Boolean = true
+    val active: Boolean = true,
+    val productId: String? = null,
+    val barcode: String = "",
+    val category: String = "",
+    val brand: String = "",
+    val location: String = "Konumsuz",
+    val shelf: String = "",
+    val imageUrl: String = "",
+    val status: String = "",
+    val archived: Boolean = false,
+    val createdAt: String? = null
 ) {
     val isLowStock: Boolean
         get() = quantity <= minimumQuantity
