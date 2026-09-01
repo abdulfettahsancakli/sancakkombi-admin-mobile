@@ -39,6 +39,15 @@ acik bir cihazla:
 
 `adb install -r app\build\outputs\apk\debug\app-debug.apk`
 
+`adb` PATH'te degilse Windows'ta Android SDK'nin tam yoluyla da
+calistirilabilir:
+
+`& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" install -r .\app\build\outputs\apk\debug\app-debug.apk`
+
+Bagli cihazlari kontrol etmek icin:
+
+`& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices`
+
 Bu bilgisayarda son temiz dogrulama, kaynaklarin ASCII yola aynen kopyalandigi
 gecici bir calisma klasorunde yapildi; `testDebugUnitTest` ve `assembleDebug`
 basarili oldu. Turkce karakterli mevcut klasorde Gradle test worker'i yolu
