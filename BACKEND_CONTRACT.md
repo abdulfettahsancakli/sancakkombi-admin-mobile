@@ -2,6 +2,17 @@
 
 The mobile client now expects the following backend behavior.
 
+## Admin session and remember-me
+
+`POST /api/admin/auth/login` continues to accept only the password and returns
+the server-issued session token. The Android client never stores the password.
+When the login form's `Beni hatırla` option is selected, that token is persisted
+encrypted with the Android Keystore so the next app launch can restore the
+session without another password prompt. When it is cleared, a successful login
+removes any previously persisted token and the session lasts only until the
+process/app state is lost. Logout and an invalid-session (401) response clear
+the persisted token.
+
 ## Customer archive
 
 `PATCH /api/admin/customers/{id}/archive` must set `isArchived = true` and keep all historical records. `GET /api/admin/customers` should omit archived customers by default.
@@ -32,13 +43,27 @@ Finance records created from a completed service must include:
 ## Catalog and inventory
 
 - `GET/POST /api/admin/catalog/items`
-- `GET/POST /api/admin/inventory/items`
+- `GET/POST/PATCH/DELETE /api/admin/inventory/items`
 - `GET/POST /api/admin/inventory/movements`
+- `POST /api/admin/inventory/images`
 
 Creating an inventory item sends an empty `id`; the response returns the
 server-generated item in `data`. Initial quantity is then recorded as an
 `IN` movement using that returned ID. Inventory item quantity is never
 written directly by the item endpoint.
+
+`catalogLinked=false` creates an inventory-only service/operations card.
+`catalogLinked=true` requires a SKU, creates the catalogue product, and relies
+on the central bridge to create its linked inventory card. Catalogue-linked metadata
+(barcode, category, brand, location, shelf, image, and prices) is updated by the
+atomic metadata RPC. `DELETE` archives/deactivates; it never deletes movement
+history. Inventory responses include `catalogLinked` so Android can distinguish
+the two card types without querying Supabase.
+
+The image endpoint accepts authenticated multipart JPEG, PNG, or WebP uploads up
+to 5 MB. It verifies both the declared MIME type and file signature, then stores
+the asset in `product-images/products/`. The client never receives Supabase
+service-role credentials.
 
 Completing a job must apply stock movements idempotently by appointment/job revision. Editing a completed job applies only the quantity delta. Deleting the appointment creates reversal movements. A low-stock request may proceed after an explicit client confirmation.
 
@@ -56,6 +81,20 @@ before testing the shared stock flow. After that migration:
 - Direct legacy product stock edits are mirrored as auditable adjustments.
 - The legacy stock panel's quick exit must use `admin_record_product_movement`; it must not insert directly into `movements`.
 - Stock quantities must be changed through movement records, not by editing `inventory_items.quantity` directly.
+
+Apply `supabase/migrations/20260901150000_inventory_catalog_adaptation.sql`
+after the bridge migration. It adds the internal `products.shelf` field,
+configures the restricted public-read `product-images` bucket, and installs
+the atomic `admin_create_inventory_catalog_item` and
+`admin_update_inventory_catalog_item` functions. Run
+`supabase/verification/20260901150000_inventory_catalog_adaptation_check.sql`
+afterward. The shelf field must not be added to public catalogue select lists.
+
+Barcode clients accept either a plain EAN/UPC/Code-128 value or legacy JSON QR
+content containing `barcode` or `sku`. Android uses Google Code Scanner
+and calls only the authenticated Next.js API; it must not connect directly to
+Supabase or request a broad application camera permission.
+
 WhatsApp Embedded Signup access tokens must remain server-side. The web connection endpoint returns only connection IDs/status; it must never return the Meta access token to the mobile or browser client.
 
 ## Voice appointment parsing

@@ -25,6 +25,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -59,10 +60,11 @@ import com.example.R
 fun LoginScreen(
     isLoading: Boolean,
     errorMessage: String?,
-    onLogin: (String) -> Unit,
+    onLogin: (String, Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var password by remember { mutableStateOf("") }
+    var rememberMe by remember { mutableStateOf(true) }
     var isPasswordVisible by remember { mutableStateOf(false) }
     val keyboardController = LocalSoftwareKeyboardController.current
 
@@ -185,7 +187,7 @@ fun LoginScreen(
                             onDone = {
                                 keyboardController?.hide()
                                 if (password.isNotBlank() && !isLoading) {
-                                    onLogin(password)
+                                    onLogin(password, rememberMe)
                                 }
                             }
                         ),
@@ -195,6 +197,24 @@ fun LoginScreen(
                             unfocusedBorderColor = MaterialTheme.colorScheme.outline
                         )
                     )
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = rememberMe,
+                            onCheckedChange = { rememberMe = it },
+                            modifier = Modifier.testTag("remember_me_checkbox")
+                        )
+                        Text(
+                            text = "Beni hatırla",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
 
                     if (errorMessage != null) {
                         Spacer(modifier = Modifier.height(12.dp))
@@ -211,7 +231,7 @@ fun LoginScreen(
                     Button(
                         onClick = {
                             keyboardController?.hide()
-                            onLogin(password)
+                            onLogin(password, rememberMe)
                         },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -270,7 +290,7 @@ fun LoginScreen(
                     )
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Yönetici şifreniz sunucu üzerinde doğrulanır; uygulama içinde sabit şifre tutulmaz.",
+                        text = "“Beni hatırla” seçiliyse güvenli oturum anahtarı cihazda saklanır; yönetici şifresi uygulamaya gömülmez.",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         lineHeight = 16.sp

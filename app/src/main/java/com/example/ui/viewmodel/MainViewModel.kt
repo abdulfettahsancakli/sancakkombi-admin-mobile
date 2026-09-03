@@ -277,7 +277,7 @@ class MainViewModel(
         }
     }
 
-    fun login(password: String) {
+    fun login(password: String, rememberMe: Boolean = true) {
         if (password.isBlank()) {
             _loginError.value = "Şifre boş bırakılamaz."
             return
@@ -286,7 +286,7 @@ class MainViewModel(
             _isLoading.value = true
             _loginError.value = null
             
-            val result = repository.login(password)
+            val result = repository.login(password, rememberMe)
             _isLoading.value = false
             
             result.onSuccess { token ->

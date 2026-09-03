@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -47,6 +48,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -58,6 +61,10 @@ import com.example.data.model.StockItem
 import com.example.data.model.StockMovement
 import com.example.data.model.StockMovementType
 import com.example.utils.parseLocalizedDouble
+import coil.compose.AsyncImage
+import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import org.json.JSONObject
 import java.util.UUID
 
 @Composable
@@ -78,6 +85,7 @@ fun StockScreen(
     var catalogPrice by remember { mutableStateOf("") }
     var stockName by remember { mutableStateOf("") }
     var stockSku by remember { mutableStateOf("") }
+    var stockBarcode by remember { mutableStateOf("") }
     var stockQuantity by remember { mutableStateOf("") }
     var minimumQuantity by remember { mutableStateOf("") }
     var searchQuery by remember { mutableStateOf("") }
@@ -85,6 +93,13 @@ fun StockScreen(
     var statusFilter by remember { mutableStateOf("Tümü") }
     var activeTab by remember { mutableStateOf(0) }
     var selectedStock by remember { mutableStateOf<StockItem?>(null) }
+    val resetStockForm = {
+        stockName = ""
+        stockSku = ""
+        stockBarcode = ""
+        stockQuantity = ""
+        minimumQuantity = ""
+    }
 
     val categories = remember(stockItems) {
         listOf("Tümü") + stockItems.map { it.category.trim() }.filter { it.isNotEmpty() }.distinct().sorted()
@@ -99,6 +114,35 @@ fun StockScreen(
                 (categoryFilter == "Tümü" || item.category == categoryFilter) &&
                 (statusFilter == "Tümü" || status == statusFilter)
         }
+    }
+    val codeScanner = remember(context) {
+        val options = GmsBarcodeScannerOptions.Builder().enableAutoZoom().build()
+        GmsBarcodeScanning.getClient(context, options)
+    }
+    val startBarcodeScan: () -> Unit = {
+        codeScanner.startScan()
+            .addOnSuccessListener { barcode ->
+                val code = decodeInventoryBarcode(barcode.rawValue.orEmpty())
+                if (code.isBlank()) {
+                    Toast.makeText(context, "Barkod değeri okunamadı.", Toast.LENGTH_SHORT).show()
+                } else {
+                    searchQuery = code
+                    val match = stockItems.firstOrNull { it.barcode == code || it.sku == code }
+                    if (match != null) {
+                        selectedStock = match
+                    } else {
+                        if (!showStockForm) resetStockForm()
+                        stockBarcode = code
+                        stockSku = stockSku.ifBlank { code }
+                        showStockForm = true
+                        Toast.makeText(context, "Ürün bulunamadı; barkod yeni ürün formuna aktarıldı.", Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+            .addOnFailureListener { error ->
+                Toast.makeText(context, error.message ?: "Barkod tarayıcı açılamadı.", Toast.LENGTH_LONG).show()
+            }
+        Unit
     }
 
     Surface(modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
@@ -130,6 +174,13 @@ fun StockScreen(
             }
             if (activeTab == 0) {
                 item { StockSummary(stockItems) }
+                item {
+                    Button(onClick = startBarcodeScan, modifier = Modifier.fillMaxWidth()) {
+                        Icon(Icons.Default.QrCode2, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Barkod / QR tara")
+                    }
+                }
                 item {
                     OutlinedTextField(
                         value = searchQuery,
@@ -176,6 +227,7 @@ fun StockScreen(
                     FormCard(title = "Yeni stok ürünü") {
                         OutlinedTextField(stockName, { stockName = it }, label = { Text("Ürün adı") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
                         OutlinedTextField(stockSku, { stockSku = it }, label = { Text("Stok kodu") }, modifier = Modifier.fillMaxWidth(), singleLine = true)
+                        OutlinedTextField(stockBarcode, { stockBarcode = it }, label = { Text("Barkod / GTIN") }, modifier = Modifier.fillMaxWidth(), singleLine = true, trailingIcon = { TextButton(onClick = startBarcodeScan) { Icon(Icons.Default.QrCode2, "Barkod tara", Modifier.size(18.dp)) } })
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             OutlinedTextField(stockQuantity, { stockQuantity = it }, label = { Text("İlk miktar") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), singleLine = true)
                             OutlinedTextField(minimumQuantity, { minimumQuantity = it }, label = { Text("Kritik seviye") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal), modifier = Modifier.weight(1f), singleLine = true)
@@ -183,18 +235,24 @@ fun StockScreen(
                         Button(onClick = {
                             if (stockName.isBlank()) return@Button
                             val initialQuantity = parseLocalizedDouble(stockQuantity)?.coerceAtLeast(0.0) ?: 0.0
-                            val item = StockItem(name = stockName.trim(), sku = stockSku.trim(), quantity = 0.0, minimumQuantity = parseLocalizedDouble(minimumQuantity)?.coerceAtLeast(0.0) ?: 0.0)
+                            val item = StockItem(name = stockName.trim(), sku = stockSku.trim().ifBlank { stockBarcode.trim() }, quantity = 0.0, minimumQuantity = parseLocalizedDouble(minimumQuantity)?.coerceAtLeast(0.0) ?: 0.0, barcode = stockBarcode.trim(), catalogLinked = stockBarcode.isNotBlank())
                             onSaveStockItem(item) { result ->
                                 result.onSuccess { savedItem ->
                                     if (initialQuantity > 0) {
                                         onCreateMovement(StockMovement(UUID.randomUUID().toString(), savedItem.id, initialQuantity, StockMovementType.IN, "İlk stok girişi")) { movementResult ->
                                             movementResult.onSuccess {
                                                 Toast.makeText(context, "Stok ürünü ve başlangıç miktarı kaydedildi.", Toast.LENGTH_SHORT).show()
+                                                resetStockForm()
                                                 showStockForm = false
-                                            }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() }
+                                            }.onFailure {
+                                                resetStockForm()
+                                                showStockForm = false
+                                                Toast.makeText(context, "Ürün kaydedildi; başlangıç stok hareketi eklenemedi: ${it.message}", Toast.LENGTH_LONG).show()
+                                            }
                                         }
                                     } else {
                                         Toast.makeText(context, "Stok ürünü kaydedildi.", Toast.LENGTH_SHORT).show()
+                                        resetStockForm()
                                         showStockForm = false
                                     }
                                 }.onFailure { Toast.makeText(context, it.message, Toast.LENGTH_LONG).show() }
@@ -304,7 +362,16 @@ private fun StockCard(stock: StockItem, onClick: () -> Unit, onMovement: (StockM
     Card(onClick = onClick, colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface), shape = RoundedCornerShape(16.dp)) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Inventory2, null, tint = if (status == "Yeterli") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                if (stock.imageUrl.isNotBlank()) {
+                    AsyncImage(
+                        model = stock.imageUrl,
+                        contentDescription = stock.name,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(38.dp).clip(CircleShape)
+                    )
+                } else {
+                    Icon(Icons.Default.Inventory2, null, tint = if (status == "Yeterli") MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error)
+                }
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(stock.name, fontWeight = FontWeight.Bold)
@@ -370,6 +437,15 @@ private fun DetailLine(label: String, value: String) {
 }
 
 private fun formatQuantity(value: Double): String = if (value % 1.0 == 0.0) value.toInt().toString() else "%.2f".format(value).replace('.', ',')
+
+private fun decodeInventoryBarcode(rawValue: String): String {
+    val raw = rawValue.trim()
+    if (raw.isBlank()) return ""
+    return runCatching {
+        val json = JSONObject(raw)
+        json.optString("barcode").ifBlank { json.optString("sku") }.trim()
+    }.getOrDefault(raw).take(160)
+}
 
 @Composable
 private fun EmptyCard(message: String) {

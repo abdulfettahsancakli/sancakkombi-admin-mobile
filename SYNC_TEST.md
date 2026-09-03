@@ -17,17 +17,15 @@ uretmek icin GitHub veya AI Studio beklemek gerekmez.
 
 ### Windows'ta yerel Gradle ve APK kurulumu
 
-Bu bilgisayardaki ust klasor adinda Turkce karakter (`ı`) oldugu icin Gradle
-test worker'i mevcut uzun yolda sorun cikartabiliyor. Yerel Android testleri
-icin repoyu su tip bir ASCII yola klonlamak gerekir:
+Bu bilgisayardaki üst klasör adında Türkçe karakter (`ı`) olduğu için Gradle
+test worker'ı doğrudan çalıştırıldığında yolu bozabiliyor. Repoyu kopyalamadan
+test ve debug APK üretmek için kökteki doğrulama betiğini çalıştır:
 
-`C:\Dev\SancakKombiMobile\sancakkombi-admin-mobile`
+`& .\scripts\verify-debug.ps1`
 
-Ardindan:
-
-`.\gradlew.bat testDebugUnitTest`
-
-`.\gradlew.bat assembleDebug`
+Betik gerekirse boş bir sürücü harfini geçici ASCII yol olarak eşler,
+`testDebugUnitTest` ve `assembleDebug` görevlerini çalıştırır ve eşlemeyi her
+durumda kaldırır.
 
 APK cikisi:
 
@@ -48,25 +46,28 @@ Bagli cihazlari kontrol etmek icin:
 
 `& "$env:LOCALAPPDATA\Android\Sdk\platform-tools\adb.exe" devices`
 
-Bu bilgisayarda son temiz dogrulama, kaynaklarin ASCII yola aynen kopyalandigi
-gecici bir calisma klasorunde yapildi; `testDebugUnitTest` ve `assembleDebug`
-basarili oldu. Turkce karakterli mevcut klasorde Gradle test worker'i yolu
-bozabildigi icin ayni yontem tekrarlandiginda ASCII bir klon kullanilmalidir:
-
-`C:\Dev\SancakKombiMobile\sancakkombi-admin-mobile\gradlew.bat clean testDebugUnitTest assembleDebug --no-daemon --no-configuration-cache`
-
-Sadece APK uretmek icin mevcut klasorde de su komut yeterlidir:
+Sadece APK üretmek için mevcut klasörde şu komut da kullanılabilir:
 
 `.\gradlew.bat assembleDebug --no-daemon --no-configuration-cache`
 
 `secrets.properties` yerel kalmali, GitHub'a gonderilmemelidir. Gemini anahtari
 mobil APK'ya konulmaz; sesli randevu parse islemi web sunucusundan yapilir.
 
+### Beni hatırla kabul testi
+
+- `Beni hatırla` seçiliyken ilk başarılı girişten sonra uygulamayı tamamen kapatıp
+  yeniden aç: parola sormadan panele dönmeli.
+- `Beni hatırla` seçimini kaldırarak giriş yap: sonraki uygulama açılışında yeni
+  parola girişi istenmeli; çıkış yapınca kayıtlı oturum da silinmeli.
+
 ### Kabul smoke listesi
 
 - Gercek backend ile giris ve token yenileme/401 cikisi
 - Randevu listeleme, yeni randevu ve tamamlanmis servis revizyonu
 - Stokta giris/cikis, merkezi web stokla ayni miktar ve mutabakat
+- Google Code Scanner ile düz barkod ve eski JSON QR etiketi okuma
+- Bilinen kodda doğru stok detayının, bilinmeyen kodda dolu yeni ürün formunun açılması
+- Ürün görselinin stok kartında gösterilmesi ve hata durumunda fallback ikonunun görünmesi
 - Hizli IBAN ekraninda hesaplarin web backend'den gelmesi
 - IBAN hesabi yoksa veya tutar bos/0 ise gonderim ve kopyalamanin engellenmesi
 - Sesli randevuda bilinmeyen alanlarin uydurulmamasi
@@ -83,4 +84,6 @@ Son remote CI kaniti: `c1d3987` commit'i icin run `33446051627` basarili oldu;
 Android SDK kurulumu, `testDebugUnitTest`, `assembleDebug` ve APK artifact
 yuklemesi tamamlandi.
 
-Son yerel dogrulama: `testDebugUnitTest` ve `assembleDebug` basarili.
+Son yerel doğrulama: `& .\scripts\verify-debug.ps1` ile `testDebugUnitTest` ve
+`assembleDebug` başarılı. Üretilen dosya:
+`app\build\outputs\apk\debug\app-debug.apk`.

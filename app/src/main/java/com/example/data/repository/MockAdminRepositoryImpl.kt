@@ -454,7 +454,7 @@ class MockAdminRepositoryImpl : AdminRepository {
 
     override fun getAuthToken(): Flow<String?> = flowOf(null)
 
-    override suspend fun login(password: String): Result<String> {
+    override suspend fun login(password: String, rememberMe: Boolean): Result<String> {
         delay(300)
         return Result.failure(IllegalStateException("Mock login devre dışı bırakıldı. Gerçek sunucuya bağlanın."))
     }

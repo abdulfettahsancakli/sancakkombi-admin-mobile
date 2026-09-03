@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.Flow
 
 interface AdminRepository {
     fun getAuthToken(): Flow<String?>
-    suspend fun login(password: String): Result<String>
+    suspend fun login(password: String, rememberMe: Boolean = true): Result<String>
     suspend fun logout()
 
     // Ekranlar arası geçişte çağrılır - web'den yapılan değişikliklerin mobile

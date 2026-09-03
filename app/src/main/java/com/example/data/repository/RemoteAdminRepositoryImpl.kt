@@ -178,7 +178,7 @@ class RemoteAdminRepositoryImpl(
 
     // Auth
 
-    override suspend fun login(password: String): Result<String> {
+    override suspend fun login(password: String, rememberMe: Boolean): Result<String> {
         if (password.isBlank()) {
             Log.w("Auth", "login: Password is empty/blank")
             return Result.failure(IllegalArgumentException("Şifre boş bırakılamaz."))
@@ -190,7 +190,7 @@ class RemoteAdminRepositoryImpl(
             if (response.isSuccessful) {
                 val token = response.body()?.token
                 if (!token.isNullOrBlank()) {
-                    tokenStore.saveToken(token)
+                    if (rememberMe) tokenStore.saveToken(token) else tokenStore.clearToken()
                     Result.success(token)
                 } else {
                     Log.e("Auth", "login: 200 OK returned but token is null or blank!")

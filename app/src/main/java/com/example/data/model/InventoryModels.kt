@@ -39,7 +39,8 @@ data class StockItem(
     val imageUrl: String = "",
     val status: String = "",
     val archived: Boolean = false,
-    val createdAt: String? = null
+    val createdAt: String? = null,
+    val catalogLinked: Boolean = false
 ) {
     val isLowStock: Boolean
         get() = quantity <= minimumQuantity

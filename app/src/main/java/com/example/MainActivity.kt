@@ -117,7 +117,7 @@ class MainActivity : ComponentActivity() {
                     LoginScreen(
                         isLoading = isLoading,
                         errorMessage = loginError,
-                        onLogin = { password -> viewModel.login(password) },
+                        onLogin = { password, rememberMe -> viewModel.login(password, rememberMe) },
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
