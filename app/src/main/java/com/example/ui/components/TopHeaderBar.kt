@@ -14,12 +14,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.LightMode
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -43,6 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
 
+// Restyled to match the blue-accent dashboard mockup: emoji glyphs instead of
+// Material icons for the theme toggle and logout action (brand accent color
+// still comes from MaterialTheme.colorScheme.primary, unchanged here).
 @Composable
 fun TopHeaderBar(
     isDarkTheme: Boolean,
@@ -67,7 +65,6 @@ fun TopHeaderBar(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Sancak Kombi Brand Logo & Badge
             Row(
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -103,26 +100,18 @@ fun TopHeaderBar(
                 }
             }
 
-            // Action Buttons: Theme Toggle & Logout
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Theme Toggle
                 IconButton(
                     onClick = onToggleTheme,
                     modifier = Modifier
                         .size(38.dp)
                         .testTag("theme_toggle_button")
                 ) {
-                    Icon(
-                        imageVector = if (isDarkTheme) Icons.Default.LightMode else Icons.Default.DarkMode,
-                        contentDescription = "Tema Değiştir",
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Text(text = if (isDarkTheme) "☀️" else "🌙", fontSize = 17.sp)
                 }
 
                 Spacer(modifier = Modifier.width(4.dp))
 
-                // Logout Button [-> Çıkış
                 Surface(
                     onClick = { showLogoutDialog = true },
                     shape = RoundedCornerShape(8.dp),
@@ -133,12 +122,7 @@ fun TopHeaderBar(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ExitToApp,
-                            contentDescription = "Çıkış Yap",
-                            tint = Color(0xFFF87171),
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Text(text = "🚪", fontSize = 14.sp)
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             text = "Çıkış",

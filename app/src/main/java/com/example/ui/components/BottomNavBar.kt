@@ -21,13 +21,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Dashboard
-import androidx.compose.material.icons.filled.DateRange
-import androidx.compose.material.icons.filled.GridView
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,17 +32,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AdminModule
 
+// Restyled to match the blue-accent dashboard mockup: emoji glyphs instead of
+// Material icon vectors, "İşler" label instead of "Randevular" for the
+// appointments tab. Brand accent color is unchanged — comes from
+// MaterialTheme.colorScheme.primary.
 data class BottomNavItem(
     val route: String,
     val title: String,
-    val icon: ImageVector,
+    val emoji: String,
     val module: AdminModule? = null
 )
 
@@ -60,34 +56,11 @@ fun BottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val items = listOf(
-        BottomNavItem(
-            route = "dashboard",
-            title = "Ana Sayfa",
-            icon = Icons.Default.Dashboard
-        ),
-        BottomNavItem(
-            route = "appointments",
-            title = "Randevular",
-            icon = Icons.Default.DateRange,
-            module = AdminModule.RANDEVULAR
-        ),
-        BottomNavItem(
-            route = "customers",
-            title = "Müşteriler",
-            icon = Icons.Default.People,
-            module = AdminModule.MUSTERILER
-        ),
-        BottomNavItem(
-            route = "finance",
-            title = "Finans",
-            icon = Icons.Default.AccountBalance,
-            module = AdminModule.FINANS
-        ),
-        BottomNavItem(
-            route = "modules",
-            title = "Modüller",
-            icon = Icons.Default.GridView
-        )
+        BottomNavItem(route = "dashboard", title = "Ana Sayfa", emoji = "🏠"),
+        BottomNavItem(route = "appointments", title = "İşler", emoji = "📅", module = AdminModule.RANDEVULAR),
+        BottomNavItem(route = "customers", title = "Müşteriler", emoji = "👥", module = AdminModule.MUSTERILER),
+        BottomNavItem(route = "finance", title = "Finans", emoji = "💳", module = AdminModule.FINANS),
+        BottomNavItem(route = "modules", title = "Modüller", emoji = "▦")
     )
 
     Box(
@@ -97,7 +70,6 @@ fun BottomNavBar(
             .padding(horizontal = 16.dp, vertical = 10.dp)
             .testTag("bottom_nav_bar")
     ) {
-        // Floating 28dp Radius Glassmorphism Bar
         Surface(
             shape = RoundedCornerShape(28.dp),
             color = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f),
@@ -148,12 +120,7 @@ fun BottomNavBar(
                                         .background(MaterialTheme.colorScheme.primaryContainer)
                                 )
                             }
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = item.title,
-                                tint = activeColor,
-                                modifier = Modifier.size(20.dp)
-                            )
+                            Text(text = item.emoji, fontSize = 16.sp)
                         }
 
                         Spacer(modifier = Modifier.height(3.dp))
@@ -165,7 +132,6 @@ fun BottomNavBar(
                             color = activeColor
                         )
 
-                        // Active Dot Indicator
                         if (isSelected) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Box(
@@ -183,4 +149,3 @@ fun BottomNavBar(
         }
     }
 }
-

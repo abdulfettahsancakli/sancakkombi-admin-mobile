@@ -10,7 +10,6 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -67,6 +66,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -294,7 +294,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "Yeni Randevu",
                     subtitle = "Hemen bir randevu planla",
-                    icon = Icons.Default.DateRange,
+                    icon = "📅",
                     accentColor = Color(0xFF0288D1),
                     onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
                 )
@@ -304,7 +304,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "Teklif Oluştur",
                     subtitle = "Hızlı teklif sun",
-                    icon = Icons.Default.Description,
+                    icon = "📝",
                     accentColor = Color(0xFF8B5CF6),
                     onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
                 )
@@ -314,7 +314,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "Müşteri Ekle",
                     subtitle = "Yeni müşteri kaydı",
-                    icon = Icons.Default.PersonAdd,
+                    icon = "🙋",
                     accentColor = Color(0xFF10B981),
                     onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
                 )
@@ -324,7 +324,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "Kasa & Gelir",
                     subtitle = "Finansal hareket",
-                    icon = Icons.Default.Wallet,
+                    icon = "💰",
                     accentColor = Color(0xFF059669),
                     onClick = { onNavigateToModule(AdminModule.FINANS) }
                 )
@@ -334,7 +334,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "WhatsApp Gönder",
                     subtitle = "Müşteriye bildir",
-                    icon = Icons.AutoMirrored.Filled.Chat,
+                    icon = "💬",
                     accentColor = Color(0xFF25D366),
                     onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
                 )
@@ -344,7 +344,7 @@ fun DashboardScreen(
                 QuickActionGridCard(
                     title = "Bakım Takvimi",
                     subtitle = "Periyodik bakımlar",
-                    icon = Icons.Default.Handyman,
+                    icon = "🛠️",
                     accentColor = Color(0xFFF97316),
                     onClick = { onNavigateToModule(AdminModule.BAKIM_TAKVIMLERI) }
                 )
@@ -376,7 +376,7 @@ fun DashboardScreen(
                 CompactMetricBentoCard(
                     title = "BEKLEYEN ONAY",
                     value = stats.bekleyenOnay.toString(),
-                    icon = Icons.Default.PendingActions,
+                    icon = "⏳",
                     accentColor = Color(0xFFF59E0B),
                     badgeText = "Aksiyon",
                     testTag = "stat_pending_approvals",
@@ -388,7 +388,7 @@ fun DashboardScreen(
                 CompactMetricBentoCard(
                     title = "HAFTALIK TAMAMLANAN",
                     value = stats.buHaftaTamamlanan.toString(),
-                    icon = Icons.Default.CheckCircle,
+                    icon = "✅",
                     accentColor = Color(0xFF10B981),
                     badgeText = "Tamamlanan",
                     testTag = "stat_weekly_completed",
@@ -475,12 +475,7 @@ private fun DashboardGreetingHeader(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = "Bildirimler",
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(20.dp)
-                    )
+                    Text(text = "🔔", fontSize = 17.sp)
                 }
 
                 if (unreadNotificationCount > 0) {
@@ -508,7 +503,7 @@ private fun DashboardGreetingHeader(
 private fun QuickActionGridCard(
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: String,
     accentColor: Color,
     onClick: () -> Unit
 ) {
@@ -544,12 +539,7 @@ private fun QuickActionGridCard(
                     .background(accentColor.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = title,
-                    tint = accentColor,
-                    modifier = Modifier.size(20.dp)
-                )
+                Text(text = icon, fontSize = 18.sp)
             }
             Spacer(modifier = Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -616,12 +606,7 @@ private fun RevenueHeroBentoCard(
                             .background(Color(0xFF10B981).copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.TrendingUp,
-                            contentDescription = null,
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(18.dp)
-                        )
+                        Text(text = "📈", fontSize = 15.sp)
                     }
                     Spacer(modifier = Modifier.width(10.dp))
                     Text(
@@ -640,12 +625,7 @@ private fun RevenueHeroBentoCard(
                             .testTag("toggle_revenue_visibility"),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = if (isRevenueVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (isRevenueVisible) "Geliri Gizle" else "Geliri Göster",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Text(text = if (isRevenueVisible) "👁️" else "🙈", fontSize = 13.sp)
                     }
                 }
 
@@ -658,15 +638,8 @@ private fun RevenueHeroBentoCard(
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.TrendingUp,
-                            contentDescription = null,
-                            tint = Color(0xFF10B981),
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = growthPercentage,
+                            text = "▲ $growthPercentage",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF10B981)
@@ -745,12 +718,7 @@ private fun TodayAppointmentsBentoCard(
                         .background(Color(0xFF0288D1).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.DateRange,
-                        contentDescription = null,
-                        tint = Color(0xFF0288D1),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Text(text = "📅", fontSize = 15.sp)
                 }
 
                 PulseEffectDot(color = Color(0xFF22C55E))
@@ -814,12 +782,7 @@ private fun ReceivablesBentoCard(
                         .background(Color(0xFFEF4444).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Receipt,
-                        contentDescription = null,
-                        tint = Color(0xFFEF4444),
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Text(text = "🧾", fontSize = 15.sp)
                 }
 
                 Surface(
@@ -871,7 +834,7 @@ private fun ReceivablesBentoCard(
 private fun CompactMetricBentoCard(
     title: String,
     value: String,
-    icon: ImageVector,
+    icon: String,
     accentColor: Color,
     badgeText: String,
     testTag: String,
@@ -900,12 +863,7 @@ private fun CompactMetricBentoCard(
                         .background(accentColor.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Text(text = icon, fontSize = 14.sp)
                 }
 
                 Surface(
@@ -948,7 +906,7 @@ private fun CompactMetricBentoCard(
 fun ModernStatCard(
     label: String,
     value: String,
-    icon: ImageVector,
+    icon: String,
     accentColor: Color,
     badgeText: String,
     testTag: String,
