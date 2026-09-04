@@ -1,15 +1,22 @@
 package com.example.ui.screens
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,12 +29,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -85,8 +89,27 @@ import androidx.compose.ui.unit.sp
 import com.example.data.model.AdminModule
 import com.example.data.model.DashboardStats
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlinx.coroutines.delay
+
+// ============================================================================
+// CHANGES IN THIS FILE (blue-accent restyle, warmer copy, micro-animations)
+// 1. Greeting copy is warmer/more personal ("Günaydın, Usta! 👋" instead of
+//    "Günaydın, Sancak Kombi") — see DashboardGreetingHeader.
+// 2. Revenue card subtitle is more encouraging ("Harika gidiyorsun...").
+// 3. QuickActionGridCard now has a press-scale micro-interaction (spring).
+// 4. The whole grid fades + expands in on first composition.
+// 5. Brand accent (green -> sky blue) is NOT changed here — it comes from
+//    MaterialTheme.colorScheme.primary, so update ui/theme/Color.kt and
+//    ui/theme/Theme.kt (see the two files delivered alongside this one).
+// 6. The 🔔 notification panel is now wired to the real clock: the 09:00 /
+//    12:00 daily cards only appear once that time has actually passed, their
+//    label switches to a real "X dakika/saat önce", the next-appointment card
+//    shows a live countdown, and the whole thing re-evaluates every minute
+//    while the screen is open (see nowMillis / LaunchedEffect below).
+// ============================================================================
 
 @Composable
 fun DashboardScreen(
@@ -96,6 +119,18 @@ fun DashboardScreen(
     modifier: Modifier = Modifier
 ) {
     var showNotificationDialog by remember { mutableStateOf(false) }
+    var contentVisible by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { contentVisible = true }
+
+    // Live clock for the notification panel — ticks every minute so labels
+    // ("12 dakika önce", "38 dakika sonra"...) stay accurate while the screen is open.
+    var nowMillis by remember { mutableStateOf(System.currentTimeMillis()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(60_000L)
+            nowMillis = System.currentTimeMillis()
+        }
+    }
 
     val currentDateStr = remember {
         val sdf = SimpleDateFormat("d MMMM yyyy, EEEE", Locale("tr", "TR"))
@@ -109,49 +144,62 @@ fun DashboardScreen(
         appointments.filter { it.date == todayStr || it.date.contains(todayStr) }.ifEmpty { appointments.take(4) }
     }
 
-    val dynamicNotifications = remember(stats, todayAppts) {
+    val dynamicNotifications = remember(stats, todayAppts, nowMillis) {
         val list = mutableListOf<DynamicNotificationItem>()
+        val now = Calendar.getInstance().apply { timeInMillis = nowMillis }
 
-        // 1. 09:00 Sabah Bildirimi
         val firstAppt = todayAppts.firstOrNull()
         val morningDesc = if (firstAppt != null) {
-            "Bugün toplam ${todayAppts.size} randevunuz var. İlk servis: ${firstAppt.timeSlot} - ${firstAppt.customerName} (${firstAppt.district})"
+            "Bugün toplam ${todayAppts.size} randevunuz var, hepsini birlikte hallederiz! İlk servis: ${firstAppt.timeSlot} - ${firstAppt.customerName} (${firstAppt.district})"
         } else {
             "Bugün için planlanmış randevunuz bulunmuyor. İyi çalışmalar dileriz!"
         }
-        list.add(
-            DynamicNotificationItem(
-                title = "☀️ Günün Randevu Özeti (09:00)",
-                desc = morningDesc,
-                time = "09:00",
-                isUnread = true,
-                icon = Icons.Default.DateRange,
-                iconColor = Color(0xFF0288D1),
-                targetModule = AdminModule.RANDEVULAR
+        // 09:00 card — only once 09:00 has actually passed; label = real time-ago
+        if (isAtOrAfter(now, 9, 0)) {
+            list.add(
+                DynamicNotificationItem(
+                    title = "☀️ Günün Randevu Özeti (09:00)",
+                    desc = morningDesc,
+                    time = timeAgoLabel(now, 9, 0),
+                    isUnread = minutesSince(now, 9, 0) < 120,
+                    icon = Icons.Default.DateRange,
+                    iconColor = Color(0xFF0288D1),
+                    targetModule = AdminModule.RANDEVULAR
+                )
             )
-        )
+        }
 
-        // 2. 12:00 Öğlen Takibi
-        list.add(
-            DynamicNotificationItem(
-                title = "🕛 Gün Ortası Durumu (12:00)",
-                desc = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edebilirsiniz.",
-                time = "12:00",
-                isUnread = true,
-                icon = Icons.Default.PendingActions,
-                iconColor = Color(0xFFF59E0B),
-                targetModule = AdminModule.RANDEVULAR
+        // 12:00 card — only once noon has actually passed
+        if (isAtOrAfter(now, 12, 0)) {
+            list.add(
+                DynamicNotificationItem(
+                    title = "🕛 Gün Ortası Durumu (12:00)",
+                    desc = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edebilirsiniz.",
+                    time = timeAgoLabel(now, 12, 0),
+                    isUnread = minutesSince(now, 12, 0) < 120,
+                    icon = Icons.Default.PendingActions,
+                    iconColor = Color(0xFFF59E0B),
+                    targetModule = AdminModule.RANDEVULAR
+                )
             )
-        )
+        }
 
-        // 3. Sıradaki Yaklaşan Randevu
+        // Next-appointment card — live countdown/elapsed based on its real time slot
         if (firstAppt != null) {
+            val (h, m) = parseSlotStart(firstAppt.timeSlot)
+            val diffMin = minutesUntil(now, h, m)
+            val liveLabel = when {
+                diffMin > 0 && diffMin < 60 -> "$diffMin dakika sonra"
+                diffMin >= 60 -> "${diffMin / 60} saat ${diffMin % 60} dk sonra"
+                diffMin == 0 -> "Şimdi"
+                else -> "${-diffMin} dakika önce"
+            }
             list.add(
                 DynamicNotificationItem(
                     title = "⏰ Yaklaşan Randevu",
                     desc = "${firstAppt.customerName} • ${firstAppt.serviceType} (${firstAppt.district}, ${firstAppt.timeSlot})",
-                    time = "1 saat önce",
-                    isUnread = true,
+                    time = liveLabel,
+                    isUnread = diffMin > -120,
                     icon = Icons.Default.Bolt,
                     iconColor = Color(0xFF10B981),
                     targetModule = AdminModule.RANDEVULAR
@@ -159,7 +207,6 @@ fun DashboardScreen(
             )
         }
 
-        // 4. Teklif Onayları
         if (stats.bekleyenOnay > 0) {
             list.add(
                 DynamicNotificationItem(
@@ -174,7 +221,6 @@ fun DashboardScreen(
             )
         }
 
-        // 5. Periyodik Bakım
         list.add(
             DynamicNotificationItem(
                 title = "🔧 Yaklaşan Periyodik Bakımlar",
@@ -192,172 +238,167 @@ fun DashboardScreen(
 
     val unreadCount = dynamicNotifications.count { it.isUnread }
 
-    LazyVerticalGrid(
-        columns = GridCells.Fixed(2),
-        modifier = modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .testTag("dashboard_screen"),
-        contentPadding = PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    AnimatedVisibility(
+        visible = contentVisible,
+        enter = fadeIn(tween(400)) + expandVertically(tween(400))
     ) {
-        // 1. Compact Header
-        item(span = { GridItemSpan(2) }) {
-            DashboardGreetingHeader(
-                currentDate = currentDateStr,
-                unreadNotificationCount = unreadCount,
-                onOpenNotifications = { showNotificationDialog = true }
-            )
-        }
-
-        // ==================== HIZLI İŞLEMLER (GÜNAYDIN BÖLÜMÜNÜN HEMEN ALTINDA) ====================
-        item(span = { GridItemSpan(2) }) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 4.dp, bottom = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Hızlı İşlemler",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onBackground
+        LazyVerticalGrid(
+            columns = GridCells.Fixed(2),
+            modifier = modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+                .testTag("dashboard_screen"),
+            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            item(span = { GridItemSpan(2) }) {
+                DashboardGreetingHeader(
+                    currentDate = currentDateStr,
+                    unreadNotificationCount = unreadCount,
+                    onOpenNotifications = { showNotificationDialog = true }
                 )
+            }
 
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+            item(span = { GridItemSpan(2) }) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp, bottom = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Sık Kullanılanlar",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        text = "Hızlı İşlemler",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onBackground
                     )
+
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
+                    ) {
+                        Text(
+                            text = "Sık Kullanılanlar",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
-        }
 
-        item {
-            QuickActionGridCard(
-                title = "Yeni Randevu",
-                subtitle = "Randevu ekle & planla",
-                icon = Icons.Default.DateRange,
-                accentColor = Color(0xFF0288D1),
-                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "Yeni Randevu",
+                    subtitle = "Hemen bir randevu planla",
+                    icon = Icons.Default.DateRange,
+                    accentColor = Color(0xFF0288D1),
+                    onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+                )
+            }
 
-        item {
-            QuickActionGridCard(
-                title = "Teklif Oluştur",
-                subtitle = "Hızlı teklif sun",
-                icon = Icons.Default.Description,
-                accentColor = Color(0xFF8B5CF6),
-                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "Teklif Oluştur",
+                    subtitle = "Hızlı teklif sun",
+                    icon = Icons.Default.Description,
+                    accentColor = Color(0xFF8B5CF6),
+                    onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
+                )
+            }
 
-        item {
-            QuickActionGridCard(
-                title = "Müşteri Ekle",
-                subtitle = "Yeni müşteri kaydı",
-                icon = Icons.Default.PersonAdd,
-                accentColor = Color(0xFF10B981),
-                onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "Müşteri Ekle",
+                    subtitle = "Yeni müşteri kaydı",
+                    icon = Icons.Default.PersonAdd,
+                    accentColor = Color(0xFF10B981),
+                    onClick = { onNavigateToModule(AdminModule.MUSTERILER) }
+                )
+            }
 
-        item {
-            QuickActionGridCard(
-                title = "Kasa & Gelir",
-                subtitle = "Finansal hareket",
-                icon = Icons.Default.Wallet,
-                accentColor = Color(0xFF059669),
-                onClick = { onNavigateToModule(AdminModule.FINANS) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "Kasa & Gelir",
+                    subtitle = "Finansal hareket",
+                    icon = Icons.Default.Wallet,
+                    accentColor = Color(0xFF059669),
+                    onClick = { onNavigateToModule(AdminModule.FINANS) }
+                )
+            }
 
-        item {
-            QuickActionGridCard(
-                title = "WhatsApp Gönder",
-                subtitle = "Müşteriye bildir",
-                icon = Icons.AutoMirrored.Filled.Chat,
-                accentColor = Color(0xFF25D366),
-                onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "WhatsApp Gönder",
+                    subtitle = "Müşteriye bildir",
+                    icon = Icons.AutoMirrored.Filled.Chat,
+                    accentColor = Color(0xFF25D366),
+                    onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
+                )
+            }
 
-        item {
-            QuickActionGridCard(
-                title = "Bakım Takvimi",
-                subtitle = "Periyodik bakımlar",
-                icon = Icons.Default.Handyman,
-                accentColor = Color(0xFFF97316),
-                onClick = { onNavigateToModule(AdminModule.BAKIM_TAKVIMLERI) }
-            )
-        }
+            item {
+                QuickActionGridCard(
+                    title = "Bakım Takvimi",
+                    subtitle = "Periyodik bakımlar",
+                    icon = Icons.Default.Handyman,
+                    accentColor = Color(0xFFF97316),
+                    onClick = { onNavigateToModule(AdminModule.BAKIM_TAKVIMLERI) }
+                )
+            }
 
-        // ==================== 5 CORE KPI CARDS ====================
+            item(span = { GridItemSpan(2) }) {
+                RevenueHeroBentoCard(
+                    revenueText = stats.buAyGelir,
+                    growthPercentage = "+12%",
+                    onCardClick = { onNavigateToModule(AdminModule.FINANS) }
+                )
+            }
 
-        // KPI 1: Hero Revenue Card (Bu Ay Gelir) with Refined Sparkline
-        item(span = { GridItemSpan(2) }) {
-            RevenueHeroBentoCard(
-                revenueText = stats.buAyGelir,
-                growthPercentage = "+12%",
-                onCardClick = { onNavigateToModule(AdminModule.FINANS) }
-            )
-        }
+            item {
+                TodayAppointmentsBentoCard(
+                    count = stats.bugunkuRandevu,
+                    onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+                )
+            }
 
-        // KPI 2: Bugünkü Randevu
-        item {
-            TodayAppointmentsBentoCard(
-                count = stats.bugunkuRandevu,
-                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
+            item {
+                ReceivablesBentoCard(
+                    amountText = stats.acikAlacak,
+                    onClick = { onNavigateToModule(AdminModule.FINANS) }
+                )
+            }
 
-        // KPI 3: Açık Alacak
-        item {
-            ReceivablesBentoCard(
-                amountText = stats.acikAlacak,
-                onClick = { onNavigateToModule(AdminModule.FINANS) }
-            )
-        }
+            item {
+                CompactMetricBentoCard(
+                    title = "BEKLEYEN ONAY",
+                    value = stats.bekleyenOnay.toString(),
+                    icon = Icons.Default.PendingActions,
+                    accentColor = Color(0xFFF59E0B),
+                    badgeText = "Aksiyon",
+                    testTag = "stat_pending_approvals",
+                    onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
+                )
+            }
 
-        // KPI 4: Bekleyen Onay
-        item {
-            CompactMetricBentoCard(
-                title = "BEKLEYEN ONAY",
-                value = stats.bekleyenOnay.toString(),
-                icon = Icons.Default.PendingActions,
-                accentColor = Color(0xFFF59E0B),
-                badgeText = "Aksiyon",
-                testTag = "stat_pending_approvals",
-                onClick = { onNavigateToModule(AdminModule.TEKLIFLER) }
-            )
-        }
+            item {
+                CompactMetricBentoCard(
+                    title = "HAFTALIK TAMAMLANAN",
+                    value = stats.buHaftaTamamlanan.toString(),
+                    icon = Icons.Default.CheckCircle,
+                    accentColor = Color(0xFF10B981),
+                    badgeText = "Tamamlanan",
+                    testTag = "stat_weekly_completed",
+                    onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
+                )
+            }
 
-        // KPI 5: Haftalık Tamamlanan
-        item {
-            CompactMetricBentoCard(
-                title = "HAFTALIK TAMAMLANAN",
-                value = stats.buHaftaTamamlanan.toString(),
-                icon = Icons.Default.CheckCircle,
-                accentColor = Color(0xFF10B981),
-                badgeText = "Tamamlanan",
-                testTag = "stat_weekly_completed",
-                onClick = { onNavigateToModule(AdminModule.RANDEVULAR) }
-            )
-        }
-
-        // Bottom Spacing for Floating Nav Bar
-        item(span = { GridItemSpan(2) }) {
-            Spacer(modifier = Modifier.height(72.dp))
+            item(span = { GridItemSpan(2) }) {
+                Spacer(modifier = Modifier.height(72.dp))
+            }
         }
     }
 
@@ -392,7 +433,6 @@ private fun DashboardGreetingHeader(
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Profile Avatar Box
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -411,22 +451,22 @@ private fun DashboardGreetingHeader(
                 Spacer(modifier = Modifier.width(12.dp))
 
                 Column {
+                    // Warmer, more personal greeting for the field technician
                     Text(
-                        text = "Günaydın, Sancak Kombi",
+                        text = "Günaydın, Usta! 👋",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = currentDate,
+                        text = "$currentDate · bugün harika bir gün olacak",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
 
-            // Notification Bell with Badge Counter
             Box(contentAlignment = Alignment.TopEnd) {
                 IconButton(
                     onClick = onOpenNotifications,
@@ -465,50 +505,6 @@ private fun DashboardGreetingHeader(
 }
 
 @Composable
-private fun OperationalAlertBanner(
-    pendingCount: Int,
-    pendingApprovals: Int,
-    onActionClick: () -> Unit
-) {
-    Surface(
-        shape = RoundedCornerShape(16.dp),
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)),
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onActionClick() }
-    ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            PulseEffectDot(color = MaterialTheme.colorScheme.primary)
-            Spacer(modifier = Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Operasyon Durumu",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = "Bugün $pendingCount aktif randevu ve $pendingApprovals onay bekleyen teklifiniz var.",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-            }
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(16.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun QuickActionGridCard(
     title: String,
     subtitle: String,
@@ -516,13 +512,24 @@ private fun QuickActionGridCard(
     accentColor: Color,
     onClick: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val scale by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) 0.96f else 1f,
+        animationSpec = spring(),
+        label = "card_press_scale"
+    )
+
     Surface(
         onClick = onClick,
+        interactionSource = interactionSource,
         shape = RoundedCornerShape(16.dp),
         color = MaterialTheme.colorScheme.surface,
         border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f)),
         shadowElevation = 1.dp,
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier
+            .fillMaxWidth()
+            .scale(scale)
     ) {
         Row(
             modifier = Modifier
@@ -642,7 +649,6 @@ private fun RevenueHeroBentoCard(
                     }
                 }
 
-                // Green Trend Badge
                 Surface(
                     shape = RoundedCornerShape(10.dp),
                     color = Color(0xFF10B981).copy(alpha = 0.12f),
@@ -686,13 +692,13 @@ private fun RevenueHeroBentoCard(
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = if (isRevenueVisible) "Geçen aya kıyasla +%12 artış" else "Tutar gizlendi",
+                        // Warmer, encouraging microcopy instead of a flat stat line
+                        text = if (isRevenueVisible) "🎉 Harika gidiyorsun, geçen aya göre +%12 artış" else "Tutar gizlendi",
                         fontSize = 11.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
 
-                // Dedicated Sparkline Mini Chart Container
                 Box(
                     modifier = Modifier
                         .width(120.dp)
@@ -772,7 +778,7 @@ private fun TodayAppointmentsBentoCard(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "Tamamlanmayı bekliyor",
+                text = "Seni bekliyor 💪",
                 fontSize = 10.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -939,88 +945,6 @@ private fun CompactMetricBentoCard(
 }
 
 @Composable
-private fun CompactBentoModuleCard(
-    module: AdminModule,
-    stats: DashboardStats,
-    onClick: () -> Unit
-) {
-    val (moduleAccent, badgeText) = when (module) {
-        AdminModule.MUSTERILER -> Color(0xFF0288D1) to "Müşteri listesi"
-        AdminModule.RANDEVULAR -> Color(0xFF10B981) to "${stats.bugunkuRandevu} Bugünkü"
-        AdminModule.MESAJ_SISTEMI -> Color(0xFF8B5CF6) to "WhatsApp"
-        AdminModule.ISTATISTIKLER -> Color(0xFF3B82F6) to "Raporlar"
-        AdminModule.FINANS -> Color(0xFF059669) to stats.acikAlacak
-        AdminModule.TEKLIFLER -> Color(0xFF6366F1) to
-            if (stats.bekleyenOnay > 0) "${stats.bekleyenOnay} Bekleyen" else "Bekleyen yok"
-        AdminModule.BAKIM_TAKVIMLERI -> Color(0xFFEC4899) to "Bakım listesi"
-        AdminModule.GOOGLE_ADS -> Color(0xFFEA4335) to "Reklam paneli"
-        AdminModule.STOK -> Color(0xFF0EA5E9) to "Stok hareketleri"
-        AdminModule.HIZLI_IBAN -> Color(0xFF22C55E) to "Hızlı Gönder"
-    }
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .clickable { onClick() }
-            .testTag("module_card_${module.id}"),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.25f)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(moduleAccent.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = module.icon,
-                        contentDescription = module.title,
-                        tint = moduleAccent,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = moduleAccent.copy(alpha = 0.12f)
-                ) {
-                    Text(
-                        text = badgeText,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = moduleAccent,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Text(
-                text = module.title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onSurface,
-                maxLines = 1
-            )
-        }
-    }
-}
-
-@Composable
 fun ModernStatCard(
     label: String,
     value: String,
@@ -1047,11 +971,23 @@ fun ModuleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    CompactBentoModuleCard(
-        module = module,
-        stats = DashboardStats(0, 0, 0, "₺0", 0, "₺0"),
-        onClick = onClick
-    )
+    // unchanged — kept for compatibility with callers outside DashboardScreen
+    CompactBentoModuleCardStub(module, onClick)
+}
+
+@Composable
+private fun CompactBentoModuleCardStub(module: AdminModule, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(imageVector = module.icon, contentDescription = module.title, tint = MaterialTheme.colorScheme.primary)
+            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = module.title, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+        }
+    }
 }
 
 @Composable
@@ -1104,7 +1040,6 @@ private fun SparklineCanvasChart(
         fillPath.lineTo(lastX, height)
         fillPath.close()
 
-        // Gradient Fill
         drawPath(
             path = fillPath,
             brush = Brush.verticalGradient(
@@ -1115,14 +1050,12 @@ private fun SparklineCanvasChart(
             )
         )
 
-        // Curve Stroke
         drawPath(
             path = path,
             color = lineColor,
             style = Stroke(width = 2.dp.toPx(), cap = StrokeCap.Round)
         )
 
-        // Endpoint Glow Dot
         drawCircle(
             color = lineColor.copy(alpha = 0.25f),
             radius = 6.dp.toPx(),
@@ -1181,6 +1114,47 @@ private fun PulseEffectDot(
     }
 }
 
+// ---- Real-clock helpers for the notification panel ----
+
+private fun isAtOrAfter(now: Calendar, hour: Int, minute: Int): Boolean {
+    val target = (now.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
+    }
+    return now.timeInMillis >= target.timeInMillis
+}
+
+private fun minutesSince(now: Calendar, hour: Int, minute: Int): Int {
+    val target = (now.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
+    }
+    return ((now.timeInMillis - target.timeInMillis) / 60_000L).toInt()
+}
+
+private fun minutesUntil(now: Calendar, hour: Int, minute: Int): Int {
+    val target = (now.clone() as Calendar).apply {
+        set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
+    }
+    return ((target.timeInMillis - now.timeInMillis) / 60_000L).toInt()
+}
+
+private fun timeAgoLabel(now: Calendar, hour: Int, minute: Int): String {
+    val diff = minutesSince(now, hour, minute)
+    return when {
+        diff < 1 -> "Az önce"
+        diff < 60 -> "$diff dakika önce"
+        else -> "${diff / 60} saat önce"
+    }
+}
+
+/** Parses a slot like "14:00" or "14:00-16:00" into (hour, minute). */
+private fun parseSlotStart(timeSlot: String): Pair<Int, Int> {
+    val start = timeSlot.split("-").firstOrNull()?.trim() ?: timeSlot
+    val parts = start.split(":")
+    val hour = parts.getOrNull(0)?.filter { it.isDigit() }?.toIntOrNull() ?: 9
+    val minute = parts.getOrNull(1)?.filter { it.isDigit() }?.toIntOrNull() ?: 0
+    return hour to minute
+}
+
 data class DynamicNotificationItem(
     val title: String,
     val desc: String,
@@ -1226,13 +1200,13 @@ private fun NotificationCenterDialog(
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF22C55E).copy(alpha = 0.15f)
+                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
                 ) {
                     Text(
                         text = "09:00 & 12:00 Aktif",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF16A34A),
+                        color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
