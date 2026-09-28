@@ -605,6 +605,16 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.failure(IllegalArgumentException("Randevu bulunamadı."))
     }
 
+    override suspend fun createServiceReceipt(appointment: Appointment, jobReport: JobReport): Result<Unit> {
+        val draft = appointment.copy(
+            id = appointment.id.ifBlank { UUID.randomUUID().toString() },
+            status = AppointmentStatus.ONAYLANDI
+        )
+        val added = addAppointment(draft)
+        if (added.isFailure) return added
+        return completeJob(draft.id, jobReport)
+    }
+
     override suspend fun sendBankTransferMessage(
         appointmentId: String,
         paymentAccountKey: String,

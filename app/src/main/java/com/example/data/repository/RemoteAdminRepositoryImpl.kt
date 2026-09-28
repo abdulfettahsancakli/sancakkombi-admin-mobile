@@ -359,6 +359,31 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun createServiceReceipt(appointment: Appointment, jobReport: JobReport): Result<Unit> = requireToken { token ->
+        val uploadedPhotoUrls = jobReport.photoUris.mapNotNull { uploadContentUri(token, it, "job-photos") }
+        val uploadedCustomerSignatureUrl = jobReport.customerSignaturePath?.let { uploadLocalFile(token, it, "signatures") }
+        val uploadedTechnicianSignatureUrl = jobReport.technicianSignaturePath?.let { uploadLocalFile(token, it, "signatures") }
+        val uploadedJobReport = jobReport.copy(
+            photoUris = uploadedPhotoUrls,
+            customerSignaturePath = uploadedCustomerSignatureUrl,
+            technicianSignaturePath = uploadedTechnicianSignatureUrl
+        )
+
+        val response = api.createServiceReceipt(
+            authHeader(token),
+            com.example.data.remote.ServiceReceiptRequestDto(appointment, uploadedJobReport)
+        )
+        if (response.isSuccessful) {
+            appointmentsTrigger.value += 1
+            customersTrigger.value += 1
+            financeTrigger.value += 1
+            stockTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
     override suspend fun addCustomers(customers: List<Customer>): Result<Unit> = requireToken { token ->
         customers.forEach { customer ->
             val response = api.addCustomer(authHeader(token), customer)

@@ -58,6 +58,7 @@ data class Appointment(
     val timeSlot: String = "", // e.g. "13:00 - 15:00"
     val serviceType: String = "", // e.g. "Kombi Bakım & Servis"
     val status: AppointmentStatus = AppointmentStatus.BEKLIYOR,
+    val source: String = "",
     val addressDetail: String = "",
     val problemNote: String = "",
     val jobReport: JobReport? = null

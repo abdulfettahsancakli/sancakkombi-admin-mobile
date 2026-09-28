@@ -91,6 +91,7 @@ import java.util.UUID
 @Composable
 fun CompleteJobDialog(
     appointment: Appointment,
+    createMode: Boolean = false,
     bankAccounts: List<BankAccount> = emptyList(),
     stockItems: List<StockItem> = emptyList(),
     onDismiss: () -> Unit,
@@ -103,7 +104,7 @@ fun CompleteJobDialog(
     // IBAN Sending Dialog State
     var showIbanDialog by remember { mutableStateOf(false) }
 
-    val isEditMode = appointment.status == AppointmentStatus.TAMAMLANDI
+    val isEditMode = !createMode && appointment.status == AppointmentStatus.TAMAMLANDI
     val existingReport = appointment.jobReport
 
     // Basic Form State
@@ -114,8 +115,12 @@ fun CompleteJobDialog(
     // Revenue Section State
     var addRevenueRecord by remember { mutableStateOf(existingReport?.addRevenueRecord ?: true) }
     var collectedAmount by remember { mutableStateOf(existingReport?.collectedAmount ?: "") }
-    var paymentStatus by remember { mutableStateOf(existingReport?.paymentStatus?.ifBlank { "Bekliyor" } ?: "Bekliyor") }
-    var paymentMethod by remember { mutableStateOf(existingReport?.paymentMethod?.trim().orEmpty()) }
+    var paymentStatus by remember {
+        mutableStateOf(if (createMode) "Ödendi" else existingReport?.paymentStatus?.ifBlank { "Bekliyor" } ?: "Bekliyor")
+    }
+    var paymentMethod by remember {
+        mutableStateOf(if (createMode) "Nakit" else existingReport?.paymentMethod?.trim().orEmpty())
+    }
     var paymentPromiseDate by remember { mutableStateOf(existingReport?.paymentPromiseDate?.trim().orEmpty()) }
     var revenueNote by remember { mutableStateOf(existingReport?.revenueNote ?: "") }
 
@@ -179,13 +184,21 @@ fun CompleteJobDialog(
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = if (isEditMode) "Servis Fişini Düzenle" else "İş Kapanış & Dijital İmza",
+                            text = when {
+                                createMode -> "Servis Fişi Kes & Kapanış"
+                                isEditMode -> "Servis Fişini Düzenle"
+                                else -> "İş Kapanış & Dijital İmza"
+                            },
                             fontWeight = FontWeight.Bold,
                             fontSize = 17.sp,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = if (isEditMode) "Servis raporunu ve detayları güncelleyin" else "Servis raporunu ve tahsilatı tamamlayın",
+                            text = when {
+                                createMode -> "Randevusuz işi, tahsilatı ve servis raporunu tamamlayın"
+                                isEditMode -> "Servis raporunu ve detayları güncelleyin"
+                                else -> "Servis raporunu ve tahsilatı tamamlayın"
+                            },
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -260,6 +273,7 @@ fun CompleteJobDialog(
                             onPaymentPromiseDateChange = { paymentPromiseDate = it },
                             revenueNote = revenueNote,
                             onRevenueNoteChange = { revenueNote = it },
+                            allowTransferMessage = !createMode,
                             onOpenIbanDialog = { showIbanDialog = true }
                         )
 
@@ -342,6 +356,19 @@ fun CompleteJobDialog(
                         Button(
                             onClick = {
                                 if (isSubmitting) return@Button
+                                if (createMode && workDoneNote.isBlank()) {
+                                    submitError = "Yapılan iş açıklaması servis fişi için zorunludur."
+                                    currentStep = 2
+                                    return@Button
+                                }
+                                val quickReceiptTotal = usedParts.sumOf { it.quantity * it.price } +
+                                    (parseLocalizedDouble(serviceFee) ?: 0.0) +
+                                    (parseLocalizedDouble(otherFee) ?: 0.0)
+                                if (createMode && quickReceiptTotal <= 0.0) {
+                                    submitError = "Servis fişi için malzeme, servis ücreti veya diğer ücretlerden en az birini girin."
+                                    currentStep = 2
+                                    return@Button
+                                }
                                 val customerSignatureBitmap = renderSignatureToBitmap(customerSignatureLines, customerSignatureCanvasSize)
                                 val technicianSignatureBitmap = renderSignatureToBitmap(technicianSignatureLines, technicianSignatureCanvasSize)
                                 val customerSignaturePath = customerSignatureBitmap?.let {
@@ -392,7 +419,14 @@ fun CompleteJobDialog(
                         ) {
                             Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text(if (isEditMode) "Fişi Güncelle & Kaydet" else "İşi Kapat & Kaydet", fontWeight = FontWeight.Bold)
+                            Text(
+                                when {
+                                    createMode -> "Servis Fişini Oluştur"
+                                    isEditMode -> "Fişi Güncelle & Kaydet"
+                                    else -> "İşi Kapat & Kaydet"
+                                },
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -433,14 +467,14 @@ fun CompleteJobDialog(
                 Column(modifier = Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator()
                     Spacer(modifier = Modifier.height(10.dp))
-                    Text("İş kapatılıyor…", fontWeight = FontWeight.Bold)
+                    Text(if (createMode) "Servis fişi oluşturuluyor…" else "İş kapatılıyor…", fontWeight = FontWeight.Bold)
                     Text("Servis fişi, finans ve stok bilgileri kaydediliyor.", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
     }
 
-    if (showIbanDialog) {
+    if (showIbanDialog && !createMode) {
         SendBankTransferDialog(
             appointment = appointment,
             bankAccounts = bankAccounts,
@@ -519,6 +553,7 @@ private fun Step1FinanceView(
     onPaymentPromiseDateChange: (String) -> Unit,
     revenueNote: String,
     onRevenueNoteChange: (String) -> Unit,
+    allowTransferMessage: Boolean = true,
     onOpenIbanDialog: () -> Unit = {}
 ) {
     Column {
@@ -610,7 +645,7 @@ private fun Step1FinanceView(
                     selected = paymentMethod == method,
                     onClick = {
                         onPaymentMethodChange(method)
-                        if (method == "EFT / Havale") {
+                        if (method == "EFT / Havale" && allowTransferMessage) {
                             onOpenIbanDialog()
                         }
                     },
@@ -623,7 +658,7 @@ private fun Step1FinanceView(
             }
         }
 
-        if (paymentMethod == "EFT / Havale") {
+        if (paymentMethod == "EFT / Havale" && allowTransferMessage) {
             Spacer(modifier = Modifier.height(8.dp))
             Card(
                 modifier = Modifier.fillMaxWidth(),

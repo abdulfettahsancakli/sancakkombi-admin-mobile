@@ -402,6 +402,16 @@ class MainViewModel(
         }
     }
 
+    fun createServiceReceipt(
+        appointment: Appointment,
+        jobReport: JobReport,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            onResult(repository.createServiceReceipt(appointment, jobReport))
+        }
+    }
+
     fun sendBankTransferMessage(
         appointmentId: String,
         paymentAccountKey: String,

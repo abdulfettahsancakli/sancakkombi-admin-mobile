@@ -47,9 +47,12 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Navigation
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -100,8 +103,14 @@ import com.example.data.model.StockItem
 import com.example.data.model.JobReport
 import com.example.ui.components.CompleteJobDialog
 import com.example.ui.components.EditAppointmentDialog
+import com.example.ui.components.AppointmentDialogMode
 import com.example.ui.components.NewAppointmentDialog
 import com.example.utils.parseLocalizedDouble
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
+import java.util.TimeZone
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -115,46 +124,89 @@ fun AppointmentsScreen(
     onUpdateAppointment: (Appointment, (Result<Unit>) -> Unit) -> Unit,
     onUpdateStatus: (String, AppointmentStatus) -> Unit,
     onCompleteJob: (String, JobReport, (Result<Unit>) -> Unit) -> Unit,
+    onCreateServiceReceipt: (Appointment, JobReport, (Result<Unit>) -> Unit) -> Unit,
     onDeleteAppointment: (String) -> Unit,
     onSendBankTransfer: (appointmentId: String, accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _, _ -> },
     onGetAvailableSlots: (dateIso: String, onResult: (Result<List<String>>) -> Unit) -> Unit = { _, _ -> },
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val defaultMonthRange = remember { currentMonthRangeTr() }
 
     var selectedStatusFilter by remember { mutableStateOf<AppointmentStatus?>(null) }
-    var viewMode by remember { mutableStateOf("liste") } // "liste" vs "takvim"
-    var startDate by remember { mutableStateOf("01.08.2026") }
-    var endDate by remember { mutableStateOf("31.08.2026") }
+    var viewMode by remember { mutableStateOf("liste") } // liste, takvim, harita
+    var dateTimeline by remember { mutableStateOf("month") }
+    var startDate by remember { mutableStateOf(defaultMonthRange.first) }
+    var endDate by remember { mutableStateOf(defaultMonthRange.second) }
+    var searchQuery by remember { mutableStateOf("") }
+    var districtFilter by remember { mutableStateOf("Tümü") }
+    var serviceFilter by remember { mutableStateOf("Tümü") }
     var showDateRangeDialog by remember { mutableStateOf(false) }
 
     var showNewDialog by remember { mutableStateOf(false) }
+    var newAppointmentInitialDate by remember { mutableStateOf<String?>(null) }
+    var showServiceReceiptIntake by remember { mutableStateOf(false) }
+    var serviceReceiptDraft by remember { mutableStateOf<Appointment?>(null) }
     var editingAppointment by remember { mutableStateOf<Appointment?>(null) }
     var completingAppointment by remember { mutableStateOf<Appointment?>(null) }
     var bankTransferAppointment by remember { mutableStateOf<Appointment?>(null) }
 
     var expandedFilter by remember { mutableStateOf(false) }
 
-    val filteredAppointments = remember(appointments, selectedStatusFilter, startDate, endDate) {
+    val timelineAppointments = remember(appointments, startDate, endDate) {
         val startVal = parseDateToComparableInt(startDate)
         val endVal = parseDateToComparableInt(endDate)
 
         appointments.filter { appt ->
-            val matchesStatus = selectedStatusFilter == null || appt.status == selectedStatusFilter
             val apptDateVal = parseDateToComparableInt(appt.date)
             val matchesDate = if (startVal != null && endVal != null && apptDateVal != null) {
                 apptDateVal in startVal..endVal
             } else true
-
-            matchesStatus && matchesDate
+            matchesDate
         }
     }
 
-    val countTotal = appointments.size
-    val countBekliyor = appointments.count { it.status == AppointmentStatus.BEKLIYOR }
-    val countOnaylandi = appointments.count { it.status == AppointmentStatus.ONAYLANDI }
-    val countTamamlandi = appointments.count { it.status == AppointmentStatus.TAMAMLANDI }
-    val countIptal = appointments.count { it.status == AppointmentStatus.IPTAL }
+    val districtOptions = remember(appointments) {
+        listOf("Tümü") + appointments.map { it.district.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+    val serviceOptions = remember(appointments) {
+        listOf("Tümü") + appointments.map { it.serviceType.trim() }.filter { it.isNotBlank() }.distinct().sorted()
+    }
+
+    val filteredAppointments = remember(
+        timelineAppointments,
+        selectedStatusFilter,
+        districtFilter,
+        serviceFilter,
+        searchQuery
+    ) {
+        val query = searchQuery.trim().lowercase(Locale.forLanguageTag("tr-TR"))
+        val queryDigits = query.filter(Char::isDigit)
+        timelineAppointments.filter { appt ->
+            val matchesStatus = selectedStatusFilter == null || appt.status == selectedStatusFilter
+            val matchesDistrict = districtFilter == "Tümü" || appt.district.equals(districtFilter, ignoreCase = true)
+            val matchesService = serviceFilter == "Tümü" || appt.serviceType.equals(serviceFilter, ignoreCase = true)
+            val searchable = listOf(
+                appt.customerName,
+                appt.phone,
+                appt.district,
+                appt.neighborhood,
+                appt.addressDetail,
+                appt.problemNote,
+                appt.serviceType
+            ).joinToString(" ").lowercase(Locale.forLanguageTag("tr-TR"))
+            val matchesSearch = query.isBlank() || searchable.contains(query) ||
+                (queryDigits.isNotBlank() && appt.phone.filter(Char::isDigit).contains(queryDigits))
+            matchesStatus && matchesDistrict && matchesService && matchesSearch
+        }
+    }
+
+    val countTotal = timelineAppointments.size
+    val countBekliyor = timelineAppointments.count { it.status == AppointmentStatus.BEKLIYOR }
+    val countOnaylandi = timelineAppointments.count { it.status == AppointmentStatus.ONAYLANDI }
+    val countTamamlandi = timelineAppointments.count { it.status == AppointmentStatus.TAMAMLANDI }
+    val countIptal = timelineAppointments.count { it.status == AppointmentStatus.IPTAL }
+    val todayCount = timelineAppointments.count { it.date == currentDateTr() }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -185,19 +237,7 @@ fun AppointmentsScreen(
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
-
-                Button(
-                    onClick = { showNewDialog = true },
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ),
-                    modifier = Modifier.testTag("new_appointment_button")
-                ) {
-                    Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text("Yeni Randevu", fontWeight = FontWeight.Bold)
-                }
+                Text("Randevu Yönetimi", fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -215,64 +255,20 @@ fun AppointmentsScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Görünen liste: ${filteredAppointments.size} kayıt | Toplam: $countTotal randevu",
+                        text = "Seçili aralıkta $countTotal randevu • ${filteredAppointments.size} kayıt gösteriliyor",
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-                // View Mode Switcher
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.surfaceVariant)
-                        .padding(2.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (viewMode == "liste") MaterialTheme.colorScheme.primary else Color.Transparent)
-                            .clickable { viewMode = "liste" }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.List,
-                                contentDescription = "Liste",
-                                tint = if (viewMode == "liste") Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Liste",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (viewMode == "liste") Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(if (viewMode == "takvim") MaterialTheme.colorScheme.primary else Color.Transparent)
-                            .clickable { viewMode = "takvim" }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.CalendarMonth,
-                                contentDescription = "Takvim",
-                                tint = if (viewMode == "takvim") Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text(
-                                text = "Takvim",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (viewMode == "takvim") Color.White else MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                if (countBekliyor > 0) {
+                    Surface(shape = RoundedCornerShape(50), color = Color(0xFFFFF7ED)) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(Modifier.size(7.dp).clip(CircleShape).background(Color(0xFFF59E0B)))
+                            Spacer(Modifier.width(5.dp))
+                            Text("$countBekliyor bekliyor", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB45309))
                         }
                     }
                 }
@@ -280,140 +276,133 @@ fun AppointmentsScreen(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Filter Chips Bar (Horizontal Scrollable Chips)
-            LazyRow(
+            // Web yönetim ekranındaki iki ana işlem mobilde tek bir aksiyon kartında.
+            Card(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .16f))
             ) {
-                item {
-                    FilterChip(
-                        selected = selectedStatusFilter == null,
-                        onClick = { selectedStatusFilter = null },
-                        label = { Text("Tümü ($countTotal)", fontWeight = FontWeight.Bold) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = MaterialTheme.colorScheme.primary,
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedStatusFilter == AppointmentStatus.BEKLIYOR,
-                        onClick = { selectedStatusFilter = AppointmentStatus.BEKLIYOR },
-                        label = { Text("Bekleyen ($countBekliyor)", fontWeight = FontWeight.SemiBold) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFF59E0B))
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFF59E0B),
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedStatusFilter == AppointmentStatus.ONAYLANDI,
-                        onClick = { selectedStatusFilter = AppointmentStatus.ONAYLANDI },
-                        label = { Text("Onaylanan ($countOnaylandi)", fontWeight = FontWeight.SemiBold) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF0288D1))
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF0288D1),
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedStatusFilter == AppointmentStatus.TAMAMLANDI,
-                        onClick = { selectedStatusFilter = AppointmentStatus.TAMAMLANDI },
-                        label = { Text("Tamamlandı ($countTamamlandi)", fontWeight = FontWeight.SemiBold) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF2E7D32))
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFF2E7D32),
-                            selectedLabelColor = Color.White
-                        )
-                    )
-                }
-                item {
-                    FilterChip(
-                        selected = selectedStatusFilter == AppointmentStatus.IPTAL,
-                        onClick = { selectedStatusFilter = AppointmentStatus.IPTAL },
-                        label = { Text("İptal ($countIptal)", fontWeight = FontWeight.SemiBold) },
-                        leadingIcon = {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFFD32F2F))
-                            )
-                        },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFD32F2F),
-                            selectedLabelColor = Color.White
-                        )
-                    )
+                Column(modifier = Modifier.fillMaxWidth().padding(10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = { showServiceReceiptIntake = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).testTag("service_receipt_button")
+                        ) {
+                            Icon(Icons.Default.ReceiptLong, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Column {
+                                Text("Servis Fişi Oluştur", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text("Randevusuz hızlı iş", fontSize = 9.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Button(
+                            onClick = { newAppointmentInitialDate = null; showNewDialog = true },
+                            shape = RoundedCornerShape(10.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.weight(1f).testTag("new_appointment_button")
+                        ) {
+                            Icon(Icons.Default.Add, null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Column {
+                                Text("Yeni Randevu", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                Text("Planlı servis oluştur", fontSize = 9.sp, color = Color.White.copy(alpha = .8f))
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(MaterialTheme.colorScheme.surfaceVariant).padding(3.dp)
+                    ) {
+                        ViewModeButton("liste", "Liste", Icons.Default.List, viewMode, Modifier.weight(1f)) { viewMode = "liste" }
+                        ViewModeButton("takvim", "Takvim", Icons.Default.CalendarMonth, viewMode, Modifier.weight(1f)) { viewMode = "takvim" }
+                        ViewModeButton("harita", "Harita", Icons.Default.Map, viewMode, Modifier.weight(1f)) { viewMode = "harita" }
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
-            // Date Range Bar
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDateRangeDialog = true },
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+            // Web ekranındaki zaman çizelgesi, arama ve dinamik filtreler.
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .14f))
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Tarih Aralığı: $startDate - $endDate",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(modifier = Modifier.weight(1f))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                    ) {
-                        Text(
-                            text = "Değiştir",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                Column(Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                        val presets = listOf(
+                            Triple("today", "Bugün", currentDateTr()),
+                            Triple("tomorrow", "Yarın", currentDateTr(1)),
+                            Triple("week", "Bu Hafta", currentWeekRangeTr().first),
+                            Triple("month", "Bu Ay", defaultMonthRange.first),
+                            Triple("all", "Tüm Zamanlar", "")
                         )
+                        items(presets) { (key, label, _) ->
+                            FilterChip(
+                                selected = dateTimeline == key,
+                                onClick = {
+                                    dateTimeline = key
+                                    when (key) {
+                                        "today" -> { startDate = currentDateTr(); endDate = startDate }
+                                        "tomorrow" -> { startDate = currentDateTr(1); endDate = startDate }
+                                        "week" -> currentWeekRangeTr().also { startDate = it.first; endDate = it.second }
+                                        "month" -> { startDate = defaultMonthRange.first; endDate = defaultMonthRange.second }
+                                        else -> { startDate = ""; endDate = "" }
+                                    }
+                                },
+                                label = { Text(label, fontSize = 11.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = .14f),
+                                    selectedLabelColor = MaterialTheme.colorScheme.primary
+                                )
+                            )
+                        }
+                        item {
+                            FilterChip(
+                                selected = dateTimeline == "custom",
+                                onClick = { showDateRangeDialog = true },
+                                label = { Text("Özel Aralık", fontSize = 11.sp) },
+                                leadingIcon = { Icon(Icons.Default.CalendarMonth, null, Modifier.size(15.dp)) }
+                            )
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        label = { Text("Müşteri, telefon, mahalle veya arıza ara") },
+                        leadingIcon = { Icon(Icons.Default.Search, null, Modifier.size(19.dp)) },
+                        trailingIcon = if (searchQuery.isNotBlank()) {
+                            { IconButton(onClick = { searchQuery = "" }) { Icon(Icons.Default.Close, "Aramayı temizle", Modifier.size(18.dp)) } }
+                        } else null,
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp)
+                    )
+
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        AppointmentFilterDropdown(
+                            label = "İlçe / Bölge",
+                            value = districtFilter,
+                            options = districtOptions,
+                            onSelect = { districtFilter = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                        AppointmentFilterDropdown(
+                            label = "Hizmet Türü",
+                            value = serviceFilter,
+                            options = serviceOptions,
+                            onSelect = { serviceFilter = it },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+
+                    if (dateTimeline == "custom") {
+                        Text("Özel aralık: $startDate – $endDate", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -427,9 +416,11 @@ fun AppointmentsScreen(
             ) {
                 item {
                     StatChipCard(
-                        label = "TOPLAM",
+                        label = "TOPLAM RANDEVU",
                         count = countTotal,
                         accentColor = Color(0xFF64748B),
+                        progress = 1f,
+                        supportingText = "Bugün $todayCount iş emri",
                         isSelected = selectedStatusFilter == null,
                         onClick = { selectedStatusFilter = null }
                     )
@@ -439,8 +430,10 @@ fun AppointmentsScreen(
                         label = "BEKLİYOR",
                         count = countBekliyor,
                         accentColor = Color(0xFFF59E0B),
+                        progress = statusProgress(countBekliyor, countTotal),
+                        supportingText = if (countBekliyor == 0) "Tümü cevaplandı" else "$countBekliyor talep",
                         isSelected = selectedStatusFilter == AppointmentStatus.BEKLIYOR,
-                        onClick = { selectedStatusFilter = AppointmentStatus.BEKLIYOR }
+                        onClick = { selectedStatusFilter = if (selectedStatusFilter == AppointmentStatus.BEKLIYOR) null else AppointmentStatus.BEKLIYOR }
                     )
                 }
                 item {
@@ -448,8 +441,10 @@ fun AppointmentsScreen(
                         label = "ONAYLANDI",
                         count = countOnaylandi,
                         accentColor = Color(0xFF0288D1),
+                        progress = statusProgress(countOnaylandi, countTotal),
+                        supportingText = "%${statusPercent(countOnaylandi, countTotal)} aktif",
                         isSelected = selectedStatusFilter == AppointmentStatus.ONAYLANDI,
-                        onClick = { selectedStatusFilter = AppointmentStatus.ONAYLANDI }
+                        onClick = { selectedStatusFilter = if (selectedStatusFilter == AppointmentStatus.ONAYLANDI) null else AppointmentStatus.ONAYLANDI }
                     )
                 }
                 item {
@@ -457,8 +452,10 @@ fun AppointmentsScreen(
                         label = "TAMAMLANDI",
                         count = countTamamlandi,
                         accentColor = Color(0xFF2E7D32),
+                        progress = statusProgress(countTamamlandi, countTotal),
+                        supportingText = "$countTamamlandi servis fişi",
                         isSelected = selectedStatusFilter == AppointmentStatus.TAMAMLANDI,
-                        onClick = { selectedStatusFilter = AppointmentStatus.TAMAMLANDI }
+                        onClick = { selectedStatusFilter = if (selectedStatusFilter == AppointmentStatus.TAMAMLANDI) null else AppointmentStatus.TAMAMLANDI }
                     )
                 }
                 item {
@@ -466,8 +463,10 @@ fun AppointmentsScreen(
                         label = "İPTAL",
                         count = countIptal,
                         accentColor = Color(0xFFD32F2F),
+                        progress = statusProgress(countIptal, countTotal),
+                        supportingText = "%${statusPercent(countIptal, countTotal)} iptal",
                         isSelected = selectedStatusFilter == AppointmentStatus.IPTAL,
-                        onClick = { selectedStatusFilter = AppointmentStatus.IPTAL }
+                        onClick = { selectedStatusFilter = if (selectedStatusFilter == AppointmentStatus.IPTAL) null else AppointmentStatus.IPTAL }
                     )
                 }
             }
@@ -483,10 +482,20 @@ fun AppointmentsScreen(
                             .weight(1f),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "Henüz kayıtlı randevu bulunamadı.",
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = .5f), modifier = Modifier.size(34.dp))
+                            Spacer(Modifier.height(6.dp))
+                            Text("Filtrelerle eşleşen randevu bulunamadı.", color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 12.sp)
+                            Spacer(Modifier.height(8.dp))
+                            OutlinedButton(
+                                onClick = {
+                                    selectedStatusFilter = null
+                                    districtFilter = "Tümü"
+                                    serviceFilter = "Tümü"
+                                    searchQuery = ""
+                                }
+                            ) { Text("Filtreleri Temizle", fontSize = 11.sp) }
+                        }
                     }
                 } else {
                     LazyColumn(
@@ -527,11 +536,11 @@ fun AppointmentsScreen(
                         }
                     }
                 }
-            } else {
+            } else if (viewMode == "takvim") {
                 // Modernized Mobile Calendar View
                 ModernMobileCalendarView(
-                    appointments = appointments,
-                    selectedStatusFilter = selectedStatusFilter,
+                    appointments = filteredAppointments,
+                    selectedStatusFilter = null,
                     onAppointmentClick = {
                         if (it.status == AppointmentStatus.TAMAMLANDI) {
                             completingAppointment = it
@@ -539,7 +548,19 @@ fun AppointmentsScreen(
                             editingAppointment = it
                         }
                     },
-                    onNewAppointmentForDate = { showNewDialog = true },
+                    onNewAppointmentForDate = {
+                        newAppointmentInitialDate = it
+                        showNewDialog = true
+                    },
+                    modifier = Modifier.weight(1f)
+                )
+            } else {
+                MobileRouteView(
+                    appointments = filteredAppointments,
+                    onAppointmentClick = {
+                        if (it.status == AppointmentStatus.TAMAMLANDI) completingAppointment = it
+                        else editingAppointment = it
+                    },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -555,12 +576,14 @@ fun AppointmentsScreen(
             onApply = { s, e ->
                 startDate = s
                 endDate = e
+                dateTimeline = "custom"
             }
         )
     }
     if (showNewDialog) {
         NewAppointmentDialog(
             customers = customers,
+            initialDate = newAppointmentInitialDate,
             onDismiss = { showNewDialog = false },
             onSave = { newAppt, callback ->
                 onAddAppointment(newAppt) { result ->
@@ -568,6 +591,32 @@ fun AppointmentsScreen(
                 }
             },
             onGetAvailableSlots = onGetAvailableSlots
+        )
+    }
+
+    if (showServiceReceiptIntake) {
+        NewAppointmentDialog(
+            customers = customers,
+            mode = AppointmentDialogMode.SERVICE_RECEIPT,
+            onDismiss = { showServiceReceiptIntake = false },
+            onSave = { draft, callback ->
+                serviceReceiptDraft = draft
+                showServiceReceiptIntake = false
+                callback(Result.success(Unit))
+            }
+        )
+    }
+
+    serviceReceiptDraft?.let { draft ->
+        CompleteJobDialog(
+            appointment = draft,
+            createMode = true,
+            bankAccounts = bankAccounts,
+            stockItems = stockItems,
+            onDismiss = { serviceReceiptDraft = null },
+            onComplete = { report, callback ->
+                onCreateServiceReceipt(draft, report, callback)
+            }
         )
     }
 
@@ -617,6 +666,204 @@ fun AppointmentsScreen(
     }
 }
 
+@Composable
+private fun ViewModeButton(
+    mode: String,
+    label: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    selectedMode: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val selected = mode == selectedMode
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Transparent)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 7.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, label, tint = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(15.dp))
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppointmentFilterDropdown(
+    label: String,
+    value: String,
+    options: List<String>,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = !expanded }, modifier = modifier) {
+        OutlinedTextField(
+            value = value,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label, fontSize = 10.sp) },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded) },
+            modifier = Modifier.fillMaxWidth().menuAnchor(),
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodySmall,
+            shape = RoundedCornerShape(10.dp)
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            options.forEach { option ->
+                DropdownMenuItem(
+                    text = { Text(option, fontSize = 12.sp) },
+                    onClick = { onSelect(option); expanded = false }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MobileRouteView(
+    appointments: List<Appointment>,
+    onAppointmentClick: (Appointment) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val routeAppointments = remember(appointments) {
+        appointments.filter { it.status != AppointmentStatus.IPTAL && it.addressDetail.isNotBlank() }
+    }
+    val routeDates = remember(routeAppointments) {
+        routeAppointments.map { it.date }.distinct().sortedBy { parseDateToComparableInt(it) ?: Int.MAX_VALUE }
+    }
+    var selectedDate by remember(routeDates) {
+        mutableStateOf(routeDates.firstOrNull { it == currentDateTr() } ?: routeDates.firstOrNull().orEmpty())
+    }
+    val stops = remember(routeAppointments, selectedDate) {
+        routeAppointments.filter { it.date == selectedDate }.sortedBy { it.timeSlot }
+    }
+
+    fun openAllStops() {
+        if (stops.isEmpty()) return
+        val destination = Uri.encode(stops.last().addressDetail)
+        val waypoints = stops.dropLast(1).take(8).joinToString("|") { it.addressDetail }
+        val url = buildString {
+            append("https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=")
+            append(destination)
+            if (waypoints.isNotBlank()) append("&waypoints=${Uri.encode(waypoints)}")
+        }
+        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+    }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .14f))
+    ) {
+        Column(Modifier.fillMaxSize().padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary.copy(alpha = .12f)) {
+                    Icon(Icons.Default.Map, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.padding(9.dp).size(20.dp))
+                }
+                Spacer(Modifier.width(9.dp))
+                Column(Modifier.weight(1f)) {
+                    Text("Günlük Servis Rotası", fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                    Text("Durakları sırayla açın veya tüm rotayı başlatın", fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            }
+
+            if (routeDates.isEmpty()) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text("Seçili filtrelerde adresi olan rota kaydı yok.", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+                    items(routeDates) { date ->
+                        val count = routeAppointments.count { it.date == date }
+                        FilterChip(
+                            selected = selectedDate == date,
+                            onClick = { selectedDate = date },
+                            label = { Text("${if (date == currentDateTr()) "Bugün • " else ""}$date ($count)", fontSize = 10.sp) }
+                        )
+                    }
+                }
+
+                Button(
+                    onClick = { openAllStops() },
+                    enabled = stops.isNotEmpty(),
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Icon(Icons.Default.Navigation, null, Modifier.size(17.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("${stops.size} Duraklı Rotayı Başlat", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+
+                LazyColumn(Modifier.fillMaxWidth().weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    items(stops, key = { it.id }) { appointment ->
+                        val stopNumber = stops.indexOf(appointment) + 1
+                        Card(
+                            modifier = Modifier.fillMaxWidth().clickable { onAppointmentClick(appointment) },
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = .34f))
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Surface(shape = CircleShape, color = MaterialTheme.colorScheme.primary) {
+                                    Text("$stopNumber", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp))
+                                }
+                                Spacer(Modifier.width(9.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text("${appointment.timeSlot} • ${appointment.customerName}", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    Text(appointment.addressDetail, fontSize = 10.5.sp, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                }
+                                IconButton(
+                                    onClick = {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(appointment.addressDetail)}")))
+                                    }
+                                ) {
+                                    Icon(Icons.Default.Navigation, "Konuma git", tint = MaterialTheme.colorScheme.primary)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun istanbulCalendar(): Calendar = Calendar.getInstance(TimeZone.getTimeZone("Europe/Istanbul"))
+
+private fun formatTrDate(calendar: Calendar): String =
+    SimpleDateFormat("dd.MM.yyyy", Locale.forLanguageTag("tr-TR")).apply {
+        timeZone = TimeZone.getTimeZone("Europe/Istanbul")
+    }.format(calendar.time)
+
+private fun currentDateTr(offsetDays: Int = 0): String =
+    formatTrDate(istanbulCalendar().apply { add(Calendar.DAY_OF_YEAR, offsetDays) })
+
+private fun currentMonthRangeTr(): Pair<String, String> {
+    val start = istanbulCalendar().apply { set(Calendar.DAY_OF_MONTH, 1) }
+    val end = (start.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, getActualMaximum(Calendar.DAY_OF_MONTH)) }
+    return formatTrDate(start) to formatTrDate(end)
+}
+
+private fun currentWeekRangeTr(): Pair<String, String> {
+    val start = istanbulCalendar().apply {
+        firstDayOfWeek = Calendar.MONDAY
+        val offset = (get(Calendar.DAY_OF_WEEK) - Calendar.MONDAY + 7) % 7
+        add(Calendar.DAY_OF_YEAR, -offset)
+    }
+    val end = (start.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 6) }
+    return formatTrDate(start) to formatTrDate(end)
+}
+
+private fun statusProgress(count: Int, total: Int): Float = if (total > 0) count.toFloat() / total else 0f
+
+private fun statusPercent(count: Int, total: Int): Int = if (total > 0) ((count * 100f) / total).toInt() else 0
+
 private fun parseDateToComparableInt(dateStr: String): Int? {
     val regex = Regex("""(\d{2})\.(\d{2})\.(\d{4})""")
     val match = regex.find(dateStr) ?: return null
@@ -629,15 +876,17 @@ private fun StatChipCard(
     label: String,
     count: Int,
     accentColor: Color,
+    progress: Float,
+    supportingText: String,
     isSelected: Boolean = false,
     onClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier
-            .widthIn(min = 72.dp)
+            .widthIn(min = 148.dp)
             .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) accentColor.copy(alpha = 0.15f) else MaterialTheme.colorScheme.surface
         ),
@@ -649,21 +898,27 @@ private fun StatChipCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 14.dp, vertical = 12.dp)
         ) {
-            Text(
-                text = "$count",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = accentColor
-            )
             Text(
                 text = label,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Spacer(Modifier.height(3.dp))
+            Text(
+                text = "$count",
+                fontSize = 23.sp,
+                fontWeight = FontWeight.Bold,
+                color = accentColor
+            )
+            Spacer(Modifier.height(7.dp))
+            Box(Modifier.fillMaxWidth().height(5.dp).clip(RoundedCornerShape(50)).background(MaterialTheme.colorScheme.outline.copy(alpha = .12f))) {
+                Box(Modifier.fillMaxWidth(progress.coerceIn(0f, 1f)).fillMaxHeight().background(accentColor))
+            }
+            Spacer(Modifier.height(5.dp))
+            Text(supportingText, fontSize = 9.sp, fontWeight = FontWeight.SemiBold, color = accentColor)
         }
     }
 }
@@ -1030,7 +1285,7 @@ private fun ModernMobileCalendarView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedDate by remember { mutableStateOf("12.08.2026") }
+    var selectedDate by remember { mutableStateOf(currentDateTr()) }
 
     val weekDays = remember(selectedDate) {
         calculateWeekDaysForDate(selectedDate)
@@ -1055,9 +1310,10 @@ private fun ModernMobileCalendarView(
         val cal = java.util.Calendar.getInstance()
         val parts = selectedDate.split(".")
         if (parts.size == 3) {
-            val d = parts[0].toIntOrNull() ?: 12
-            val m = (parts[1].toIntOrNull() ?: 8) - 1
-            val y = parts[2].toIntOrNull() ?: 2026
+            val now = Calendar.getInstance(TimeZone.getTimeZone("Europe/Istanbul"))
+            val d = parts[0].toIntOrNull() ?: now.get(Calendar.DAY_OF_MONTH)
+            val m = (parts[1].toIntOrNull() ?: (now.get(Calendar.MONTH) + 1)) - 1
+            val y = parts[2].toIntOrNull() ?: now.get(Calendar.YEAR)
             cal.set(y, m, d)
         }
 
@@ -1129,7 +1385,7 @@ private fun ModernMobileCalendarView(
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f),
-                    modifier = Modifier.clickable { selectedDate = "12.08.2026" }
+                    modifier = Modifier.clickable { selectedDate = currentDateTr() }
                 ) {
                     Text(
                         text = "Bugün",
@@ -1353,12 +1609,15 @@ private data class CalendarDay(
 )
 
 private fun calculateWeekDaysForDate(selectedDateStr: String): List<CalendarDay> {
-    val cal = java.util.Calendar.getInstance()
+    val cal = istanbulCalendar()
+    val fallbackDay = cal.get(Calendar.DAY_OF_MONTH)
+    val fallbackMonth = cal.get(Calendar.MONTH) + 1
+    val fallbackYear = cal.get(Calendar.YEAR)
     val parts = selectedDateStr.split(".")
     if (parts.size == 3) {
-        val d = parts[0].toIntOrNull() ?: 12
-        val m = (parts[1].toIntOrNull() ?: 8) - 1
-        val y = parts[2].toIntOrNull() ?: 2026
+        val d = parts[0].toIntOrNull() ?: fallbackDay
+        val m = (parts[1].toIntOrNull() ?: fallbackMonth) - 1
+        val y = parts[2].toIntOrNull() ?: fallbackYear
         cal.set(y, m, d)
     }
 
@@ -1385,25 +1644,29 @@ private fun getMonthYearText(selectedDateStr: String): String {
     val monthNames = arrayOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
     val parts = selectedDateStr.split(".")
     if (parts.size == 3) {
-        val m = (parts[1].toIntOrNull() ?: 8) - 1
-        val y = parts[2].toIntOrNull() ?: 2026
+        val now = istanbulCalendar()
+        val m = (parts[1].toIntOrNull() ?: (now.get(Calendar.MONTH) + 1)) - 1
+        val y = parts[2].toIntOrNull() ?: now.get(Calendar.YEAR)
         if (m in 0..11) {
             return "${monthNames[m]} $y"
         }
     }
-    return "Ağustos 2026"
+    return getMonthYearText(currentDateTr())
 }
 
 private fun formatFullDateHeader(selectedDateStr: String): String {
     val monthNames = arrayOf("Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık")
     val dayNames = arrayOf("Pazar", "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi")
 
-    val cal = java.util.Calendar.getInstance()
+    val cal = istanbulCalendar()
+    val fallbackDay = cal.get(Calendar.DAY_OF_MONTH)
+    val fallbackMonth = cal.get(Calendar.MONTH) + 1
+    val fallbackYear = cal.get(Calendar.YEAR)
     val parts = selectedDateStr.split(".")
     if (parts.size == 3) {
-        val d = parts[0].toIntOrNull() ?: 12
-        val m = (parts[1].toIntOrNull() ?: 8) - 1
-        val y = parts[2].toIntOrNull() ?: 2026
+        val d = parts[0].toIntOrNull() ?: fallbackDay
+        val m = (parts[1].toIntOrNull() ?: fallbackMonth) - 1
+        val y = parts[2].toIntOrNull() ?: fallbackYear
         cal.set(y, m, d)
         val dayOfWeekIndex = cal.get(java.util.Calendar.DAY_OF_WEEK) - 1
         val dayOfWeekStr = dayNames[dayOfWeekIndex]
@@ -1420,8 +1683,9 @@ private fun DateRangeDialog(
     onDismiss: () -> Unit,
     onApply: (start: String, end: String) -> Unit
 ) {
-    var startInput by remember { mutableStateOf(initialStartDate) }
-    var endInput by remember { mutableStateOf(initialEndDate) }
+    val monthRange = remember { currentMonthRangeTr() }
+    var startInput by remember { mutableStateOf(initialStartDate.ifBlank { monthRange.first }) }
+    var endInput by remember { mutableStateOf(initialEndDate.ifBlank { monthRange.second }) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(
@@ -1473,8 +1737,8 @@ private fun DateRangeDialog(
                     item {
                         SuggestionChip(
                             onClick = {
-                                startInput = "12.08.2026"
-                                endInput = "12.08.2026"
+                                startInput = currentDateTr()
+                                endInput = startInput
                             },
                             label = { Text("Bugün", fontSize = 11.sp) }
                         )
@@ -1482,8 +1746,7 @@ private fun DateRangeDialog(
                     item {
                         SuggestionChip(
                             onClick = {
-                                startInput = "10.08.2026"
-                                endInput = "16.08.2026"
+                                currentWeekRangeTr().also { startInput = it.first; endInput = it.second }
                             },
                             label = { Text("Bu Hafta", fontSize = 11.sp) }
                         )
@@ -1491,8 +1754,8 @@ private fun DateRangeDialog(
                     item {
                         SuggestionChip(
                             onClick = {
-                                startInput = "01.08.2026"
-                                endInput = "31.08.2026"
+                                startInput = monthRange.first
+                                endInput = monthRange.second
                             },
                             label = { Text("Bu Ay", fontSize = 11.sp) }
                         )
@@ -1500,8 +1763,9 @@ private fun DateRangeDialog(
                     item {
                         SuggestionChip(
                             onClick = {
-                                startInput = "01.01.2026"
-                                endInput = "31.12.2026"
+                                val year = istanbulCalendar().get(Calendar.YEAR)
+                                startInput = "01.01.$year"
+                                endInput = "31.12.$year"
                             },
                             label = { Text("Tüm Yıl", fontSize = 11.sp) }
                         )

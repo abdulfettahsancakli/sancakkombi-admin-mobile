@@ -73,6 +73,12 @@ interface AdminApiService {
     @POST("api/admin/appointments/{id}/complete")
     suspend fun completeJob(@Header("Authorization") auth: String, @Path("id") id: String, @Body body: CompleteJobRequestDto): Response<SuccessResponseDto>
 
+    @POST("api/admin/appointments/service-receipt")
+    suspend fun createServiceReceipt(
+        @Header("Authorization") auth: String,
+        @Body body: ServiceReceiptRequestDto
+    ): Response<SuccessResponseDto>
+
     @POST("api/admin/appointments/{id}/send-bank-transfer")
     suspend fun sendBankTransfer(
         @Header("Authorization") auth: String,

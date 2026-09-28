@@ -83,6 +83,12 @@ data class CompleteJobRequestDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class ServiceReceiptRequestDto(
+    val appointment: com.example.data.model.Appointment,
+    val jobReport: com.example.data.model.JobReport
+)
+
+@JsonClass(generateAdapter = true)
 data class FinanceRecordCreateResponseDto(
     val success: Boolean = false,
     val error: String? = null,

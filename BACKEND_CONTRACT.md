@@ -38,6 +38,13 @@ Finance records created from a completed service must include:
 
 ## Receipt detail
 
+`POST /api/admin/appointments/service-receipt` accepts the authenticated mobile
+payload `{ appointment, jobReport }`. It creates a silent confirmed appointment
+and completes it through the same financial, receipt, stock, maintenance, and
+notification workflow used by the web admin's `Servis Fişi Kes` action. If
+completion fails, the backend removes the intermediate appointment so a quick
+receipt never leaves a half-created booking behind.
+
 `GET /api/admin/finance/receipt/{entryId}` should return the actual appointment-backed customer, address, device, work note, payment, warranty, service fee, other fee, and used parts. Do not return placeholder customer, phone, date, device, or warranty values.
 
 ## Catalog and inventory

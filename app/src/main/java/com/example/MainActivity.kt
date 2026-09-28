@@ -168,6 +168,9 @@ class MainActivity : ComponentActivity() {
                                         onUpdateAppointment = { appt, callback -> viewModel.updateAppointment(appt, callback) },
                                         onUpdateStatus = { id, st -> viewModel.updateAppointmentStatus(id, st) },
                                         onCompleteJob = { id, report, callback -> viewModel.completeJob(id, report, callback) },
+                                        onCreateServiceReceipt = { appointment, report, callback ->
+                                            viewModel.createServiceReceipt(appointment, report, callback)
+                                        },
                                         onDeleteAppointment = { id -> viewModel.deleteAppointment(id) },
                                         onSendBankTransfer = { id, accKey, amt, date, callback ->
                                             viewModel.sendBankTransferMessage(id, accKey, amt, date, callback)
