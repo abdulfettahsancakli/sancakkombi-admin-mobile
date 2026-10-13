@@ -636,6 +636,7 @@ fun AppointmentDetailPane(
     val context = LocalContext.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
+    var activeViewerPhotoUrl by remember { mutableStateOf<String?>(null) }
 
     Column(modifier = modifier.fillMaxSize()) {
         Column(
@@ -884,6 +885,16 @@ fun AppointmentDetailPane(
                 }
             }
 
+            // Servis Fotoğrafları Galerisi (Tamamlanmış / Raporlu Randevular için)
+            val photos = appointment.jobReport?.photoUris ?: emptyList()
+            if (photos.isNotEmpty()) {
+                AppointmentPhotoGallery(
+                    photoUris = photos,
+                    t = t,
+                    onPhotoClick = { activeViewerPhotoUrl = it }
+                )
+            }
+
             // Map Route Preview Strip
             Surface(
                 onClick = {
@@ -983,6 +994,13 @@ fun AppointmentDetailPane(
                     }
                 }
             }
+        }
+
+        if (activeViewerPhotoUrl != null) {
+            PhotoViewerDialog(
+                photoUrl = activeViewerPhotoUrl!!,
+                onDismiss = { activeViewerPhotoUrl = null }
+            )
         }
     }
 }

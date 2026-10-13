@@ -55,8 +55,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import coil.compose.AsyncImage
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -344,6 +346,7 @@ fun ServiceReceiptFlowContent(
     }
     var showPhotoSourceDialog by remember { mutableStateOf(false) }
     var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+    var previewPhotoUrl by remember { mutableStateOf<String?>(null) }
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetMultipleContents()
     ) { uris ->
@@ -2102,7 +2105,9 @@ fun ServiceReceiptFlowContent(
                                 ) {
                                     rowIndices.forEach { idx ->
                                         if (idx < photoUris.size) {
+                                            val uriStr = photoUris[idx]
                                             Surface(
+                                                onClick = { previewPhotoUrl = uriStr },
                                                 shape = RoundedCornerShape(12.dp),
                                                 color = t.surface2,
                                                 border = BorderStroke(1.dp, t.border),
@@ -2111,22 +2116,22 @@ fun ServiceReceiptFlowContent(
                                                     .aspectRatio(1f)
                                             ) {
                                                 Box(modifier = Modifier.fillMaxSize()) {
-                                                    Column(
+                                                    AsyncImage(
+                                                        model = uriStr,
+                                                        contentDescription = "Fotoğraf #${idx + 1}",
+                                                        contentScale = ContentScale.Crop,
+                                                        modifier = Modifier.fillMaxSize()
+                                                    )
+                                                    Box(
                                                         modifier = Modifier
-                                                            .fillMaxSize()
-                                                            .padding(8.dp),
-                                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                                        verticalArrangement = Arrangement.Center
+                                                            .align(Alignment.BottomStart)
+                                                            .padding(4.dp)
+                                                            .size(20.dp)
+                                                            .clip(CircleShape)
+                                                            .background(Color.Black.copy(alpha = 0.6f)),
+                                                        contentAlignment = Alignment.Center
                                                     ) {
-                                                        Text(text = "🖼️", fontSize = 24.sp)
-                                                        Spacer(modifier = Modifier.height(4.dp))
-                                                        Text(
-                                                            text = "Fotoğraf #${idx + 1}",
-                                                            fontSize = 10.5.sp,
-                                                            fontWeight = FontWeight.Bold,
-                                                            color = t.text2,
-                                                            textAlign = TextAlign.Center
-                                                        )
+                                                        Text("🔍", fontSize = 10.sp)
                                                     }
                                                     Surface(
                                                         onClick = { photoUris.removeAt(idx) },
@@ -2135,7 +2140,7 @@ fun ServiceReceiptFlowContent(
                                                         modifier = Modifier
                                                             .align(Alignment.TopEnd)
                                                             .padding(4.dp)
-                                                            .size(22.dp)
+                                                            .size(24.dp)
                                                     ) {
                                                         Box(contentAlignment = Alignment.Center) {
                                                             Text(
@@ -2494,6 +2499,13 @@ fun ServiceReceiptFlowContent(
                     }
                 }
             }
+        }
+
+        if (previewPhotoUrl != null) {
+            PhotoViewerDialog(
+                photoUrl = previewPhotoUrl!!,
+                onDismiss = { previewPhotoUrl = null }
+            )
         }
     }
 }

@@ -23,6 +23,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -1912,6 +1915,7 @@ private fun CustomerDetailPaneContent(
     var editAddress by remember(profile.customer.id, profile.address) { mutableStateOf(profile.address) }
     var editGateNote by remember(profile.customer.id, profile.gateNote) { mutableStateOf(profile.gateNote) }
     var editServiceNote by remember(profile.customer.id, profile.serviceNote) { mutableStateOf(profile.serviceNote) }
+    var selectedCustomerPhotoViewer by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = modifier) {
         Column(
@@ -2741,6 +2745,43 @@ private fun CustomerDetailPaneContent(
                                         fontWeight = FontWeight.Black
                                     )
                                 }
+                                val historyPhotos = appt.jobReport?.photoUris ?: emptyList()
+                                if (historyPhotos.isNotEmpty()) {
+                                    Spacer(Modifier.height(5.dp))
+                                    Row(
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text("📸", fontSize = 12.sp)
+                                        Text(
+                                            text = "${historyPhotos.size} Servis Fotoğrafı",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = tokens.primary
+                                        )
+                                    }
+                                    Spacer(Modifier.height(4.dp))
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(historyPhotos) { photoUri ->
+                                            Surface(
+                                                onClick = { selectedCustomerPhotoViewer = photoUri },
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.size(54.dp),
+                                                border = androidx.compose.foundation.BorderStroke(1.dp, tokens.border)
+                                            ) {
+                                                AsyncImage(
+                                                    model = photoUri,
+                                                    contentDescription = "Fotoğraf",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize()
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -3067,6 +3108,13 @@ private fun CustomerDetailPaneContent(
                     )
                 }
             }
+        }
+
+        if (selectedCustomerPhotoViewer != null) {
+            PhotoViewerDialog(
+                photoUrl = selectedCustomerPhotoViewer!!,
+                onDismiss = { selectedCustomerPhotoViewer = null }
+            )
         }
     }
 }

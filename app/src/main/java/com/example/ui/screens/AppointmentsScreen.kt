@@ -1425,6 +1425,7 @@ fun AppointmentCard(
     val (startT, endT) = parseSlotTimes(appointment.timeSlot)
     val isOpen = appointment.status == AppointmentStatus.ONAYLANDI ||
         appointment.status == AppointmentStatus.BEKLIYOR
+    var viewerPhoto by remember { mutableStateOf<String?>(null) }
 
     Surface(
         shape = RoundedCornerShape(18.dp),
@@ -1503,6 +1504,21 @@ fun AppointmentCard(
                                 color = t.text2,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
                             )
+                        }
+                        val photoCount = appointment.jobReport?.photoUris?.size ?: 0
+                        if (photoCount > 0) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = t.primaryC
+                            ) {
+                                Text(
+                                    text = "📸 $photoCount",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = t.primary,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -1705,6 +1721,16 @@ fun AppointmentCard(
                     }
                     Spacer(modifier = Modifier.height(10.dp))
 
+                    val photos = appointment.jobReport?.photoUris ?: emptyList()
+                    if (photos.isNotEmpty()) {
+                        AppointmentPhotoGallery(
+                            photoUris = photos,
+                            t = t,
+                            onPhotoClick = { viewerPhoto = it }
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                    }
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1791,5 +1817,12 @@ fun AppointmentCard(
                 }
             }
         }
+    }
+
+    if (viewerPhoto != null) {
+        PhotoViewerDialog(
+            photoUrl = viewerPhoto!!,
+            onDismiss = { viewerPhoto = null }
+        )
     }
 }
