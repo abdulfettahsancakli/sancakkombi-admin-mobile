@@ -6,7 +6,8 @@ enum class ProposalStatus(val label: String) {
     DRAFT("Taslak"),
     PENDING("Beklemede"),
     APPROVED("Kabul Edildi"),
-    REJECTED("Reddedildi")
+    REJECTED("Reddedildi"),
+    EXPIRED("Süresi Doldu")
 }
 
 @JsonClass(generateAdapter = true)

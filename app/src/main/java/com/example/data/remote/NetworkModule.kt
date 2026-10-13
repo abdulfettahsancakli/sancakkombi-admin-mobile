@@ -52,6 +52,7 @@ class ProposalStatusAdapter {
         "PENDING", "BEKLIYOR", "DRAFT" -> ProposalStatus.PENDING
         "APPROVED", "ONAYLANDI", "ACCEPTED" -> ProposalStatus.APPROVED
         "REJECTED", "REDDEDILDI" -> ProposalStatus.REJECTED
+        "EXPIRED", "SURESI_DOLDU" -> ProposalStatus.EXPIRED
         else -> ProposalStatus.PENDING
     }
 }

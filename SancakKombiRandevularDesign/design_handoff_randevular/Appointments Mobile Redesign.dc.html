@@ -1,0 +1,1669 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#0b0e14;font-family:'Roboto',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#0EA5E9}
+  a:hover{color:#38BDF8}
+  ::-webkit-scrollbar{display:none}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes sheetUp{from{opacity:0;transform:translateY(40px)}to{opacity:1;transform:translateY(0)}}
+  input::placeholder,textarea::placeholder{color:inherit;opacity:0.5}
+  select{appearance:none;-webkit-appearance:none}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:56px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;color:#E2E8F0">
+
+  <div style="max-width:1100px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#131B2E;border:1px solid #334155;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#0EA5E9;letter-spacing:.4px;margin-bottom:14px">RANDEVULAR · TELEFON + TABLET</div>
+    <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;color:#F8FAFC">Randevu &amp; Servis Yönetimi</h1>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#94A3B8;max-width:720px;text-wrap:pretty">Web tablosu telefonda gün gün gruplanmış kartlara, tablette liste + detay bölmesine dönüşür. Hızlı Randevu ve Servis Fişi tam ekran akış olarak açılır; toplam ve kaydet butonu her zaman parmak altında kalır. Telefonun üstündeki sekmelerle ekranlar arasında geç, her şey tıklanabilir.</p>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+    <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+      <div style="display:flex;gap:4px;background:#131B2E;border:1px solid #334155;border-radius:14px;padding:4px">
+        <sc-for list="{{ screenTabs }}" as="st" hint-placeholder-count="3">
+          <div onClick="{{ st.go }}" style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;background:{{ st.bg }};color:{{ st.color }}">{{ st.label }}</div>
+        </sc-for>
+      </div>
+
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ isDark }}" width="{{ 412 }}" height="{{ 892 }}" hint-size="412,892">
+        <div style="background:{{ theme.bg }};height:100%;overflow:hidden;display:flex;flex-direction:column;font-family:'Roboto',system-ui,sans-serif;position:relative;transition:background .3s">
+
+          <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:10px;left:16px;right:16px;z-index:20;background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+          </sc-if>
+
+          <!-- ============ LIST ============ -->
+          <sc-if value="{{ screenIsList }}" hint-placeholder-val="{{ true }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <div style="width:34px;height:34px;border-radius:8px;background:#111632;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:{{ theme.primary }}">SK</div>
+                  <div style="display:flex;align-items:baseline;gap:4px">
+                    <span style="font-weight:700;font-size:15px;font-family:monospace;color:{{ theme.text }}">sancakkombi</span>
+                    <span style="font-weight:500;font-size:13px;font-family:monospace;color:{{ theme.primary }}">/admin</span>
+                  </div>
+                </div>
+                <div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 12px 96px;display:flex;flex-direction:column;gap:10px">
+                <div style="display:flex;align-items:center;justify-content:space-between;animation:fadeUp .5s ease both">
+                  <div>
+                    <div style="font-size:18px;font-weight:800;color:{{ theme.text }};letter-spacing:-0.3px">Randevular</div>
+                    <div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:2px">Saha ekibi anlık senkron 🟢</div>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:6px;background:{{ theme.primaryC }};border-radius:14px;padding:5px 10px">
+                    <div style="width:7px;height:7px;border-radius:50%;background:{{ theme.primary }}"></div>
+                    <span style="font-size:11px;font-weight:800;color:{{ theme.primary }}">{{ filteredCount }} Randevu</span>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;animation:fadeUp .5s ease .05s both">
+                  <div onClick="{{ goNew }}" style="border-radius:16px;background:linear-gradient(135deg,#0EA5E9,#0369A1);padding:12px;cursor:pointer;transition:transform .15s" style-active="transform:scale(.97)">
+                    <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:15px">📅</div>
+                    <div style="font-size:12.5px;font-weight:800;color:#fff">Yeni Randevu</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.85);margin-top:2px">Telefonla gelen iş</div>
+                  </div>
+                  <div onClick="{{ goReceipt }}" style="border-radius:16px;background:linear-gradient(135deg,#F59E0B,#B45309);padding:12px;cursor:pointer;transition:transform .15s" style-active="transform:scale(.97)">
+                    <div style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;margin-bottom:8px;font-size:15px">🧾</div>
+                    <div style="font-size:12.5px;font-weight:800;color:#fff">Servis Fişi Kes</div>
+                    <div style="font-size:10px;color:rgba(255,255,255,0.85);margin-top:2px">Randevusuz · Acil / Yerinde</div>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;animation:fadeUp .5s ease .08s both">
+                  <sc-for list="{{ statCards }}" as="sc" hint-placeholder-count="4">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:10px 8px">
+                      <div style="font-size:19px;font-weight:900;color:{{ sc.color }}">{{ sc.value }}</div>
+                      <div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }};margin-top:2px">{{ sc.label }}</div>
+                      <div style="height:3px;border-radius:2px;background:{{ theme.surface2 }};margin-top:7px;overflow:hidden"><div style="height:100%;width:{{ sc.pct }};background:{{ sc.color }};border-radius:2px"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:8px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:10px 14px">
+                  <span style="font-size:14px">🔎</span>
+                  <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Müşteri, telefon, mahalle ara..." style="flex:1;border:none;outline:none;background:transparent;font-size:13px;color:{{ theme.text }};font-family:inherit"></input>
+                </div>
+
+                <div style="display:flex;gap:6px;overflow-x:auto;margin:0 -12px;padding:0 12px">
+                  <sc-for list="{{ statusChips }}" as="ch" hint-placeholder-count="5">
+                    <div onClick="{{ ch.pick }}" style="flex:none;display:flex;align-items:center;gap:6px;padding:7px 11px;border-radius:20px;cursor:pointer;background:{{ ch.bg }};border:1px solid {{ ch.border }}">
+                      <div style="width:7px;height:7px;border-radius:50%;background:{{ ch.dot }}"></div>
+                      <span style="font-size:11.5px;font-weight:700;color:{{ ch.color }}">{{ ch.label }}</span>
+                      <span style="font-size:10px;font-weight:800;color:{{ ch.color }};opacity:.7">{{ ch.count }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:4px;background:{{ theme.surface2 }};border-radius:12px;padding:3px">
+                  <sc-for list="{{ rangeChips }}" as="rc" hint-placeholder-count="5">
+                    <div onClick="{{ rc.pick }}" style="flex:1;text-align:center;padding:7px 2px;border-radius:9px;font-size:11px;font-weight:700;cursor:pointer;background:{{ rc.bg }};color:{{ rc.color }}">{{ rc.label }}</div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+                  <div style="text-align:center;padding:36px 16px;color:{{ theme.text2 }};font-size:13px;line-height:1.6">☕ Bu aralıkta randevu yok.<br>Filtreyi değiştir ya da yeni randevu ekle.</div>
+                </sc-if>
+
+                <sc-for list="{{ groups }}" as="g" hint-placeholder-count="2">
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <div style="display:flex;align-items:center;gap:8px;margin-top:6px">
+                      <span style="font-size:11px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">{{ g.label }}</span>
+                      <div style="flex:1;height:1px;background:{{ theme.border }}"></div>
+                      <span style="font-size:10px;font-weight:700;color:{{ theme.text2 }}">{{ g.count }} iş</span>
+                    </div>
+                    <sc-for list="{{ g.items }}" as="a" hint-placeholder-count="2">
+                      <div style="background:{{ theme.surface }};border:1px solid {{ a.borderColor }};border-radius:18px;padding:14px;animation:fadeUp .4s ease both">
+                        <div onClick="{{ a.toggle }}" style="display:flex;gap:12px;cursor:pointer">
+                          <div style="flex:none;width:54px;border-radius:12px;background:{{ theme.surface2 }};display:flex;flex-direction:column;align-items:center;justify-content:center;padding:8px 0">
+                            <span style="font-size:15px;font-weight:900;color:{{ theme.text }};font-family:monospace">{{ a.timeStart }}</span>
+                            <span style="font-size:10px;color:{{ theme.text2 }};font-family:monospace;margin-top:2px">{{ a.timeEnd }}</span>
+                          </div>
+                          <div style="flex:1;min-width:0">
+                            <div style="display:flex;align-items:center;gap:8px">
+                              <span style="font-size:14.5px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</span>
+                            </div>
+                            <div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap">
+                              <span style="font-size:11.5px;color:{{ theme.text2 }}">📍 {{ a.district }}</span>
+                              <span style="font-size:9.5px;font-weight:800;color:{{ theme.text2 }};border:1px solid {{ theme.border }};border-radius:6px;padding:1px 5px">{{ a.tag }}</span>
+                            </div>
+                          </div>
+                          <div style="flex:none;align-self:flex-start;padding:5px 9px;border-radius:20px;background:{{ a.stBg }};font-size:10.5px;font-weight:800;color:{{ a.stColor }}">{{ a.stLabel }}</div>
+                        </div>
+
+                        <div style="display:flex;flex-direction:column;gap:6px;margin-top:10px;padding:10px 12px;border-radius:12px;background:{{ theme.surface2 }}">
+                          <div style="display:flex;align-items:center;gap:6px">
+                            <div style="width:7px;height:7px;border-radius:50%;background:{{ a.serviceColor }}"></div>
+                            <span style="font-size:12px;font-weight:800;color:{{ theme.text }}">{{ a.service }}</span>
+                          </div>
+                          <div style="font-size:12px;color:{{ theme.text2 }};line-height:1.45">{{ a.address }}</div>
+                          <sc-if value="{{ a.hasNote }}" hint-placeholder-val="{{ true }}">
+                            <div style="font-size:12px;color:{{ theme.amber }};font-weight:700;line-height:1.45">⚠️ {{ a.note }}</div>
+                          </sc-if>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:6px;margin-top:10px">
+                          <div style="height:40px;border-radius:11px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer"><span style="font-size:13px">📞</span><span style="font-size:11.5px;font-weight:800;color:{{ theme.primary }}">Ara</span></div>
+                          <div style="height:40px;border-radius:11px;background:{{ theme.greenC }};display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer"><span style="font-size:13px">💬</span><span style="font-size:11.5px;font-weight:800;color:{{ theme.green }}">WA</span></div>
+                          <div style="height:40px;border-radius:11px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer"><span style="font-size:13px">🧭</span><span style="font-size:11.5px;font-weight:800;color:{{ theme.text }}">Rota</span></div>
+                          <div onClick="{{ a.primaryAction }}" style="height:40px;border-radius:11px;background:{{ a.primaryBg }};display:flex;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:transform .12s" style-active="transform:scale(.95)"><span style="font-size:11.5px;font-weight:800;color:{{ a.primaryColor }}">{{ a.primaryLabel }}</span></div>
+                        </div>
+
+                        <sc-if value="{{ a.expanded }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;gap:6px;margin-top:8px;padding-top:10px;border-top:1px dashed {{ theme.border }}">
+                            <div style="flex:1;height:36px;border-radius:10px;border:1px solid {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:{{ theme.text }};cursor:pointer">✏️ Düzenle</div>
+                            <div onClick="{{ a.cancel }}" style="flex:1;height:36px;border-radius:10px;border:1px solid {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:{{ theme.red }};cursor:pointer">❌ İptal Et</div>
+                            <div style="flex:1;height:36px;border-radius:10px;border:1px solid {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:{{ theme.text2 }};cursor:pointer">🗑️ Sil</div>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="position:absolute;left:14px;right:14px;bottom:14px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:26px;box-shadow:0 8px 24px rgba(0,0,0,0.3);display:flex;justify-content:space-around;align-items:center;padding:8px 4px">
+                <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="5">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 12px;border-radius:14px">
+                    <div style="width:26px;height:26px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:{{ nav.pillBg }};font-size:15px">{{ nav.emoji }}</div>
+                    <span style="font-size:10px;font-weight:700;color:{{ nav.color }}">{{ nav.label }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ HIZLI RANDEVU ============ -->
+          <sc-if value="{{ screenIsNew }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column;animation:sheetUp .35s ease both">
+              <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 16px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div onClick="{{ goList }}" style="width:40px;height:40px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">✕</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:16px;font-weight:800;color:{{ theme.text }}">Hızlı Randevu Kaydı</div>
+                  <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Telefonla gelen işi saniyeler içinde kaydet</div>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px">
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👤 Müşteri &amp; İletişim</div>
+                  <div>
+                    <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Adı Soyadı *</div>
+                    <input value="{{ nName }}" onInput="{{ onNName }}" placeholder="Örn: Ahmet Yılmaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                  </div>
+                  <div>
+                    <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Telefon *</div>
+                    <div style="display:flex;gap:8px">
+                      <input value="{{ nPhone }}" onInput="{{ onNPhone }}" type="tel" placeholder="05xx xxx xx xx" style="flex:1;min-width:0;height:48px;box-sizing:border-box;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:monospace;outline:none"></input>
+                      <div style="flex:none;height:48px;padding:0 12px;border-radius:12px;background:{{ theme.primaryC }};display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:{{ theme.primary }};cursor:pointer">📇 Rehber</div>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İlçe *</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Bayrampaşa</option><option>Güngören</option><option>Eyüpsultan</option><option>Gaziosmanpaşa</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Mahalle *</div>
+                      <input placeholder="Seç veya yaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Cadde / Sokak *</div>
+                      <input placeholder="Cadde veya sokak" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">No / Daire</div>
+                      <input placeholder="12 / 4" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Bizi Nereden Buldu?</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Seçiniz</option><option>Google</option><option>Tavsiye</option><option>Eski müşteri</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Durum *</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Onaylandı</option><option>Bekliyor</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">📅 Tarih &amp; Saat</div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                    <sc-for list="{{ quickDates }}" as="qd" hint-placeholder-count="3">
+                      <div onClick="{{ qd.pick }}" style="height:52px;border-radius:12px;border:1px solid {{ qd.border }};background:{{ qd.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">
+                        <span style="font-size:12.5px;font-weight:800;color:{{ qd.color }}">{{ qd.label }}</span>
+                        <span style="font-size:10px;color:{{ qd.color }};opacity:.75;margin-top:2px">{{ qd.sub }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Randevu Tarihi *</div>
+                      <input type="date" value="{{ nDate }}" onChange="{{ onNDate }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none;color-scheme:{{ colorScheme }}"></input>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Hizmet Türü</div>
+                      <select value="{{ nService }}" onChange="{{ onNService }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Genel Servis</option><option>Kombi Bakım &amp; Servis</option><option>Petek Temizliği</option><option>Doğalgaz Tesisatı</option><option>Gaz Kaçağı Tespiti</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                      <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Saat Aralığı *</span>
+                      <span style="font-size:11px;font-weight:800;color:{{ theme.primary }}">{{ nSlotLabel }}</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                      <sc-for list="{{ slots }}" as="sl" hint-placeholder-count="15">
+                        <div onClick="{{ sl.pick }}" style="height:44px;border-radius:11px;border:1px solid {{ sl.border }};background:{{ sl.bg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:monospace;color:{{ sl.color }};cursor:pointer;transition:all .15s">{{ sl.label }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔧 Arıza &amp; Müşteri Şikâyeti</div>
+                  <div style="font-size:11px;color:{{ theme.text2 }}">Dokun, nota eklensin</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ faultChips }}" as="fc" hint-placeholder-count="8">
+                      <div onClick="{{ fc.pick }}" style="padding:9px 11px;border-radius:12px;border:1px solid {{ fc.border }};background:{{ fc.bg }};font-size:12px;font-weight:700;color:{{ fc.color }};cursor:pointer">{{ fc.label }}</div>
+                    </sc-for>
+                  </div>
+                  <textarea value="{{ nNote }}" onInput="{{ onNNote }}" placeholder="Örn: Sıcak su açıldığında kombi duruyor, basınç 0.8 bar." style="min-height:86px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                </div>
+              </div>
+
+              <div style="flex:none;display:flex;gap:8px;padding:12px 12px 16px;background:{{ theme.surface }};border-top:1px solid {{ theme.border }}">
+                <div onClick="{{ goList }}" style="flex:none;height:52px;padding:0 18px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13.5px;font-weight:700;color:{{ theme.text }};cursor:pointer">Vazgeç</div>
+                <div onClick="{{ saveNew }}" style="flex:1;height:52px;border-radius:14px;background:{{ saveNewBg }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:#fff;cursor:pointer;opacity:{{ saveNewOpacity }};transition:all .2s">✓ Randevuyu Kaydet</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ SERVİS FİŞİ ============ -->
+          <sc-if value="{{ screenIsReceipt }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column;animation:sheetUp .35s ease both">
+              <div style="flex:none;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }};padding:12px 16px 12px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div onClick="{{ goList }}" style="width:40px;height:40px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">✕</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span style="font-size:16px;font-weight:800;color:{{ theme.text }}">Servis Fişi Kes</span>
+                      <span style="font-size:9.5px;font-weight:800;color:{{ theme.amber }};background:{{ theme.amberC }};border-radius:6px;padding:2px 6px">YENİ İŞ</span>
+                    </div>
+                    <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Randevusuz acil / yerinde iş · fiş + gelir kaydı</div>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px">
+                  <sc-for list="{{ steps }}" as="sp" hint-placeholder-count="4">
+                    <div onClick="{{ sp.go }}" style="display:flex;flex-direction:column;gap:6px;cursor:pointer">
+                      <div style="height:4px;border-radius:2px;background:{{ sp.bar }};transition:background .25s"></div>
+                      <div style="display:flex;align-items:center;gap:4px">
+                        <span style="font-size:11px">{{ sp.emoji }}</span>
+                        <span style="font-size:10.5px;font-weight:800;color:{{ sp.color }}">{{ sp.label }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px">
+
+                <sc-if value="{{ stepIs1 }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👤 Müşteri &amp; Adres</div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Adı *</div>
+                        <input placeholder="Örn: Ahmet Yılmaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                      </div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Telefon *</div>
+                        <input type="tel" placeholder="05xx xxx xx xx" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:monospace;outline:none"></input>
+                      </div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İlçe *</div>
+                          <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"><option>Bayrampaşa</option><option>Güngören</option><option>Eyüpsultan</option></select>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Mahalle</div>
+                          <input placeholder="Seç veya yaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Cadde / Sokak</div>
+                          <input placeholder="14. Sokak" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Kapı / Daire</div>
+                          <input placeholder="12 / 4" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🗓️ Hizmet &amp; Zaman</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İş Tarihi *</div>
+                          <input type="date" value="{{ todayIso }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none;color-scheme:{{ colorScheme }}"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Saat *</div>
+                          <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:monospace;outline:none"><option>09:00 – 10:00</option><option>10:00 – 11:00</option><option>11:00 – 12:00</option><option>Şu an</option></select>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Beyanı / Arıza Şikâyeti</div>
+                        <textarea placeholder="Müşteri ne şikâyet etti? Örn: Sıcak su gelmiyor." style="min-height:76px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs2 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔥 Cihaz Markası &amp; Modeli</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ brands }}" as="br" hint-placeholder-count="11">
+                          <div onClick="{{ br.pick }}" style="height:42px;border-radius:11px;border:1.5px solid {{ br.border }};background:{{ br.bg }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;letter-spacing:.2px;color:{{ br.color }};cursor:pointer;transition:all .15s">{{ br.name }}</div>
+                        </sc-for>
+                      </div>
+                      <input placeholder="Model · Örn: Thema Fast F25" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🛠️ Yapılan İş *</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        <sc-for list="{{ jobChips }}" as="jc" hint-placeholder-count="9">
+                          <div onClick="{{ jc.pick }}" style="padding:9px 11px;border-radius:12px;border:1px solid {{ jc.border }};background:{{ jc.bg }};font-size:12px;font-weight:700;color:{{ jc.color }};cursor:pointer">{{ jc.label }}</div>
+                        </sc-for>
+                      </div>
+                      <textarea value="{{ jobText }}" onInput="{{ onJobText }}" placeholder="Şablona dokun ya da detay yaz…" style="min-height:86px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔩 Parçalar &amp; Kalemler</span>
+                        <span style="font-size:10.5px;font-weight:700;color:{{ theme.text2 }}">Stoktan otomatik düşer</span>
+                      </div>
+                      <div style="display:flex;gap:6px;overflow-x:auto">
+                        <sc-for list="{{ partSources }}" as="ps" hint-placeholder-count="4">
+                          <div onClick="{{ ps.pick }}" style="flex:none;padding:7px 11px;border-radius:20px;background:{{ ps.bg }};color:{{ ps.color }};font-size:11.5px;font-weight:700;cursor:pointer">{{ ps.label }}</div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <sc-for list="{{ parts }}" as="pt" hint-placeholder-count="5">
+                          <div onClick="{{ pt.toggle }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid {{ pt.border }};background:{{ pt.bg }};cursor:pointer;transition:all .15s">
+                            <div style="width:22px;height:22px;flex:none;border-radius:7px;border:1.5px solid {{ pt.checkBorder }};background:{{ pt.checkBg }};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:900">{{ pt.check }}</div>
+                            <div style="flex:1;min-width:0">
+                              <div style="font-size:12.5px;font-weight:700;color:{{ theme.text }};line-height:1.3">{{ pt.name }}</div>
+                              <div style="font-size:10.5px;color:{{ theme.text2 }};margin-top:2px">{{ pt.src }}</div>
+                            </div>
+                            <span style="flex:none;font-size:12.5px;font-weight:800;color:{{ theme.green }}">{{ pt.price }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="height:42px;border-radius:12px;border:1.5px dashed {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:{{ theme.text2 }};cursor:pointer">＋ Özel parça satırı ekle</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İşçilik (₺)</div>
+                          <input type="number" inputmode="numeric" value="{{ labor }}" onInput="{{ onLabor }}" placeholder="0" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;outline:none"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Diğer (₺)</div>
+                          <input type="number" inputmode="numeric" value="{{ other }}" onInput="{{ onOther }}" placeholder="0" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🛡️ Garanti &amp; Test</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ warranties }}" as="w" hint-placeholder-count="6">
+                          <div onClick="{{ w.pick }}" style="height:40px;border-radius:11px;border:1px solid {{ w.border }};background:{{ w.bg }};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;color:{{ w.color }};cursor:pointer">{{ w.label }}</div>
+                        </sc-for>
+                      </div>
+                      <div onClick="{{ toggleTested }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:{{ testedBg }};border:1px solid {{ testedBorder }};cursor:pointer">
+                        <div style="width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid {{ testedCheckBorder }};background:{{ testedCheckBg }};display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900">{{ testedCheck }}</div>
+                        <span style="font-size:12.5px;font-weight:700;color:{{ theme.text }};line-height:1.4">Cihaz test edildi, çalışır durumda teslim edildi</span>
+                      </div>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👷 Usta &amp; Bildirim</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"><option>Usta seç (opsiyonel)</option><option>Cemil Usta</option><option>İlhan Usta</option></select>
+                      <div onClick="{{ toggleWa }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:{{ theme.greenC }};cursor:pointer">
+                        <span style="font-size:18px">📲</span>
+                        <div style="flex:1">
+                          <div style="font-size:12.5px;font-weight:800;color:{{ theme.text }}">Fişi WhatsApp ile gönder</div>
+                          <div style="font-size:10.5px;color:{{ theme.text2 }};margin-top:2px">Dijital fiş + garanti bilgisi müşteriye iletilir</div>
+                        </div>
+                        <div style="width:42px;height:24px;border-radius:12px;background:{{ waTrack }};position:relative;transition:background .2s;flex:none">
+                          <div style="position:absolute;top:3px;left:{{ waKnob }};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs3 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="border-radius:18px;padding:16px;background:linear-gradient(135deg,#0EA5E9,#0369A1);color:#fff">
+                      <div style="font-size:10.5px;font-weight:800;letter-spacing:.5px;opacity:.85">CANLI TAHSİLAT DÖKÜMÜ</div>
+                      <div style="font-size:32px;font-weight:900;margin-top:6px;letter-spacing:-0.5px">{{ totalFmt }}</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.25)">
+                        <div><div style="font-size:10px;opacity:.85">Parça</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ partsFmt }}</div></div>
+                        <div><div style="font-size:10px;opacity:.85">İşçilik</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ laborFmt }}</div></div>
+                        <div><div style="font-size:10px;opacity:.85">Diğer</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ otherFmt }}</div></div>
+                      </div>
+                      <div style="font-size:10.5px;opacity:.85;margin-top:10px">🔒 Tutar iş kalemlerinden otomatik hesaplandı</div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">💳 Ödeme Yöntemi</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ payMethods }}" as="pm" hint-placeholder-count="3">
+                          <div onClick="{{ pm.pick }}" style="height:66px;border-radius:14px;border:1.5px solid {{ pm.border }};background:{{ pm.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .15s">
+                            <span style="font-size:20px">{{ pm.emoji }}</span>
+                            <span style="font-size:11.5px;font-weight:800;color:{{ pm.color }}">{{ pm.label }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">💵 Tahsilat Durumu</div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <sc-for list="{{ collStates }}" as="cs" hint-placeholder-count="3">
+                          <div onClick="{{ cs.pick }}" style="height:48px;border-radius:12px;border:1.5px solid {{ cs.border }};background:{{ cs.bg }};display:flex;align-items:center;gap:10px;padding:0 14px;cursor:pointer;transition:all .15s">
+                            <span style="font-size:16px">{{ cs.emoji }}</span>
+                            <span style="flex:1;font-size:13px;font-weight:800;color:{{ cs.color }}">{{ cs.label }}</span>
+                            <div style="width:18px;height:18px;border-radius:50%;border:2px solid {{ cs.border }};display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;border-radius:50%;background:{{ cs.dot }}"></div></div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <input placeholder="Kasa notu · Örn: Nakit elden alındı" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                    <div onClick="{{ toggleExpense }}" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:{{ theme.surface }};border:1px solid {{ theme.border }};cursor:pointer">
+                      <div style="width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid {{ expCheckBorder }};background:{{ expCheckBg }};display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900">{{ expCheck }}</div>
+                      <div>
+                        <div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Bu iş için gider kaydı ekle</div>
+                        <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Parça alımı, usta harcaması, malzeme</div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs4 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">✍️ Dijital İmza</div>
+                      <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                          <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Müşteri İmzası</span>
+                          <span onClick="{{ clearA }}" style="font-size:11px;font-weight:700;color:{{ theme.primary }};cursor:pointer">🧽 Temizle</span>
+                        </div>
+                        <div style="position:relative;border-radius:14px;border:1.5px dashed {{ theme.border }};background:{{ theme.surface2 }};overflow:hidden">
+                          <sc-if value="{{ sigAEmpty }}" hint-placeholder-val="{{ true }}">
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{ theme.text2 }};pointer-events:none">👆 Parmağınla imzala</div>
+                          </sc-if>
+                          <canvas ref="{{ sigRefA }}" width="700" height="280" onPointerDown="{{ downA }}" onPointerMove="{{ moveA }}" onPointerUp="{{ sigUp }}" onPointerLeave="{{ sigUp }}" style="display:block;width:100%;height:140px;touch-action:none;cursor:crosshair"></canvas>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                          <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Firma Yetkilisi İmzası</span>
+                          <span onClick="{{ clearB }}" style="font-size:11px;font-weight:700;color:{{ theme.primary }};cursor:pointer">🧽 Temizle</span>
+                        </div>
+                        <div style="position:relative;border-radius:14px;border:1.5px dashed {{ theme.border }};background:{{ theme.surface2 }};overflow:hidden">
+                          <sc-if value="{{ sigBEmpty }}" hint-placeholder-val="{{ true }}">
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{ theme.text2 }};pointer-events:none">👆 Parmağınla imzala</div>
+                          </sc-if>
+                          <canvas ref="{{ sigRefB }}" width="700" height="220" onPointerDown="{{ downB }}" onPointerMove="{{ moveB }}" onPointerUp="{{ sigUp }}" onPointerLeave="{{ sigUp }}" style="display:block;width:100%;height:110px;touch-action:none;cursor:crosshair"></canvas>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">📸 Servis Fotoğrafları</span>
+                        <span style="font-size:11px;font-weight:800;color:{{ theme.text2 }}">{{ photoCount }} / 5</span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ photos }}" as="ph" hint-placeholder-count="0">
+                          <div style="aspect-ratio:1;border-radius:12px;background:repeating-linear-gradient(45deg,{{ theme.surface2 }} 0 8px,{{ theme.bg }} 8px 16px);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:{{ theme.text2 }};font-family:monospace">{{ ph.label }}</div>
+                        </sc-for>
+                        <sc-if value="{{ canAddPhoto }}" hint-placeholder-val="{{ true }}">
+                          <div onClick="{{ addPhoto }}" style="aspect-ratio:1;border-radius:12px;border:1.5px dashed {{ theme.primary }};background:{{ theme.primaryC }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer">
+                            <span style="font-size:20px">📷</span>
+                            <span style="font-size:10.5px;font-weight:800;color:{{ theme.primary }}">Çek / Yükle</span>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <div style="font-size:11px;color:{{ theme.text2 }}">Arıza durumu, takılan parça veya bakım sonrası</div>
+                    </div>
+                  </div>
+                </sc-if>
+
+              </div>
+
+              <div style="flex:none;display:flex;align-items:center;gap:10px;padding:12px 12px 16px;background:{{ theme.surface }};border-top:1px solid {{ theme.border }}">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:9.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.5px">GENEL TOPLAM</div>
+                  <div style="font-size:20px;font-weight:900;color:{{ theme.green }};margin-top:2px">{{ totalFmt }}</div>
+                </div>
+                <sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ prevStep }}" style="flex:none;width:52px;height:52px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">←</div>
+                </sc-if>
+                <div onClick="{{ nextStep }}" style="flex:none;height:52px;padding:0 18px;border-radius:14px;background:{{ nextBg }};display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#fff;cursor:pointer;transition:transform .12s" style-active="transform:scale(.96)">{{ nextLabel }}</div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </x-import>
+    </div>
+
+    <!-- ============ TABLET ============ -->
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;min-height:40px">
+        <div style="display:flex;gap:4px;background:#131B2E;border:1px solid #334155;border-radius:14px;padding:4px">
+          <sc-for list="{{ orientTabs }}" as="ot" hint-placeholder-count="2">
+            <div onClick="{{ ot.go }}" style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;background:{{ ot.bg }};color:{{ ot.color }}">{{ ot.label }}</div>
+          </sc-for>
+        </div>
+        <span style="font-size:12px;font-weight:700;color:#94A3B8">{{ tabCaption }}</span>
+      </div>
+      <div style="width:{{ tabW }};height:{{ tabH }};position:relative;box-sizing:border-box;border-radius:40px;border:14px solid #1a1f2b;box-shadow:0 30px 80px rgba(0,0,0,.5);overflow:hidden;background:{{ theme.bg }};display:flex;font-family:'Roboto',system-ui,sans-serif;transition:background .3s,width .35s,height .35s">
+
+        <div style="width:84px;flex:none;background:{{ theme.surface }};border-right:1px solid {{ theme.border }};display:flex;flex-direction:column;align-items:center;padding:18px 0;gap:6px">
+          <div style="width:40px;height:40px;border-radius:10px;background:#111632;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:{{ theme.primary }};margin-bottom:14px">SK</div>
+          <sc-for list="{{ navItems }}" as="nav" hint-placeholder-count="5">
+            <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 0;width:68px;border-radius:14px;cursor:pointer">
+              <div style="width:44px;height:32px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:{{ nav.pillBg }};font-size:17px">{{ nav.emoji }}</div>
+              <span style="font-size:10.5px;font-weight:700;color:{{ nav.color }}">{{ nav.label }}</span>
+            </div>
+          </sc-for>
+          <div style="flex:1"></div>
+          <div onClick="{{ toggleTheme }}" style="width:44px;height:44px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer">{{ themeIcon }}</div>
+        </div>
+
+        <div style="flex:1;min-width:0;display:flex;flex-direction:column;padding:18px 20px;gap:14px">
+          <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+            <div style="flex:1 1 280px;min-width:0">
+              <div style="font-size:12px;color:{{ theme.text2 }}">Ana Panel / Saha Randevuları</div>
+              <div style="font-size:24px;font-weight:900;color:{{ theme.text }};letter-spacing:-0.4px;margin-top:2px">Randevu &amp; Servis Yönetimi</div>
+            </div>
+            <div style="display:flex;gap:3px;background:{{ theme.surface2 }};border-radius:12px;padding:3px">
+              <sc-for list="{{ tabViews }}" as="tv" hint-placeholder-count="3">
+                <div onClick="{{ tv.go }}" style="padding:9px 14px;border-radius:9px;background:{{ tv.bg }};font-size:12.5px;font-weight:800;color:{{ tv.color }};cursor:pointer;transition:all .15s">{{ tv.label }}</div>
+              </sc-for>
+            </div>
+            <div onClick="{{ tabReceipt }}" style="height:46px;padding:0 16px;border-radius:14px;background:{{ theme.amberC }};display:flex;align-items:center;gap:8px;cursor:pointer">
+              <span style="font-size:16px">🧾</span>
+              <div><div style="font-size:12.5px;font-weight:800;color:{{ theme.amber }}">Servis Fişi</div><div style="font-size:9.5px;color:{{ theme.amber }};opacity:.85">Randevusuz · Acil</div></div>
+            </div>
+            <div onClick="{{ tabNew }}" style="height:46px;padding:0 18px;border-radius:14px;background:linear-gradient(135deg,#0EA5E9,#0369A1);display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;font-weight:800;color:#fff">📅 Yeni Randevu</div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px">
+            <sc-for list="{{ statCardsWide }}" as="sc" hint-placeholder-count="5">
+              <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:12px 14px">
+                <div style="display:flex;justify-content:space-between;align-items:center">
+                  <span style="font-size:10px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">{{ sc.label }}</span>
+                  <span style="font-size:14px">{{ sc.emoji }}</span>
+                </div>
+                <div style="display:flex;align-items:baseline;gap:8px;margin-top:6px">
+                  <span style="font-size:26px;font-weight:900;color:{{ sc.color }}">{{ sc.value }}</span>
+                  <span style="font-size:10.5px;font-weight:800;color:{{ sc.color }}">{{ sc.sub }}</span>
+                </div>
+                <div style="height:4px;border-radius:2px;background:{{ theme.surface2 }};margin-top:8px;overflow:hidden"><div style="height:100%;width:{{ sc.pct }};background:{{ sc.color }};border-radius:2px;transition:width .4s"></div></div>
+              </div>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ showSplit }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;min-height:0;display:grid;grid-template-columns:440px minmax(0,1fr);gap:14px">
+            <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden">
+              <div style="padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:8px;background:{{ theme.surface2 }};border-radius:12px;padding:9px 12px">
+                  <span style="font-size:13px">🔎</span>
+                  <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Müşteri, telefon, mahalle ara..." style="flex:1;border:none;outline:none;background:transparent;font-size:13px;color:{{ theme.text }};font-family:inherit"></input>
+                </div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap">
+                  <sc-for list="{{ statusChips }}" as="ch" hint-placeholder-count="5">
+                    <div onClick="{{ ch.pick }}" style="display:flex;align-items:center;gap:5px;padding:6px 10px;border-radius:20px;cursor:pointer;background:{{ ch.bg }};border:1px solid {{ ch.border }}">
+                      <div style="width:6px;height:6px;border-radius:50%;background:{{ ch.dot }}"></div>
+                      <span style="font-size:11px;font-weight:700;color:{{ ch.color }}">{{ ch.label }} {{ ch.count }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:4px">
+                <sc-for list="{{ flatList }}" as="a" hint-placeholder-count="6">
+                  <div onClick="{{ a.select }}" style="display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:14px;background:{{ a.rowBg }};border:1px solid {{ a.rowBorder }};cursor:pointer;transition:background .15s">
+                    <div style="flex:none;width:52px;text-align:center">
+                      <div style="font-size:10px;font-weight:700;color:{{ theme.text2 }}">{{ a.dateShort }}</div>
+                      <div style="font-size:14px;font-weight:900;color:{{ theme.text }};font-family:monospace;margin-top:1px">{{ a.timeStart }}</div>
+                    </div>
+                    <div style="width:38px;height:38px;flex:none;border-radius:50%;background:{{ a.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;color:{{ a.avatarColor }}">{{ a.initials }}</div>
+                    <div style="flex:1;min-width:0">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div>
+                      <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.service }} · {{ a.district }}</div>
+                    </div>
+                    <div style="flex:none;padding:4px 8px;border-radius:20px;background:{{ a.stBg }};font-size:10px;font-weight:800;color:{{ a.stColor }}">{{ a.stLabel }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden">
+              <div style="padding:18px 20px;display:flex;align-items:center;gap:14px;border-bottom:1px solid {{ theme.border }}">
+                <div style="width:54px;height:54px;flex:none;border-radius:50%;background:{{ sel.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:{{ sel.avatarColor }}">{{ sel.initials }}</div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <span style="font-size:19px;font-weight:900;color:{{ theme.text }}">{{ sel.name }}</span>
+                    <span style="font-size:10px;font-weight:800;color:{{ theme.text2 }};border:1px solid {{ theme.border }};border-radius:6px;padding:2px 6px">{{ sel.tag }}</span>
+                  </div>
+                  <div style="font-size:13px;color:{{ theme.text2 }};margin-top:3px;font-family:monospace">{{ sel.phone }}</div>
+                </div>
+                <div style="padding:7px 12px;border-radius:20px;background:{{ sel.stBg }};font-size:12px;font-weight:800;color:{{ sel.stColor }}">{{ sel.stLabel }}</div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:14px">
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                  <div style="height:54px;border-radius:14px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:18px">📞</span><span style="font-size:14px;font-weight:800;color:{{ theme.primary }}">Ara</span></div>
+                  <div style="height:54px;border-radius:14px;background:{{ theme.greenC }};display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:18px">💬</span><span style="font-size:14px;font-weight:800;color:{{ theme.green }}">WhatsApp</span></div>
+                  <div style="height:54px;border-radius:14px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;gap:8px;cursor:pointer"><span style="font-size:18px">🧭</span><span style="font-size:14px;font-weight:800;color:{{ theme.text }}">Rota</span></div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                  <div style="background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                    <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">📅 TARİH &amp; SAAT</div>
+                    <div style="font-size:15px;font-weight:800;color:{{ theme.text }};margin-top:6px">{{ sel.dateLong }}</div>
+                    <div style="font-size:13px;color:{{ theme.text2 }};margin-top:2px;font-family:monospace">{{ sel.time }}</div>
+                  </div>
+                  <div style="background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                    <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">🔧 HİZMET</div>
+                    <div style="display:flex;align-items:center;gap:6px;margin-top:6px">
+                      <div style="width:8px;height:8px;border-radius:50%;background:{{ sel.serviceColor }}"></div>
+                      <span style="font-size:15px;font-weight:800;color:{{ theme.text }}">{{ sel.service }}</span>
+                    </div>
+                  </div>
+                  <div style="grid-column:1 / -1;background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                    <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">📍 HİZMET ADRESİ · {{ sel.districtUpper }}</div>
+                    <div style="font-size:14.5px;font-weight:700;color:{{ theme.text }};margin-top:6px;line-height:1.4">{{ sel.address }}</div>
+                  </div>
+                  <div style="grid-column:1 / -1;background:{{ theme.amberC }};border-radius:14px;padding:12px 14px">
+                    <div style="font-size:10.5px;font-weight:800;color:{{ theme.amber }};letter-spacing:.4px">⚠️ ARIZA &amp; NOTLAR</div>
+                    <div style="font-size:14px;font-weight:700;color:{{ theme.text }};margin-top:6px;line-height:1.45">{{ sel.noteOrEmpty }}</div>
+                  </div>
+                </div>
+
+                <div style="flex:1;min-height:120px;border-radius:14px;background:repeating-linear-gradient(45deg,{{ theme.surface2 }} 0 10px,{{ theme.bg }} 10px 20px);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:{{ theme.text2 }};font-family:monospace">harita önizleme · rota</div>
+              </div>
+
+              <div style="padding:14px 20px;border-top:1px solid {{ theme.border }};display:flex;gap:8px">
+                <div style="height:50px;padding:0 16px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13px;font-weight:700;color:{{ theme.text }};cursor:pointer">✏️ Düzenle</div>
+                <div onClick="{{ sel.cancel }}" style="height:50px;padding:0 16px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13px;font-weight:700;color:{{ theme.red }};cursor:pointer">❌ İptal</div>
+                <div style="flex:1"></div>
+                <div onClick="{{ tabReceipt }}" style="height:50px;padding:0 18px;border-radius:14px;background:{{ theme.amberC }};display:flex;align-items:center;font-size:13.5px;font-weight:800;color:{{ theme.amber }};cursor:pointer">🧾 Servis Fişi</div>
+                <div onClick="{{ sel.primaryAction }}" style="height:50px;padding:0 22px;border-radius:14px;background:{{ sel.primaryBg }};display:flex;align-items:center;font-size:13.5px;font-weight:800;color:{{ sel.primaryColor }};cursor:pointer">{{ sel.primaryLabel }}</div>
+              </div>
+            </div>
+          </div>
+          </sc-if>
+
+          <sc-if value="{{ showPortraitList }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden;animation:fadeUp .3s ease both">
+              <div style="padding:12px;display:flex;flex-direction:column;gap:8px;border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:8px;background:{{ theme.surface2 }};border-radius:12px;padding:11px 14px">
+                  <span style="font-size:14px">🔎</span>
+                  <input value="{{ search }}" onInput="{{ onSearch }}" placeholder="Müşteri, telefon, mahalle ara..." style="flex:1;border:none;outline:none;background:transparent;font-size:14px;color:{{ theme.text }};font-family:inherit"></input>
+                </div>
+                <div style="display:flex;gap:6px;flex-wrap:wrap">
+                  <sc-for list="{{ statusChips }}" as="ch" hint-placeholder-count="5">
+                    <div onClick="{{ ch.pick }}" style="display:flex;align-items:center;gap:6px;padding:8px 12px;border-radius:20px;cursor:pointer;background:{{ ch.bg }};border:1px solid {{ ch.border }}">
+                      <div style="width:7px;height:7px;border-radius:50%;background:{{ ch.dot }}"></div>
+                      <span style="font-size:12px;font-weight:700;color:{{ ch.color }}">{{ ch.label }} {{ ch.count }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+              <div style="flex:1;overflow-y:auto;padding:10px;display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start">
+                <sc-for list="{{ flatList }}" as="a" hint-placeholder-count="6">
+                  <div onClick="{{ a.select }}" style="display:flex;flex-direction:column;gap:10px;padding:14px;border-radius:16px;background:{{ theme.surface2 }};border:1px solid {{ a.rowBorder }};cursor:pointer;transition:transform .12s" style-active="transform:scale(.98)">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:40px;height:40px;flex:none;border-radius:50%;background:{{ a.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:{{ a.avatarColor }}">{{ a.initials }}</div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:14px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ a.name }}</div>
+                        <div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:2px;font-family:monospace">{{ a.dateShort }} · {{ a.time }}</div>
+                      </div>
+                      <div style="flex:none;padding:4px 8px;border-radius:20px;background:{{ a.stBg }};font-size:10px;font-weight:800;color:{{ a.stColor }}">{{ a.stLabel }}</div>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <div style="width:7px;height:7px;border-radius:50%;background:{{ a.serviceColor }}"></div>
+                      <span style="font-size:12px;font-weight:700;color:{{ theme.text }}">{{ a.service }}</span>
+                    </div>
+                    <div style="font-size:11.5px;color:{{ theme.text2 }};line-height:1.4">📍 {{ a.district }} · {{ a.address }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showCal }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden;animation:fadeUp .3s ease both">
+              <div style="display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid {{ theme.border }};flex-wrap:wrap">
+                <div onClick="{{ weekPrev }}" style="width:38px;height:38px;border-radius:10px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:15px;color:{{ theme.text }};cursor:pointer">‹</div>
+                <div onClick="{{ weekNext }}" style="width:38px;height:38px;border-radius:10px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:15px;color:{{ theme.text }};cursor:pointer">›</div>
+                <div style="font-size:15px;font-weight:800;color:{{ theme.text }};margin-left:4px">{{ weekLabel }}</div>
+                <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">{{ weekCount }} randevu</div>
+                <div style="flex:1"></div>
+                <div onClick="{{ weekToday }}" style="height:38px;padding:0 14px;border-radius:10px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:12px;font-weight:800;color:{{ theme.primary }};cursor:pointer">Bu Hafta</div>
+              </div>
+              <div style="display:grid;grid-template-columns:52px repeat(7,minmax(0,1fr));border-bottom:1px solid {{ theme.border }}">
+                <div></div>
+                <sc-for list="{{ calDays }}" as="d" hint-placeholder-count="7">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 0">
+                    <span style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">{{ d.dow }}</span>
+                    <span style="width:30px;height:30px;border-radius:50%;background:{{ d.headBg }};display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:{{ d.headColor }}">{{ d.num }}</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1;overflow-y:auto">
+                <div style="display:grid;grid-template-columns:52px repeat(7,minmax(0,1fr));height:{{ calBodyH }}">
+                  <div>
+                    <sc-for list="{{ calHours }}" as="h" hint-placeholder-count="11">
+                      <div style="height:{{ calRowH }};box-sizing:border-box;padding:4px 8px 0 0;text-align:right;font-size:10.5px;font-weight:700;color:{{ theme.text2 }};font-family:monospace">{{ h.label }}</div>
+                    </sc-for>
+                  </div>
+                  <sc-for list="{{ calDays }}" as="d" hint-placeholder-count="7">
+                    <div style="position:relative;border-left:1px solid {{ theme.border }};background:{{ d.colBg }}">
+                      <sc-for list="{{ calHours }}" as="h" hint-placeholder-count="11">
+                        <div style="height:{{ calRowH }};box-sizing:border-box;border-top:1px solid {{ theme.border }}"></div>
+                      </sc-for>
+                      <sc-for list="{{ d.items }}" as="it" hint-placeholder-count="0">
+                        <div onClick="{{ it.select }}" style="position:absolute;left:3px;right:3px;top:{{ it.top }};height:{{ it.height }};box-sizing:border-box;border-radius:9px;background:{{ it.bg }};border-left:3px solid {{ it.color }};padding:4px 6px;overflow:hidden;cursor:pointer;transition:transform .12s" style-hover="transform:scale(1.03)">
+                          <div style="font-size:10px;font-weight:800;color:{{ it.color }};font-family:monospace">{{ it.time }}</div>
+                          <div style="font-size:11px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">{{ it.name }}</div>
+                          <div style="font-size:10px;color:{{ theme.text2 }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px">{{ it.service }}</div>
+                        </div>
+                      </sc-for>
+                      <sc-if value="{{ d.showNow }}" hint-placeholder-val="{{ false }}">
+                        <div style="position:absolute;left:0;right:0;top:{{ d.nowTop }};height:2px;background:{{ theme.red }}"><div style="position:absolute;left:-4px;top:-3px;width:8px;height:8px;border-radius:50%;background:{{ theme.red }}"></div></div>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showMap }}" hint-placeholder-val="{{ false }}">
+            <div style="flex:1;min-height:0;display:grid;grid-template-columns:{{ mapCols }};grid-template-rows:{{ mapRows }};gap:14px;animation:fadeUp .3s ease both">
+              <div style="order:{{ mapListOrder }};min-height:0;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden">
+                <div style="padding:12px;border-bottom:1px solid {{ theme.border }};display:flex;flex-direction:column;gap:8px">
+                  <div style="display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:14px;font-weight:800;color:{{ theme.text }}">🧭 Günün Rotası</span>
+                    <span style="font-size:11px;font-weight:700;color:{{ theme.text2 }}">{{ mapSummary }}</span>
+                  </div>
+                  <div style="display:flex;gap:6px;overflow-x:auto">
+                    <sc-for list="{{ mapDays }}" as="md" hint-placeholder-count="6">
+                      <div onClick="{{ md.pick }}" style="flex:none;padding:7px 11px;border-radius:20px;background:{{ md.bg }};color:{{ md.color }};font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap">{{ md.label }} · {{ md.count }}</div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:6px">
+                  <sc-for list="{{ stops }}" as="sp" hint-placeholder-count="3">
+                    <div onClick="{{ sp.select }}" style="display:flex;gap:10px;padding:12px;border-radius:14px;background:{{ sp.rowBg }};border:1px solid {{ sp.rowBorder }};cursor:pointer;transition:background .15s">
+                      <div style="width:30px;height:30px;flex:none;border-radius:50%;background:{{ sp.pinBg }};display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#fff">{{ sp.n }}</div>
+                      <div style="flex:1;min-width:0">
+                        <div style="display:flex;justify-content:space-between;gap:6px">
+                          <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ sp.name }}</span>
+                          <span style="flex:none;font-size:11px;font-weight:800;color:{{ theme.text2 }};font-family:monospace">{{ sp.time }}</span>
+                        </div>
+                        <div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:3px;line-height:1.4">📍 {{ sp.district }} · {{ sp.address }}</div>
+                        <div style="display:flex;gap:6px;margin-top:8px">
+                          <div style="height:32px;padding:0 10px;border-radius:9px;background:{{ theme.primaryC }};display:flex;align-items:center;font-size:11px;font-weight:800;color:{{ theme.primary }}">🧭 Yol Tarifi</div>
+                          <div onClick="{{ sp.open }}" style="height:32px;padding:0 10px;border-radius:9px;background:{{ theme.surface }};border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:11px;font-weight:800;color:{{ theme.text }}">Detay</div>
+                          <div style="flex:1"></div>
+                          <div style="align-self:center;padding:3px 8px;border-radius:20px;background:{{ sp.stBg }};font-size:10px;font-weight:800;color:{{ sp.stColor }}">{{ sp.stLabel }}</div>
+                        </div>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="padding:10px;border-top:1px solid {{ theme.border }}">
+                  <div style="height:46px;border-radius:12px;background:linear-gradient(135deg,#0EA5E9,#0369A1);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;cursor:pointer">🗺️ Tüm rotayı Google Maps'te aç</div>
+                </div>
+              </div>
+              <div style="order:{{ mapCanvasOrder }};position:relative;min-height:0;border-radius:20px;border:1px solid {{ theme.border }};overflow:hidden;background:repeating-linear-gradient(45deg,{{ theme.surface2 }} 0 12px,{{ theme.bg }} 12px 24px)">
+                <div style="position:absolute;top:12px;left:12px;padding:6px 10px;border-radius:8px;background:{{ theme.surface }};font-size:10.5px;font-weight:700;color:{{ theme.text2 }};font-family:monospace">harita alanı · Google Maps SDK</div>
+                <sc-for list="{{ stops }}" as="sp" hint-placeholder-count="3">
+                  <div onClick="{{ sp.select }}" style="position:absolute;left:{{ sp.left }};top:{{ sp.top }};transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;z-index:{{ sp.z }}">
+                    <sc-if value="{{ sp.showLabel }}" hint-placeholder-val="{{ false }}">
+                      <div style="padding:6px 10px;border-radius:10px;background:{{ theme.surface }};box-shadow:0 6px 18px rgba(0,0,0,.3);font-size:11.5px;font-weight:800;color:{{ theme.text }};white-space:nowrap">{{ sp.name }} · {{ sp.time }}</div>
+                    </sc-if>
+                    <div style="width:{{ sp.pinSize }};height:{{ sp.pinSize }};border-radius:50%;background:{{ sp.pinBg }};border:3px solid #fff;box-shadow:0 4px 12px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;transition:all .2s">{{ sp.n }}</div>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ showSheet }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeSheet }}" style="position:absolute;inset:0;z-index:30;background:rgba(2,6,23,.55);display:flex;align-items:flex-end;justify-content:center">
+              <div onClick="{{ stop }}" style="width:{{ sheetW }};max-height:78%;box-sizing:border-box;background:{{ theme.surface }};border-radius:24px 24px 0 0;display:flex;flex-direction:column;overflow:hidden;animation:sheetUp .3s ease both">
+                <div style="display:flex;justify-content:center;padding:8px 0 0"><div style="width:44px;height:5px;border-radius:3px;background:{{ theme.border }}"></div></div>
+                <div style="padding:12px 20px 14px;display:flex;align-items:center;gap:14px;border-bottom:1px solid {{ theme.border }}">
+                  <div style="width:50px;height:50px;flex:none;border-radius:50%;background:{{ sel.avatarBg }};display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:900;color:{{ sel.avatarColor }}">{{ sel.initials }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:18px;font-weight:900;color:{{ theme.text }}">{{ sel.name }}</div>
+                    <div style="font-size:12.5px;color:{{ theme.text2 }};margin-top:3px;font-family:monospace">{{ sel.phone }}</div>
+                  </div>
+                  <div style="padding:6px 11px;border-radius:20px;background:{{ sel.stBg }};font-size:11.5px;font-weight:800;color:{{ sel.stColor }}">{{ sel.stLabel }}</div>
+                  <div onClick="{{ closeSheet }}" style="width:40px;height:40px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:15px;color:{{ theme.text }};cursor:pointer">✕</div>
+                </div>
+                <div style="flex:1;overflow-y:auto;padding:14px 20px;display:flex;flex-direction:column;gap:10px">
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">
+                    <div style="height:52px;border-radius:14px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:17px">📞</span><span style="font-size:13.5px;font-weight:800;color:{{ theme.primary }}">Ara</span></div>
+                    <div style="height:52px;border-radius:14px;background:{{ theme.greenC }};display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:17px">💬</span><span style="font-size:13.5px;font-weight:800;color:{{ theme.green }}">WhatsApp</span></div>
+                    <div style="height:52px;border-radius:14px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;gap:8px"><span style="font-size:17px">🧭</span><span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">Rota</span></div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div style="background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                      <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">📅 TARİH &amp; SAAT</div>
+                      <div style="font-size:14.5px;font-weight:800;color:{{ theme.text }};margin-top:6px">{{ sel.dateLong }}</div>
+                      <div style="font-size:12.5px;color:{{ theme.text2 }};margin-top:2px;font-family:monospace">{{ sel.time }}</div>
+                    </div>
+                    <div style="background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                      <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">🔧 HİZMET</div>
+                      <div style="font-size:14.5px;font-weight:800;color:{{ theme.text }};margin-top:6px">{{ sel.service }}</div>
+                    </div>
+                    <div style="grid-column:1 / -1;background:{{ theme.surface2 }};border-radius:14px;padding:12px 14px">
+                      <div style="font-size:10.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">📍 ADRES · {{ sel.districtUpper }}</div>
+                      <div style="font-size:14px;font-weight:700;color:{{ theme.text }};margin-top:6px;line-height:1.4">{{ sel.address }}</div>
+                    </div>
+                    <div style="grid-column:1 / -1;background:{{ theme.amberC }};border-radius:14px;padding:12px 14px">
+                      <div style="font-size:10.5px;font-weight:800;color:{{ theme.amber }};letter-spacing:.4px">⚠️ ARIZA &amp; NOTLAR</div>
+                      <div style="font-size:14px;font-weight:700;color:{{ theme.text }};margin-top:6px;line-height:1.45">{{ sel.noteOrEmpty }}</div>
+                    </div>
+                  </div>
+                </div>
+                <div style="padding:12px 20px 18px;border-top:1px solid {{ theme.border }};display:flex;gap:8px">
+                  <div style="height:50px;padding:0 16px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13px;font-weight:700;color:{{ theme.text }};cursor:pointer">✏️ Düzenle</div>
+                  <div onClick="{{ sel.cancel }}" style="height:50px;padding:0 16px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13px;font-weight:700;color:{{ theme.red }};cursor:pointer">❌ İptal</div>
+                  <div style="flex:1"></div>
+                  <div onClick="{{ sel.primaryAction }}" style="height:50px;padding:0 22px;border-radius:14px;background:{{ sel.primaryBg }};display:flex;align-items:center;font-size:13.5px;font-weight:800;color:{{ sel.primaryColor }};cursor:pointer">{{ sel.primaryLabel }}</div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ tabModalOpen }}" hint-placeholder-val="{{ false }}">
+            <div onClick="{{ closeTabModal }}" style="position:absolute;inset:0;z-index:40;background:rgba(2,6,23,.6);display:flex;align-items:center;justify-content:center;padding:28px;box-sizing:border-box">
+              <div onClick="{{ stop }}" style="width:100%;max-width:760px;height:100%;max-height:1000px;border-radius:24px;overflow:hidden;background:{{ theme.bg }};box-shadow:0 30px 80px rgba(0,0,0,.5);display:flex;flex-direction:column">
+                <!-- ============ HIZLI RANDEVU ============ -->
+          <sc-if value="{{ tabModalNew }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column;animation:sheetUp .35s ease both">
+              <div style="flex:none;display:flex;align-items:center;gap:12px;padding:12px 16px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div onClick="{{ closeTabModal }}" style="width:40px;height:40px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">✕</div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:16px;font-weight:800;color:{{ theme.text }}">Hızlı Randevu Kaydı</div>
+                  <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Telefonla gelen işi saniyeler içinde kaydet</div>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px">
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👤 Müşteri &amp; İletişim</div>
+                  <div>
+                    <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Adı Soyadı *</div>
+                    <input value="{{ nName }}" onInput="{{ onNName }}" placeholder="Örn: Ahmet Yılmaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                  </div>
+                  <div>
+                    <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Telefon *</div>
+                    <div style="display:flex;gap:8px">
+                      <input value="{{ nPhone }}" onInput="{{ onNPhone }}" type="tel" placeholder="05xx xxx xx xx" style="flex:1;min-width:0;height:48px;box-sizing:border-box;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:monospace;outline:none"></input>
+                      <div style="flex:none;height:48px;padding:0 12px;border-radius:12px;background:{{ theme.primaryC }};display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:800;color:{{ theme.primary }};cursor:pointer">📇 Rehber</div>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İlçe *</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Bayrampaşa</option><option>Güngören</option><option>Eyüpsultan</option><option>Gaziosmanpaşa</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Mahalle *</div>
+                      <input placeholder="Seç veya yaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Cadde / Sokak *</div>
+                      <input placeholder="Cadde veya sokak" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">No / Daire</div>
+                      <input placeholder="12 / 4" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Bizi Nereden Buldu?</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Seçiniz</option><option>Google</option><option>Tavsiye</option><option>Eski müşteri</option>
+                      </select>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Durum *</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Onaylandı</option><option>Bekliyor</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">📅 Tarih &amp; Saat</div>
+                  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                    <sc-for list="{{ quickDates }}" as="qd" hint-placeholder-count="3">
+                      <div onClick="{{ qd.pick }}" style="height:52px;border-radius:12px;border:1px solid {{ qd.border }};background:{{ qd.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer">
+                        <span style="font-size:12.5px;font-weight:800;color:{{ qd.color }}">{{ qd.label }}</span>
+                        <span style="font-size:10px;color:{{ qd.color }};opacity:.75;margin-top:2px">{{ qd.sub }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Randevu Tarihi *</div>
+                      <input type="date" value="{{ nDate }}" onChange="{{ onNDate }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none;color-scheme:{{ colorScheme }}"></input>
+                    </div>
+                    <div>
+                      <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Hizmet Türü</div>
+                      <select value="{{ nService }}" onChange="{{ onNService }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none">
+                        <option>Genel Servis</option><option>Kombi Bakım &amp; Servis</option><option>Petek Temizliği</option><option>Doğalgaz Tesisatı</option><option>Gaz Kaçağı Tespiti</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:6px">
+                      <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Saat Aralığı *</span>
+                      <span style="font-size:11px;font-weight:800;color:{{ theme.primary }}">{{ nSlotLabel }}</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                      <sc-for list="{{ slots }}" as="sl" hint-placeholder-count="15">
+                        <div onClick="{{ sl.pick }}" style="height:44px;border-radius:11px;border:1px solid {{ sl.border }};background:{{ sl.bg }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;font-family:monospace;color:{{ sl.color }};cursor:pointer;transition:all .15s">{{ sl.label }}</div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                  <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔧 Arıza &amp; Müşteri Şikâyeti</div>
+                  <div style="font-size:11px;color:{{ theme.text2 }}">Dokun, nota eklensin</div>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px">
+                    <sc-for list="{{ faultChips }}" as="fc" hint-placeholder-count="8">
+                      <div onClick="{{ fc.pick }}" style="padding:9px 11px;border-radius:12px;border:1px solid {{ fc.border }};background:{{ fc.bg }};font-size:12px;font-weight:700;color:{{ fc.color }};cursor:pointer">{{ fc.label }}</div>
+                    </sc-for>
+                  </div>
+                  <textarea value="{{ nNote }}" onInput="{{ onNNote }}" placeholder="Örn: Sıcak su açıldığında kombi duruyor, basınç 0.8 bar." style="min-height:86px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                </div>
+              </div>
+
+              <div style="flex:none;display:flex;gap:8px;padding:12px 12px 16px;background:{{ theme.surface }};border-top:1px solid {{ theme.border }}">
+                <div onClick="{{ closeTabModal }}" style="flex:none;height:52px;padding:0 18px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;font-size:13.5px;font-weight:700;color:{{ theme.text }};cursor:pointer">Vazgeç</div>
+                <div onClick="{{ saveNew }}" style="flex:1;height:52px;border-radius:14px;background:{{ saveNewBg }};display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;color:#fff;cursor:pointer;opacity:{{ saveNewOpacity }};transition:all .2s">✓ Randevuyu Kaydet</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ============ SERVİS FİŞİ ============ -->
+          <sc-if value="{{ tabModalReceipt }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column;animation:sheetUp .35s ease both">
+              <div style="flex:none;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }};padding:12px 16px 12px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <div onClick="{{ closeTabModal }}" style="width:40px;height:40px;border-radius:12px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">✕</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="display:flex;align-items:center;gap:6px">
+                      <span style="font-size:16px;font-weight:800;color:{{ theme.text }}">Servis Fişi Kes</span>
+                      <span style="font-size:9.5px;font-weight:800;color:{{ theme.amber }};background:{{ theme.amberC }};border-radius:6px;padding:2px 6px">YENİ İŞ</span>
+                    </div>
+                    <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Randevusuz acil / yerinde iş · fiş + gelir kaydı</div>
+                  </div>
+                </div>
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:12px">
+                  <sc-for list="{{ steps }}" as="sp" hint-placeholder-count="4">
+                    <div onClick="{{ sp.go }}" style="display:flex;flex-direction:column;gap:6px;cursor:pointer">
+                      <div style="height:4px;border-radius:2px;background:{{ sp.bar }};transition:background .25s"></div>
+                      <div style="display:flex;align-items:center;gap:4px">
+                        <span style="font-size:11px">{{ sp.emoji }}</span>
+                        <span style="font-size:10.5px;font-weight:800;color:{{ sp.color }}">{{ sp.label }}</span>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px">
+
+                <sc-if value="{{ stepIs1 }}" hint-placeholder-val="{{ true }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👤 Müşteri &amp; Adres</div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Adı *</div>
+                        <input placeholder="Örn: Ahmet Yılmaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                      </div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Telefon *</div>
+                        <input type="tel" placeholder="05xx xxx xx xx" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:monospace;outline:none"></input>
+                      </div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İlçe *</div>
+                          <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"><option>Bayrampaşa</option><option>Güngören</option><option>Eyüpsultan</option></select>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Mahalle</div>
+                          <input placeholder="Seç veya yaz" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                      <div style="display:grid;grid-template-columns:2fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Cadde / Sokak</div>
+                          <input placeholder="14. Sokak" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Kapı / Daire</div>
+                          <input placeholder="12 / 4" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🗓️ Hizmet &amp; Zaman</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İş Tarihi *</div>
+                          <input type="date" value="{{ todayIso }}" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none;color-scheme:{{ colorScheme }}"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Saat *</div>
+                          <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:monospace;outline:none"><option>09:00 – 10:00</option><option>10:00 – 11:00</option><option>11:00 – 12:00</option><option>Şu an</option></select>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Müşteri Beyanı / Arıza Şikâyeti</div>
+                        <textarea placeholder="Müşteri ne şikâyet etti? Örn: Sıcak su gelmiyor." style="min-height:76px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs2 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔥 Cihaz Markası &amp; Modeli</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ brands }}" as="br" hint-placeholder-count="11">
+                          <div onClick="{{ br.pick }}" style="height:42px;border-radius:11px;border:1.5px solid {{ br.border }};background:{{ br.bg }};display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:900;letter-spacing:.2px;color:{{ br.color }};cursor:pointer;transition:all .15s">{{ br.name }}</div>
+                        </sc-for>
+                      </div>
+                      <input placeholder="Model · Örn: Thema Fast F25" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🛠️ Yapılan İş *</div>
+                      <div style="display:flex;flex-wrap:wrap;gap:6px">
+                        <sc-for list="{{ jobChips }}" as="jc" hint-placeholder-count="9">
+                          <div onClick="{{ jc.pick }}" style="padding:9px 11px;border-radius:12px;border:1px solid {{ jc.border }};background:{{ jc.bg }};font-size:12px;font-weight:700;color:{{ jc.color }};cursor:pointer">{{ jc.label }}</div>
+                        </sc-for>
+                      </div>
+                      <textarea value="{{ jobText }}" onInput="{{ onJobText }}" placeholder="Şablona dokun ya da detay yaz…" style="min-height:86px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:12px 14px;font-size:13.5px;line-height:1.5;font-family:inherit;outline:none;resize:none"></textarea>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🔩 Parçalar &amp; Kalemler</span>
+                        <span style="font-size:10.5px;font-weight:700;color:{{ theme.text2 }}">Stoktan otomatik düşer</span>
+                      </div>
+                      <div style="display:flex;gap:6px;overflow-x:auto">
+                        <sc-for list="{{ partSources }}" as="ps" hint-placeholder-count="4">
+                          <div onClick="{{ ps.pick }}" style="flex:none;padding:7px 11px;border-radius:20px;background:{{ ps.bg }};color:{{ ps.color }};font-size:11.5px;font-weight:700;cursor:pointer">{{ ps.label }}</div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <sc-for list="{{ parts }}" as="pt" hint-placeholder-count="5">
+                          <div onClick="{{ pt.toggle }}" style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;border:1px solid {{ pt.border }};background:{{ pt.bg }};cursor:pointer;transition:all .15s">
+                            <div style="width:22px;height:22px;flex:none;border-radius:7px;border:1.5px solid {{ pt.checkBorder }};background:{{ pt.checkBg }};display:flex;align-items:center;justify-content:center;font-size:12px;color:#fff;font-weight:900">{{ pt.check }}</div>
+                            <div style="flex:1;min-width:0">
+                              <div style="font-size:12.5px;font-weight:700;color:{{ theme.text }};line-height:1.3">{{ pt.name }}</div>
+                              <div style="font-size:10.5px;color:{{ theme.text2 }};margin-top:2px">{{ pt.src }}</div>
+                            </div>
+                            <span style="flex:none;font-size:12.5px;font-weight:800;color:{{ theme.green }}">{{ pt.price }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="height:42px;border-radius:12px;border:1.5px dashed {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:{{ theme.text2 }};cursor:pointer">＋ Özel parça satırı ekle</div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">İşçilik (₺)</div>
+                          <input type="number" inputmode="numeric" value="{{ labor }}" onInput="{{ onLabor }}" placeholder="0" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;outline:none"></input>
+                        </div>
+                        <div>
+                          <div style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }};margin-bottom:6px">Diğer (₺)</div>
+                          <input type="number" inputmode="numeric" value="{{ other }}" onInput="{{ onOther }}" placeholder="0" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:15px;font-weight:700;font-family:inherit;outline:none"></input>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">🛡️ Garanti &amp; Test</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ warranties }}" as="w" hint-placeholder-count="6">
+                          <div onClick="{{ w.pick }}" style="height:40px;border-radius:11px;border:1px solid {{ w.border }};background:{{ w.bg }};display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:800;color:{{ w.color }};cursor:pointer">{{ w.label }}</div>
+                        </sc-for>
+                      </div>
+                      <div onClick="{{ toggleTested }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:{{ testedBg }};border:1px solid {{ testedBorder }};cursor:pointer">
+                        <div style="width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid {{ testedCheckBorder }};background:{{ testedCheckBg }};display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900">{{ testedCheck }}</div>
+                        <span style="font-size:12.5px;font-weight:700;color:{{ theme.text }};line-height:1.4">Cihaz test edildi, çalışır durumda teslim edildi</span>
+                      </div>
+                    </div>
+
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">👷 Usta &amp; Bildirim</div>
+                      <select style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 12px;font-size:14px;font-family:inherit;outline:none"><option>Usta seç (opsiyonel)</option><option>Cemil Usta</option><option>İlhan Usta</option></select>
+                      <div onClick="{{ toggleWa }}" style="display:flex;align-items:center;gap:12px;padding:12px;border-radius:12px;background:{{ theme.greenC }};cursor:pointer">
+                        <span style="font-size:18px">📲</span>
+                        <div style="flex:1">
+                          <div style="font-size:12.5px;font-weight:800;color:{{ theme.text }}">Fişi WhatsApp ile gönder</div>
+                          <div style="font-size:10.5px;color:{{ theme.text2 }};margin-top:2px">Dijital fiş + garanti bilgisi müşteriye iletilir</div>
+                        </div>
+                        <div style="width:42px;height:24px;border-radius:12px;background:{{ waTrack }};position:relative;transition:background .2s;flex:none">
+                          <div style="position:absolute;top:3px;left:{{ waKnob }};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .2s"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs3 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="border-radius:18px;padding:16px;background:linear-gradient(135deg,#0EA5E9,#0369A1);color:#fff">
+                      <div style="font-size:10.5px;font-weight:800;letter-spacing:.5px;opacity:.85">CANLI TAHSİLAT DÖKÜMÜ</div>
+                      <div style="font-size:32px;font-weight:900;margin-top:6px;letter-spacing:-0.5px">{{ totalFmt }}</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.25)">
+                        <div><div style="font-size:10px;opacity:.85">Parça</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ partsFmt }}</div></div>
+                        <div><div style="font-size:10px;opacity:.85">İşçilik</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ laborFmt }}</div></div>
+                        <div><div style="font-size:10px;opacity:.85">Diğer</div><div style="font-size:13px;font-weight:800;margin-top:2px">{{ otherFmt }}</div></div>
+                      </div>
+                      <div style="font-size:10.5px;opacity:.85;margin-top:10px">🔒 Tutar iş kalemlerinden otomatik hesaplandı</div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">💳 Ödeme Yöntemi</div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ payMethods }}" as="pm" hint-placeholder-count="3">
+                          <div onClick="{{ pm.pick }}" style="height:66px;border-radius:14px;border:1.5px solid {{ pm.border }};background:{{ pm.bg }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:all .15s">
+                            <span style="font-size:20px">{{ pm.emoji }}</span>
+                            <span style="font-size:11.5px;font-weight:800;color:{{ pm.color }}">{{ pm.label }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">💵 Tahsilat Durumu</div>
+                      <div style="display:flex;flex-direction:column;gap:6px">
+                        <sc-for list="{{ collStates }}" as="cs" hint-placeholder-count="3">
+                          <div onClick="{{ cs.pick }}" style="height:48px;border-radius:12px;border:1.5px solid {{ cs.border }};background:{{ cs.bg }};display:flex;align-items:center;gap:10px;padding:0 14px;cursor:pointer;transition:all .15s">
+                            <span style="font-size:16px">{{ cs.emoji }}</span>
+                            <span style="flex:1;font-size:13px;font-weight:800;color:{{ cs.color }}">{{ cs.label }}</span>
+                            <div style="width:18px;height:18px;border-radius:50%;border:2px solid {{ cs.border }};display:flex;align-items:center;justify-content:center"><div style="width:8px;height:8px;border-radius:50%;background:{{ cs.dot }}"></div></div>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <input placeholder="Kasa notu · Örn: Nakit elden alındı" style="height:48px;box-sizing:border-box;width:100%;border-radius:12px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text }};padding:0 14px;font-size:14px;font-family:inherit;outline:none"></input>
+                    </div>
+                    <div onClick="{{ toggleExpense }}" style="display:flex;align-items:center;gap:12px;padding:14px;border-radius:18px;background:{{ theme.surface }};border:1px solid {{ theme.border }};cursor:pointer">
+                      <div style="width:24px;height:24px;flex:none;border-radius:7px;border:1.5px solid {{ expCheckBorder }};background:{{ expCheckBg }};display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:900">{{ expCheck }}</div>
+                      <div>
+                        <div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Bu iş için gider kaydı ekle</div>
+                        <div style="font-size:11px;color:{{ theme.text2 }};margin-top:2px">Parça alımı, usta harcaması, malzeme</div>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ stepIs4 }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;flex-direction:column;gap:10px;animation:fadeUp .3s ease both">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">✍️ Dijital İmza</div>
+                      <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                          <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Müşteri İmzası</span>
+                          <span onClick="{{ clearA }}" style="font-size:11px;font-weight:700;color:{{ theme.primary }};cursor:pointer">🧽 Temizle</span>
+                        </div>
+                        <div style="position:relative;border-radius:14px;border:1.5px dashed {{ theme.border }};background:{{ theme.surface2 }};overflow:hidden">
+                          <sc-if value="{{ sigAEmpty }}" hint-placeholder-val="{{ true }}">
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{ theme.text2 }};pointer-events:none">👆 Parmağınla imzala</div>
+                          </sc-if>
+                          <canvas ref="{{ sigRefA }}" width="700" height="280" onPointerDown="{{ downA }}" onPointerMove="{{ moveA }}" onPointerUp="{{ sigUp }}" onPointerLeave="{{ sigUp }}" style="display:block;width:100%;height:140px;touch-action:none;cursor:crosshair"></canvas>
+                        </div>
+                      </div>
+                      <div>
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+                          <span style="font-size:11.5px;font-weight:700;color:{{ theme.text2 }}">Firma Yetkilisi İmzası</span>
+                          <span onClick="{{ clearB }}" style="font-size:11px;font-weight:700;color:{{ theme.primary }};cursor:pointer">🧽 Temizle</span>
+                        </div>
+                        <div style="position:relative;border-radius:14px;border:1.5px dashed {{ theme.border }};background:{{ theme.surface2 }};overflow:hidden">
+                          <sc-if value="{{ sigBEmpty }}" hint-placeholder-val="{{ true }}">
+                            <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:{{ theme.text2 }};pointer-events:none">👆 Parmağınla imzala</div>
+                          </sc-if>
+                          <canvas ref="{{ sigRefB }}" width="700" height="220" onPointerDown="{{ downB }}" onPointerMove="{{ moveB }}" onPointerUp="{{ sigUp }}" onPointerLeave="{{ sigUp }}" style="display:block;width:100%;height:110px;touch-action:none;cursor:crosshair"></canvas>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:center">
+                        <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">📸 Servis Fotoğrafları</span>
+                        <span style="font-size:11px;font-weight:800;color:{{ theme.text2 }}">{{ photoCount }} / 5</span>
+                      </div>
+                      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                        <sc-for list="{{ photos }}" as="ph" hint-placeholder-count="0">
+                          <div style="aspect-ratio:1;border-radius:12px;background:repeating-linear-gradient(45deg,{{ theme.surface2 }} 0 8px,{{ theme.bg }} 8px 16px);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:{{ theme.text2 }};font-family:monospace">{{ ph.label }}</div>
+                        </sc-for>
+                        <sc-if value="{{ canAddPhoto }}" hint-placeholder-val="{{ true }}">
+                          <div onClick="{{ addPhoto }}" style="aspect-ratio:1;border-radius:12px;border:1.5px dashed {{ theme.primary }};background:{{ theme.primaryC }};display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer">
+                            <span style="font-size:20px">📷</span>
+                            <span style="font-size:10.5px;font-weight:800;color:{{ theme.primary }}">Çek / Yükle</span>
+                          </div>
+                        </sc-if>
+                      </div>
+                      <div style="font-size:11px;color:{{ theme.text2 }}">Arıza durumu, takılan parça veya bakım sonrası</div>
+                    </div>
+                  </div>
+                </sc-if>
+
+              </div>
+
+              <div style="flex:none;display:flex;align-items:center;gap:10px;padding:12px 12px 16px;background:{{ theme.surface }};border-top:1px solid {{ theme.border }}">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:9.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.5px">GENEL TOPLAM</div>
+                  <div style="font-size:20px;font-weight:900;color:{{ theme.green }};margin-top:2px">{{ totalFmt }}</div>
+                </div>
+                <sc-if value="{{ hasPrev }}" hint-placeholder-val="{{ false }}">
+                  <div onClick="{{ prevStep }}" style="flex:none;width:52px;height:52px;border-radius:14px;border:1px solid {{ theme.border }};display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text }};cursor:pointer">←</div>
+                </sc-if>
+                <div onClick="{{ nextStep }}" style="flex:none;height:52px;padding:0 18px;border-radius:14px;background:{{ nextBg }};display:flex;align-items:center;justify-content:center;font-size:13.5px;font-weight:800;color:#fff;cursor:pointer;transition:transform .12s" style-active="transform:scale(.96)">{{ nextLabel }}</div>
+              </div>
+            </div>
+          </sc-if>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:18px;left:50%;transform:translateX(-50%);z-index:50;background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 18px;font-size:13.5px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+          </sc-if>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const RAW = [
+  { id: 1, date: '2026-09-26', time: '13:00 – 14:00', name: 'İbrahim Soydan', district: 'Bayrampaşa', tag: 'Eski müşteri', phone: '0530 847 43 66', service: 'Kombi Bakım & Servis', address: 'Kocatepe Mah. Çiçek Sok.', note: 'Su akıtıyor', status: 'onay' },
+  { id: 2, date: '2026-09-24', time: '13:00 – 14:00', name: 'Sevtap Karagöz', district: 'Bayrampaşa', tag: 'Yeni', phone: '0535 583 74 61', service: 'Petek Temizliği', address: 'Kartaltepe Mah. Sel Sokağı No:2/3', note: 'Petekler ısınmıyor, yıllık bakım', status: 'tamam' },
+  { id: 3, date: '2026-09-23', time: '11:00 – 12:00', name: 'Murat Esen', district: 'Bayrampaşa', tag: 'Eski müşteri', phone: '0542 660 23 20', service: 'Kombi Bakım & Servis', address: 'Yıldırım Trabzon Sokak 22/4', note: 'Sıcak su arızası / ısıtmama', status: 'tamam' },
+  { id: 4, date: '2026-09-23', time: '14:00 – 15:00', name: 'Kübra Palaman', district: 'Bayrampaşa', tag: 'Yeni', phone: '0534 040 51 45', service: 'Petek Temizliği', address: 'Kartaltepe Mah. Şehit Ömer Halisdemir Cad. 154/4', note: 'Yıllık bakım, petekler ısınmıyor', status: 'onay' },
+  { id: 5, date: '2026-09-21', time: '17:00 – 18:00', name: 'Vahide Tok', district: 'Bayrampaşa', tag: 'Yeni', phone: '0530 613 89 31', service: 'Kombi Bakım & Servis', address: 'Aykut Sokak No:10 D:1', note: 'Su akıtıyor şikâyeti ile ulaştı', status: 'tamam' },
+  { id: 6, date: '2026-09-05', time: '14:00 – 15:00', name: 'Cemil Sancaklı', district: 'Bayrampaşa', tag: 'Yeni', phone: '0540 001 94 29', service: 'Kombi Bakım & Servis', address: 'Kocatepe Ömür Sokak 16/4', note: 'Kombi ateşlemiyor', status: 'tamam' },
+  { id: 7, date: '2026-09-03', time: '12:00 – 13:00', name: 'İbrahim Çevik', district: 'Bayrampaşa', tag: 'Yeni', phone: '0505 449 56 98', service: 'Doğalgaz Tesisatı', address: 'Kocatepe', note: 'Aşırı gaz kokusu şikâyeti, İGDAŞ bildirildi', status: 'tamam' },
+  { id: 8, date: '2026-09-02', time: '15:00 – 16:00', name: 'Caner Çolhan', district: 'Güngören', tag: 'Yeni', phone: '0534 974 76 01', service: 'Kombi Bakım & Servis', address: 'Merkez Mah. Köyiçi', note: '', status: 'onay' },
+  { id: 9, date: '2026-09-02', time: '17:00 – 18:00', name: 'Ercan Enes Savaşkol', district: 'Eyüpsultan', tag: 'Yeni', phone: '0552 705 00 27', service: 'Gaz Kaçağı Tespiti', address: 'İslambey Mah. Örnek Sokak 5/4', note: '', status: 'tamam' },
+  { id: 10, date: '2026-09-02', time: '18:00 – 19:00', name: 'Onur Yaka', district: 'Gaziosmanpaşa', tag: 'Yeni', phone: '0552 406 21 49', service: 'Kombi Bakım & Servis', address: 'Küçükköy Mah. Yaka Emlak', note: '', status: 'onay' },
+];
+const PARTS = [
+  { id: 'p1', name: '3 Bar Emniyet Ventili Değişimi', price: 950, src: 'pasa' },
+  { id: 'p2', name: '3 Yollu Vana Motoru & Kartuş Değişimi', price: 1950, src: 'ilhan' },
+  { id: 'p3', name: 'NTC Sıcaklık Sensörü', price: 650, src: 'depo' },
+  { id: 'p4', name: 'Genleşme Tankı 8 L', price: 1400, src: 'ilhan' },
+  { id: 'p5', name: 'Plakalı Eşanjör', price: 3200, src: 'depo' },
+  { id: 'p6', name: 'Ariston Alteas One Net 24 kW Kombi', price: 42610, src: 'depo' },
+];
+const SRC = { all: 'Tümü', depo: '🏢 Dükkan Depo', ilhan: '🏷️ İlhan Isı', pasa: '🛒 Paşa Market' };
+const DAYS = ['Pazar', 'Pazartesi', 'Salı', 'Çarşamba', 'Perşembe', 'Cuma', 'Cumartesi'];
+const DAYS_S = ['Paz', 'Pzt', 'Sal', 'Çar', 'Per', 'Cum', 'Cmt'];
+const MONTHS = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+const iso = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const tl = n => '₺' + (n || 0).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+class Component extends DCLogic {
+  state = {
+    isDark: true, screen: 'list', appts: RAW, statusFilter: 'all', range: 'month', search: '',
+    expanded: null, selectedId: 1, toast: null,
+    nName: '', nPhone: '', nDate: iso(new Date()), nService: 'Genel Servis', nSlot: null, nNote: '',
+    step: 1, brand: null, jobText: '', parts: [], partSrc: 'all', labor: '', other: '', warranty: 'Yok',
+    tabView: 'list', orient: 'landscape', weekOff: -1, mapDate: null, sheetOpen: false, tabModal: null,
+    tested: false, wa: true, pay: 'cash', coll: 'paid', expense: false, photos: 0, sigA: false, sigB: false,
+  };
+  sigRefA = React.createRef();
+  sigRefB = React.createRef();
+  drawing = null;
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._t);
+    this._t = setTimeout(() => this.setState({ toast: null }), 2600);
+  }
+  setStatus(id, status) { this.setState(s => ({ appts: s.appts.map(a => a.id === id ? { ...a, status } : a) })); }
+  pos(c, e) { const r = c.getBoundingClientRect(); return [(e.clientX - r.left) * c.width / r.width, (e.clientY - r.top) * c.height / r.height]; }
+  down(key, e) {
+    const c = (key === 'A' ? this.sigRefA : this.sigRefB).current; if (!c) return;
+    const ctx = c.getContext('2d'); const [x, y] = this.pos(c, e);
+    ctx.strokeStyle = this.state.isDark ? '#F8FAFC' : '#0F172A'; ctx.lineWidth = 5; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    ctx.beginPath(); ctx.moveTo(x, y); this.drawing = key;
+    if (!this.state['sig' + key]) this.setState({ ['sig' + key]: true });
+  }
+  move(key, e) {
+    if (this.drawing !== key) return;
+    const c = (key === 'A' ? this.sigRefA : this.sigRefB).current; if (!c) return;
+    const ctx = c.getContext('2d'); const [x, y] = this.pos(c, e); ctx.lineTo(x, y); ctx.stroke();
+  }
+  clear(key) {
+    const c = (key === 'A' ? this.sigRefA : this.sigRefB).current;
+    if (c) c.getContext('2d').clearRect(0, 0, c.width, c.height);
+    this.setState({ ['sig' + key]: false });
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = { bg: '#090D16', surface: '#131B2E', surface2: '#1E293B', border: '#334155', text: '#F8FAFC', text2: '#94A3B8',
+      primary: '#0EA5E9', primaryC: 'rgba(14,165,233,0.16)', green: '#22C55E', greenC: 'rgba(34,197,94,0.14)',
+      amber: '#F59E0B', amberC: 'rgba(245,158,11,0.14)', red: '#F87171', redC: 'rgba(248,113,113,0.14)', violet: '#A78BFA' };
+    const light = { bg: '#F4F7FA', surface: '#FFFFFF', surface2: '#EEF2F6', border: 'rgba(15,23,42,0.10)', text: '#0F172A', text2: '#64748B',
+      primary: '#0284C7', primaryC: 'rgba(2,132,199,0.10)', green: '#16A34A', greenC: 'rgba(22,163,74,0.10)',
+      amber: '#B45309', amberC: 'rgba(217,119,6,0.12)', red: '#DC2626', redC: 'rgba(220,38,38,0.10)', violet: '#7C3AED' };
+    const t = s.isDark ? dark : light;
+    const ST = {
+      bekle: { label: 'Bekliyor', color: t.amber, bg: t.amberC },
+      onay: { label: 'Onaylandı', color: t.primary, bg: t.primaryC },
+      tamam: { label: 'Tamamlandı', color: t.green, bg: t.greenC },
+      iptal: { label: 'İptal', color: t.red, bg: t.redC },
+    };
+    const svcColor = sv => /Petek/.test(sv) ? t.primary : /Doğalgaz/.test(sv) ? t.violet : /Kaçağı/.test(sv) ? t.red : t.text2;
+    const avatarPal = ['#F59E0B', '#14B8A6', '#3B82F6', '#8B5CF6', '#22C55E', '#EC4899', '#0EA5E9'];
+
+    const now = new Date(); const today = iso(now);
+    const add = n => { const d = new Date(now); d.setDate(d.getDate() + n); return iso(d); };
+    const inRange = d => {
+      if (s.range === 'today') return d === today;
+      if (s.range === 'tomorrow') return d === add(1);
+      if (s.range === 'week') return d >= add(-6) && d <= add(6);
+      if (s.range === 'month') return d.slice(0, 7) === today.slice(0, 7);
+      return true;
+    };
+    const q = s.search.trim().toLocaleLowerCase('tr');
+    const base = s.appts.filter(a => inRange(a.date) && (!q || (a.name + a.phone + a.address + a.district + a.note).toLocaleLowerCase('tr').includes(q)));
+    const list = base.filter(a => s.statusFilter === 'all' || a.status === s.statusFilter);
+    const cnt = k => base.filter(a => a.status === k).length;
+
+    const decorate = a => {
+      const st = ST[a.status];
+      const [ts, te] = a.time.split(' – ');
+      const d = new Date(a.date + 'T12:00');
+      const col = avatarPal[a.id % avatarPal.length];
+      const open = a.status === 'onay' || a.status === 'bekle';
+      return { ...a, timeStart: ts, timeEnd: te, stLabel: st.label, stColor: st.color, stBg: st.bg,
+        serviceColor: svcColor(a.service), hasNote: !!a.note, noteOrEmpty: a.note || 'Özel not girilmedi',
+        initials: a.name.normalize('NFC').split(' ').slice(0, 2).map(w => w.charAt(0).toLocaleUpperCase('tr')).join(''),
+        avatarBg: col + '2E', avatarColor: col, districtUpper: a.district.toLocaleUpperCase('tr'),
+        dateShort: d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3),
+        dateLong: d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + DAYS[d.getDay()],
+        expanded: s.expanded === a.id,
+        borderColor: s.expanded === a.id ? t.primary : t.border,
+        primaryLabel: open ? '✓ Tamamla' : '🧾 Fiş',
+        primaryBg: open ? t.green : t.surface2,
+        primaryColor: open ? '#fff' : t.text,
+        primaryAction: () => { if (open) { this.setStatus(a.id, 'tamam'); this.flash('🎉 ' + a.name + ' işi tamamlandı'); } else this.setState({ screen: 'receipt', step: 1 }); },
+        cancel: () => { this.setStatus(a.id, 'iptal'); this.flash('❌ Randevu iptal edildi'); },
+        toggle: () => this.setState({ expanded: s.expanded === a.id ? null : a.id }),
+        select: () => this.setState({ selectedId: a.id, sheetOpen: true }),
+        rowBg: s.selectedId === a.id ? t.primaryC : 'transparent',
+        rowBorder: s.selectedId === a.id ? t.primary : 'transparent',
+      };
+    };
+    const flat = list.map(decorate);
+    const groupsMap = {};
+    flat.forEach(a => { (groupsMap[a.date] = groupsMap[a.date] || []).push(a); });
+    const groups = Object.keys(groupsMap).sort().reverse().map(k => {
+      const d = new Date(k + 'T12:00');
+      const pre = k === today ? 'BUGÜN · ' : k === add(1) ? 'YARIN · ' : '';
+      return { label: (pre + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + DAYS[d.getDay()]).toLocaleUpperCase('tr'), count: groupsMap[k].length, items: groupsMap[k] };
+    });
+    const selRaw = s.appts.find(a => a.id === s.selectedId) || s.appts[0];
+    const sel = decorate(selRaw);
+    if (!(sel.status === 'onay' || sel.status === 'bekle')) sel.primaryAction = () => this.setState({ tabModal: 'receipt', step: 1, screen: 'list' });
+
+    const total = base.length || 1;
+    const statCards = [
+      { label: 'Toplam', value: base.length, color: t.text, pct: '100%' },
+      { label: 'Sahada', value: cnt('onay'), color: t.primary, pct: Math.round(cnt('onay') / total * 100) + '%' },
+      { label: 'Bitti', value: cnt('tamam'), color: t.green, pct: Math.round(cnt('tamam') / total * 100) + '%' },
+      { label: 'İptal', value: cnt('iptal'), color: t.red, pct: Math.round(cnt('iptal') / total * 100) + '%' },
+    ];
+    const pc = k => Math.round(cnt(k) / total * 100);
+    const statCardsWide = [
+      { label: 'TOPLAM RANDEVU', emoji: '📅', value: base.length, sub: '%100 kapasite', color: t.text, pct: '100%' },
+      { label: 'ONAY BEKLİYOR', emoji: '⏳', value: cnt('bekle'), sub: cnt('bekle') ? 'Sırada' : 'Bekleyen yok', color: t.amber, pct: pc('bekle') + '%' },
+      { label: 'ONAYLANDI · SAHADA', emoji: '🚐', value: cnt('onay'), sub: '%' + pc('onay') + ' aktif', color: t.primary, pct: pc('onay') + '%' },
+      { label: 'TAMAMLANDI', emoji: '✅', value: cnt('tamam'), sub: '%' + pc('tamam') + ' başarılı', color: t.green, pct: pc('tamam') + '%' },
+      { label: 'İPTAL ORANI', emoji: '❌', value: cnt('iptal'), sub: '%' + pc('iptal') + ' fire', color: t.red, pct: pc('iptal') + '%' },
+    ];
+    const statusDefs = [['all', 'Tümü', t.text2], ['bekle', 'Bekliyor', t.amber], ['onay', 'Onaylandı', t.primary], ['tamam', 'Tamamlandı', t.green], ['iptal', 'İptal', t.red]];
+    const statusChips = statusDefs.map(([k, l, c]) => {
+      const on = s.statusFilter === k;
+      return { label: l, count: k === 'all' ? base.length : cnt(k), dot: c, bg: on ? t.primary : t.surface, border: on ? t.primary : t.border, color: on ? '#fff' : t.text, pick: () => this.setState({ statusFilter: k }) };
+    });
+    const rangeChips = [['today', 'Bugün'], ['tomorrow', 'Yarın'], ['week', 'Hafta'], ['month', 'Bu Ay'], ['all', 'Tümü']].map(([k, l]) => ({
+      label: l, bg: s.range === k ? t.surface : 'transparent', color: s.range === k ? t.primary : t.text2, pick: () => this.setState({ range: k }) }));
+
+    const navItems = [['İşler', '📅', true], ['Ana Sayfa', '🏠'], ['Müşteriler', '👥'], ['Finans', '💳'], ['Modüller', '▦']];
+    const navOrdered = [navItems[1], navItems[0], navItems[2], navItems[3], navItems[4]].map(([l, e, a]) => ({ label: l, emoji: e, color: a ? t.primary : t.text2, pillBg: a ? t.primaryC : 'transparent' }));
+
+    // Hızlı randevu
+    const quickDates = [['Bugün', 0], ['Yarın', 1], ['+2 Gün', 2]].map(([l, n]) => {
+      const v = add(n); const d = new Date(v + 'T12:00'); const on = s.nDate === v;
+      return { label: l, sub: d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3) + ' ' + DAYS_S[d.getDay()], bg: on ? t.primary : t.surface2, border: on ? t.primary : t.border, color: on ? '#fff' : t.text, pick: () => this.setState({ nDate: v }) };
+    });
+    const takenSlots = s.appts.filter(a => a.date === s.nDate && a.status !== 'iptal').map(a => a.time.slice(0, 5));
+    const slots = Array.from({ length: 15 }, (_, i) => {
+      const h = 9 + i; const lbl = String(h).padStart(2, '0') + ':00';
+      const full = lbl + ' – ' + String((h + 1) % 24).padStart(2, '0') + ':00';
+      const on = s.nSlot === full; const taken = takenSlots.includes(lbl);
+      return { label: taken ? lbl + ' dolu' : full.replace(' – ', '–'), bg: on ? t.primary : taken ? 'transparent' : t.surface2, border: on ? t.primary : t.border, color: on ? '#fff' : taken ? t.text2 : t.text, pick: () => !taken && this.setState({ nSlot: full }) };
+    });
+    const appendTo = (key, txt) => this.setState(st => ({ [key]: st[key] ? st[key].replace(/\s*$/, '') + (st[key].trim().endsWith('.') ? ' ' : ', ') + txt : txt }));
+    const faults = ['🔥 Sıcak Su Gelmiyor', '❄️ Petekler Isınmıyor', '💧 Su Akıtıyor', '📉 Basınç Düşüyor', '⚡ Ateşleme / F1 / E01', '🔊 Ses / Gürültü', '🛠️ Yıllık Bakım', '⚠️ Gaz Kokusu (Acil)'];
+    const faultChips = faults.map(f => {
+      const plain = f.slice(f.indexOf(' ') + 1); const on = s.nNote.includes(plain); const gas = f.startsWith('⚠️');
+      return { label: f, bg: on ? t.primaryC : gas ? t.redC : t.surface2, border: on ? t.primary : gas ? t.red : t.border, color: on ? t.primary : gas ? t.red : t.text, pick: () => !on && appendTo('nNote', plain) };
+    });
+    const canSave = s.nName.trim() && s.nPhone.trim() && s.nSlot;
+
+    // Servis fişi
+    const brandDefs = [['DemirDöküm', '#1D4ED8'], ['Baymak', '#0F766E'], ['E.C.A.', '#0369A1'], ['Vaillant', '#15803D'], ['BOSCH', '#DC2626'], ['Buderus', '#1E3A8A'], ['ARISTON', '#BE123C'], ['Viessmann', '#EA580C'], ['Protherm', '#F97316'], ['Airfel', '#0284C7'], ['Ferroli', '#B91C1C']];
+    const brands = brandDefs.map(([n, c]) => {
+      const on = s.brand === n;
+      return { name: n, bg: on ? c : '#FFFFFF', border: on ? c : t.border, color: on ? '#fff' : c, pick: () => this.setState({ brand: n }) };
+    });
+    const jobs = ['🔥 Yıllık Periyodik Bakım', '🌡️ NTC Sensör Değişti', '🎈 Genleşme Tankı Basıldı (1 bar)', '🧽 Eşanjör Kireç Temizliği', '🔄 Doldurma Musluğu Yenilendi', '🌀 Fan Motoru Temizlendi', '🔁 Sirkülasyon Pompası Revize', '⚙️ 3 Yollu Vana Motoru Değişti', '⚡ Ateşleme / İyonizasyon'];
+    const jobChips = jobs.map(j => {
+      const plain = j.slice(j.indexOf(' ') + 1); const on = s.jobText.includes(plain);
+      return { label: j, bg: on ? t.primaryC : t.surface2, border: on ? t.primary : t.border, color: on ? t.primary : t.text, pick: () => !on && appendTo('jobText', plain) };
+    });
+    const partSources = Object.keys(SRC).map(k => ({ label: k === 'all' ? 'Tümü (' + PARTS.length + ')' : SRC[k], bg: s.partSrc === k ? t.text : t.surface2, color: s.partSrc === k ? t.bg : t.text, pick: () => this.setState({ partSrc: k }) }));
+    const parts = PARTS.filter(p => s.partSrc === 'all' || p.src === s.partSrc).map(p => {
+      const on = s.parts.includes(p.id);
+      return { name: p.name, src: SRC[p.src], price: tl(p.price), check: on ? '✓' : '', checkBg: on ? t.green : 'transparent', checkBorder: on ? t.green : t.border,
+        bg: on ? t.greenC : t.surface2, border: on ? t.green : 'transparent',
+        toggle: () => this.setState(st => ({ parts: on ? st.parts.filter(x => x !== p.id) : [...st.parts, p.id] })) };
+    });
+    const partsSum = PARTS.filter(p => s.parts.includes(p.id)).reduce((a, p) => a + p.price, 0);
+    const laborN = parseFloat(s.labor) || 0, otherN = parseFloat(s.other) || 0;
+    const totalN = partsSum + laborN + otherN;
+    const warranties = ['Yok', '1 Ay', '3 Ay', '6 Ay', '1 Yıl', '2 Yıl'].map(w => ({ label: w, bg: s.warranty === w ? t.green : t.surface2, border: s.warranty === w ? t.green : t.border, color: s.warranty === w ? '#fff' : t.text, pick: () => this.setState({ warranty: w }) }));
+    const payMethods = [['cash', '💵', 'Nakit'], ['card', '💳', 'Kart / POS'], ['iban', '🏦', 'Havale']].map(([k, e, l]) => {
+      const on = s.pay === k; return { emoji: e, label: l, bg: on ? t.primaryC : t.surface2, border: on ? t.primary : 'transparent', color: on ? t.primary : t.text, pick: () => this.setState({ pay: k }) };
+    });
+    const collStates = [['paid', '✅', 'Tahsil Edildi (Ödendi)', t.green, t.greenC], ['partial', '⏳', 'Kısmi Tahsilat', t.amber, t.amberC], ['none', '❌', 'Ödeme Alınmadı (Veresiye)', t.red, t.redC]].map(([k, e, l, c, cb]) => {
+      const on = s.coll === k; return { emoji: e, label: l, bg: on ? cb : t.surface2, border: on ? c : 'transparent', color: on ? c : t.text, dot: on ? c : 'transparent', pick: () => this.setState({ coll: k }) };
+    });
+    const stepDefs = [['👤', 'Müşteri'], ['🛠️', 'İş & Cihaz'], ['💰', 'Tahsilat'], ['✍️', 'İmza']];
+    const steps = stepDefs.map(([e, l], i) => ({ emoji: e, label: l, bar: i + 1 <= s.step ? t.primary : t.surface2, color: i + 1 === s.step ? t.primary : i + 1 < s.step ? t.text : t.text2, go: () => this.setState({ step: i + 1 }) }));
+    const nextLabels = { 1: 'İş & Cihaz →', 2: 'Tahsilata İlerle →', 3: 'İmza & Foto →', 4: '✓ Fişi Kes' };
+    const cb = on => ({ bg: on ? t.primary : 'transparent', border: on ? t.primary : t.border, mark: on ? '✓' : '' });
+    const ct = cb(s.tested), ce = cb(s.expense);
+
+    const land = s.orient === 'landscape';
+    const rowH = land ? 46 : 70;
+    const mon = new Date(now); mon.setDate(mon.getDate() - ((mon.getDay() + 6) % 7) + s.weekOff * 7);
+    const nowH = now.getHours() + now.getMinutes() / 60;
+    let weekCount = 0;
+    const calDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon); d.setDate(mon.getDate() + i); const k = iso(d); const isT = k === today;
+      const items = s.appts.filter(a => a.date === k).map(a => {
+        const h = parseInt(a.time, 10); const st = ST[a.status];
+        return { name: a.name, time: a.time.slice(0, 5), service: a.service, top: ((h - 9) * rowH + 2) + 'px', height: (rowH - 4) + 'px', bg: st.bg, color: st.color,
+          select: () => this.setState({ selectedId: a.id, sheetOpen: true }) };
+      });
+      weekCount += items.length;
+      return { dow: DAYS_S[d.getDay()].toLocaleUpperCase('tr'), num: d.getDate(), items, headBg: isT ? t.primary : 'transparent', headColor: isT ? '#fff' : t.text,
+        colBg: isT ? t.primaryC : 'transparent', showNow: isT && nowH >= 9 && nowH < 20, nowTop: ((nowH - 9) * rowH) + 'px' };
+    });
+    const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+    const weekLabel = mon.getMonth() === sun.getMonth()
+      ? mon.getDate() + ' – ' + sun.getDate() + ' ' + MONTHS[sun.getMonth()] + ' ' + sun.getFullYear()
+      : mon.getDate() + ' ' + MONTHS[mon.getMonth()].slice(0, 3) + ' – ' + sun.getDate() + ' ' + MONTHS[sun.getMonth()].slice(0, 3) + ' ' + sun.getFullYear();
+    const calHours = Array.from({ length: 11 }, (_, i) => ({ label: String(9 + i).padStart(2, '0') + ':00' }));
+
+    const byDate = {}; s.appts.forEach(a => { if (a.status !== 'iptal') byDate[a.date] = (byDate[a.date] || 0) + 1; });
+    const dates = Object.keys(byDate).sort().reverse();
+    const mDate = s.mapDate || dates.reduce((b, d) => byDate[d] > byDate[b] ? d : b, dates[0]);
+    const mapDays = dates.slice(0, 8).map(k => {
+      const d = new Date(k + 'T12:00'); const on = k === mDate;
+      return { label: (k === today ? 'Bugün' : d.getDate() + ' ' + MONTHS[d.getMonth()].slice(0, 3)), count: byDate[k], bg: on ? t.primary : t.surface2, color: on ? '#fff' : t.text, pick: () => this.setState({ mapDate: k }) };
+    });
+    const COORD = { 'Bayrampaşa': [58, 55], 'Güngören': [30, 76], 'Eyüpsultan': [70, 24], 'Gaziosmanpaşa': [40, 28] };
+    const dayStops = s.appts.filter(a => a.date === mDate && a.status !== 'iptal').sort((x, y) => x.time.localeCompare(y.time));
+    const stops = dayStops.map((a, i) => {
+      const c = COORD[a.district] || [50, 50]; const j = (a.id * 37) % 11 - 5; const on = s.selectedId === a.id; const st = ST[a.status];
+      return { n: i + 1, name: a.name, time: a.time, district: a.district, address: a.address, stLabel: st.label, stColor: st.color, stBg: st.bg,
+        left: (c[0] + j) + '%', top: (c[1] + j * 1.4) + '%', pinSize: on ? '44px' : '34px', z: on ? 5 : 1, showLabel: on,
+        pinBg: a.status === 'tamam' ? t.green : t.primary, rowBg: on ? t.primaryC : t.surface2, rowBorder: on ? t.primary : 'transparent',
+        select: () => this.setState({ selectedId: a.id }), open: e => { e.stopPropagation(); this.setState({ selectedId: a.id, sheetOpen: true }); } };
+    });
+    const doneN = dayStops.filter(a => a.status === 'tamam').length;
+    const viewDefs = [['list', '☰ Liste'], ['calendar', '🗓️ Takvim'], ['map', '🗺️ Harita']];
+
+    const scr = [['list', '☰ Liste'], ['new', '📅 Hızlı Randevu'], ['receipt', '🧾 Servis Fişi']];
+    return {
+      isDark: s.isDark, theme: t, themeIcon: s.isDark ? '☀️' : '🌙', colorScheme: s.isDark ? 'dark' : 'light',
+      toggleTheme: () => this.setState(x => ({ isDark: !x.isDark })),
+      screenTabs: scr.map(([k, l]) => ({ label: l, bg: s.screen === k ? '#0EA5E9' : 'transparent', color: s.screen === k ? '#fff' : '#94A3B8', go: () => this.setState({ screen: k }) })),
+      screenIsList: s.screen === 'list', screenIsNew: s.screen === 'new', screenIsReceipt: s.screen === 'receipt',
+      goList: () => this.setState({ screen: 'list' }), goNew: () => this.setState({ screen: 'new' }), goReceipt: () => this.setState({ screen: 'receipt', step: 1 }),
+      toast: s.toast,
+      search: s.search, onSearch: e => this.setState({ search: e.target.value }),
+      filteredCount: list.length, isEmpty: list.length === 0, groups, flatList: flat, sel,
+      statCards, statCardsWide, statusChips, rangeChips, navItems: navOrdered,
+      nName: s.nName, onNName: e => this.setState({ nName: e.target.value }),
+      nPhone: s.nPhone, onNPhone: e => this.setState({ nPhone: e.target.value }),
+      nDate: s.nDate, onNDate: e => this.setState({ nDate: e.target.value }),
+      nService: s.nService, onNService: e => this.setState({ nService: e.target.value }),
+      nNote: s.nNote, onNNote: e => this.setState({ nNote: e.target.value }),
+      nSlotLabel: s.nSlot || 'Seçilmedi', quickDates, slots, faultChips,
+      saveNewBg: canSave ? t.primary : t.text2, saveNewOpacity: canSave ? 1 : 0.5,
+      saveNew: () => {
+        if (!canSave) { this.flash('👀 Ad, telefon ve saat aralığını doldur'); return; }
+        const id = Date.now();
+        this.setState(st => ({ appts: [{ id, date: st.nDate, time: st.nSlot, name: st.nName.trim(), district: 'Bayrampaşa', tag: 'Yeni', phone: st.nPhone, service: st.nService, address: 'Adres bekleniyor', note: st.nNote, status: 'onay' }, ...st.appts],
+          screen: 'list', tabModal: null, range: 'all', statusFilter: 'all', selectedId: id, nName: '', nPhone: '', nSlot: null, nNote: '' }));
+        this.flash('✅ Randevu kaydedildi, ekibe iletildi');
+      },
+      todayIso: today,
+      steps, stepIs1: s.step === 1, stepIs2: s.step === 2, stepIs3: s.step === 3, stepIs4: s.step === 4,
+      hasPrev: s.step > 1, prevStep: () => this.setState({ step: s.step - 1 }),
+      nextLabel: nextLabels[s.step], nextBg: s.step === 4 ? t.green : t.primary,
+      nextStep: () => {
+        if (s.step < 4) { this.setState({ step: s.step + 1 }); return; }
+        this.setState({ screen: 'list', tabModal: null, step: 1, parts: [], labor: '', other: '', jobText: '', brand: null, photos: 0, sigA: false, sigB: false });
+        this.flash('🧾 Fiş kesildi · ' + tl(totalN) + (s.wa ? ' · WhatsApp gönderildi' : ''));
+      },
+      brands, jobChips, jobText: s.jobText, onJobText: e => this.setState({ jobText: e.target.value }),
+      partSources, parts, labor: s.labor, other: s.other,
+      onLabor: e => this.setState({ labor: e.target.value }), onOther: e => this.setState({ other: e.target.value }),
+      warranties,
+      toggleTested: () => this.setState({ tested: !s.tested }), testedBg: s.tested ? t.primaryC : t.surface2, testedBorder: s.tested ? t.primary : 'transparent',
+      testedCheck: ct.mark, testedCheckBg: ct.bg, testedCheckBorder: ct.border,
+      toggleWa: () => this.setState({ wa: !s.wa }), waTrack: s.wa ? t.green : t.border, waKnob: s.wa ? '21px' : '3px',
+      totalFmt: tl(totalN), partsFmt: tl(partsSum), laborFmt: tl(laborN), otherFmt: tl(otherN),
+      payMethods, collStates,
+      toggleExpense: () => this.setState({ expense: !s.expense }), expCheck: ce.mark, expCheckBg: ce.bg, expCheckBorder: ce.border,
+      sigRefA: this.sigRefA, sigRefB: this.sigRefB,
+      downA: e => this.down('A', e), moveA: e => this.move('A', e), downB: e => this.down('B', e), moveB: e => this.move('B', e),
+      sigUp: () => { this.drawing = null; }, clearA: () => this.clear('A'), clearB: () => this.clear('B'),
+      sigAEmpty: !s.sigA, sigBEmpty: !s.sigB,
+      photoCount: s.photos, photos: Array.from({ length: s.photos }, (_, i) => ({ label: 'foto ' + (i + 1) })),
+      canAddPhoto: s.photos < 5, addPhoto: () => this.setState({ photos: Math.min(5, s.photos + 1) }),
+      tabModalOpen: !!s.tabModal, tabModalNew: s.tabModal === 'new', tabModalReceipt: s.tabModal === 'receipt',
+      tabNew: () => this.setState({ tabModal: 'new', screen: 'list', sheetOpen: false }),
+      tabReceipt: () => this.setState({ tabModal: 'receipt', step: 1, screen: 'list', sheetOpen: false }),
+      closeTabModal: () => this.setState({ tabModal: null }),
+      tabW: land ? '1194px' : '834px', tabH: land ? '834px' : '1194px',
+      tabCaption: land ? 'Tablet · yatay 1194 × 834' : 'Tablet · dikey 834 × 1194',
+      orientTabs: [['landscape', '↔ Yatay'], ['portrait', '↕ Dikey']].map(([k, l]) => ({ label: l, bg: s.orient === k ? '#0EA5E9' : 'transparent', color: s.orient === k ? '#fff' : '#94A3B8', go: () => this.setState({ orient: k, sheetOpen: false }) })),
+      tabViews: viewDefs.map(([k, l]) => ({ label: l, bg: s.tabView === k ? t.surface : 'transparent', color: s.tabView === k ? t.primary : t.text2, go: () => this.setState({ tabView: k, sheetOpen: false }) })),
+      showSplit: s.tabView === 'list' && land, showPortraitList: s.tabView === 'list' && !land,
+      showCal: s.tabView === 'calendar', showMap: s.tabView === 'map',
+      showSheet: s.sheetOpen && !(s.tabView === 'list' && land),
+      closeSheet: () => this.setState({ sheetOpen: false }), stop: e => e.stopPropagation(),
+      sheetW: land ? '640px' : '100%',
+      calDays, calHours, calRowH: rowH + 'px', calBodyH: (rowH * 11) + 'px', weekLabel, weekCount,
+      weekPrev: () => this.setState({ weekOff: s.weekOff - 1 }), weekNext: () => this.setState({ weekOff: s.weekOff + 1 }), weekToday: () => this.setState({ weekOff: 0 }),
+      mapDays, stops, mapSummary: stops.length + ' durak · ' + doneN + ' tamamlandı',
+      mapCols: land ? '360px minmax(0,1fr)' : 'minmax(0,1fr)', mapRows: land ? 'minmax(0,1fr)' : '440px minmax(0,1fr)',
+      mapListOrder: land ? 0 : 1, mapCanvasOrder: land ? 1 : 0,
+    };
+  }
+}
+</script>
+</body>
+</html>

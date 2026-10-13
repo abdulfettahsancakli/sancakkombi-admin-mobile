@@ -12,5 +12,14 @@ data class Customer(
     val appointmentCount: Int = 0,
     val activeAppointmentCount: Int = 0,
     val notes: String = "",
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    val gateNote: String = "",
+    val serviceNote: String = "",
+    val deviceBrand: String = "",
+    val deviceModel: String = "",
+    val deviceNotes: String = "",
+    val autoWhatsApp: Boolean = true,
+    val registeredAt: String = "",
+    val billedAmount: Double = 0.0,
+    val paidAmount: Double = 0.0
 )

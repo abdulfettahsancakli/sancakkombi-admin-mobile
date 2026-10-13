@@ -3,8 +3,10 @@ package com.example.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -19,10 +21,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -44,9 +50,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -115,7 +123,7 @@ suspend fun downloadAndShareQuotePdf(
             } else {
                 withContext(Dispatchers.Main) {
                     onLoadingStateChange(false)
-                    Toast.makeText(context, "PDF indirilemedi (Hata koda: $responseCode)", Toast.LENGTH_LONG).show()
+                    Toast.makeText(context, "PDF indirilemedi (Hata kodu: $responseCode)", Toast.LENGTH_LONG).show()
                 }
             }
         } catch (e: Exception) {
@@ -135,19 +143,20 @@ fun ProposalDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val tokens = rememberProposalTokens()
     val coroutineScope = rememberCoroutineScope()
     var isDownloadingPdf by remember { mutableStateOf(false) }
 
     if (proposal == null) {
         Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Teklif bulunamadı.")
+            Text("Teklif bulunamadı.", color = tokens.text2)
         }
         return
     }
 
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+        color = tokens.bg
     ) {
         Column(
             modifier = Modifier
@@ -162,7 +171,8 @@ fun ProposalDetailScreen(
             ) {
                 OutlinedButton(
                     onClick = onBackClick,
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = tokens.text),
                     modifier = Modifier.testTag("back_button")
                 ) {
                     Icon(
@@ -171,7 +181,7 @@ fun ProposalDetailScreen(
                         modifier = Modifier.size(16.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
-                    Text("Geri")
+                    Text("Teklifler", fontWeight = FontWeight.Bold)
                 }
 
                 Spacer(modifier = Modifier.weight(1f))
@@ -190,233 +200,543 @@ fun ProposalDetailScreen(
                         }
                     },
                     enabled = !isDownloadingPdf,
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = tokens.primary, contentColor = tokens.onPrimary),
                     modifier = Modifier.testTag("share_proposal_pdf_button")
                 ) {
                     if (isDownloadingPdf) {
                         CircularProgressIndicator(
                             modifier = Modifier.size(16.dp),
                             strokeWidth = 2.dp,
-                            color = MaterialTheme.colorScheme.onPrimary
+                            color = tokens.onPrimary
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text("İndiriliyor...", fontSize = 12.sp)
                     } else {
-                        Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Icon(imageVector = Icons.Default.Description, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(modifier = Modifier.width(6.dp))
-                        Text("Fiyat Teklifi PDF", fontSize = 12.sp)
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Status Changer Bar
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Müşteri Onayı:", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    Button(
-                        onClick = { onUpdateStatus(ProposalStatus.APPROVED) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981)),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Kabul Edildi", fontSize = 11.sp)
-                    }
-
-                    Spacer(modifier = Modifier.width(6.dp))
-
-                    Button(
-                        onClick = { onUpdateStatus(ProposalStatus.REJECTED) },
-                        shape = RoundedCornerShape(6.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEF4444)),
-                        modifier = Modifier.height(32.dp)
-                    ) {
-                        Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Text("Reddedildi", fontSize = 11.sp)
+                        Text("PDF Paylaş", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Paper Document Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
-                border = androidx.compose.foundation.BorderStroke(1.dp, Color.LightGray)
+            ProposalDetailContent(
+                proposal = proposal,
+                tokens = tokens,
+                onUpdateStatus = onUpdateStatus,
+                onSharePdf = {
+                    if (!isDownloadingPdf) {
+                        coroutineScope.launch {
+                            downloadAndShareQuotePdf(
+                                context = context,
+                                quoteId = proposal.id,
+                                quoteNumber = proposal.quoteNumber.ifEmpty { proposal.id },
+                                onLoadingStateChange = { isDownloadingPdf = it }
+                            )
+                        }
+                    }
+                },
+                isDownloadingPdf = isDownloadingPdf
+            )
+
+            Spacer(modifier = Modifier.height(30.dp))
+        }
+    }
+}
+
+@Composable
+fun ProposalDetailContent(
+    proposal: Proposal,
+    tokens: ProposalTokens,
+    onUpdateStatus: (ProposalStatus) -> Unit,
+    onSharePdf: () -> Unit,
+    isDownloadingPdf: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val visual = getProposalStatusVisual(proposal.status, tokens)
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // Durum Onay Çubuğu
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            colors = CardDefaults.cardColors(containerColor = tokens.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, tokens.border)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(12.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp)
-                ) {
-                    // Header Area
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                Column {
+                    Text("Müşteri Onayı:", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.text2)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(visual.bgColor)
+                            .padding(horizontal = 8.dp, vertical = 2.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        Text(visual.label, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, color = visual.textColor)
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Button(
+                        onClick = { onUpdateStatus(ProposalStatus.APPROVED) },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (proposal.status == ProposalStatus.APPROVED) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.2f),
+                            contentColor = if (proposal.status == ProposalStatus.APPROVED) Color.White else Color(0xFF10B981)
+                        ),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("✓ Kabul Edildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = { onUpdateStatus(ProposalStatus.REJECTED) },
+                        shape = RoundedCornerShape(8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (proposal.status == ProposalStatus.REJECTED) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.2f),
+                            contentColor = if (proposal.status == ProposalStatus.REJECTED) Color.White else Color(0xFFEF4444)
+                        ),
+                        modifier = Modifier.height(36.dp)
+                    ) {
+                        Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("✕ Reddedildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+        }
+
+        // Hızlı İletişim Aksiyon Butonları (WhatsApp, Arama, PDF)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .weight(1.3f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color(0xFF25D366).copy(alpha = 0.14f))
+                    .border(1.dp, Color(0xFF25D366).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable { sendProposalWhatsApp(context, proposal) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "WhatsApp ile İlet",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF25D366)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tokens.primaryC)
+                    .border(1.dp, tokens.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .clickable { dialProposalPhone(context, proposal.customerPhone) }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(imageVector = Icons.Default.Call, contentDescription = null, tint = tokens.primary, modifier = Modifier.size(14.dp))
+                    Text("Ara", fontSize = 12.sp, fontWeight = FontWeight.ExtraBold, color = tokens.primary)
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(tokens.surface2)
+                    .border(1.dp, tokens.border, RoundedCornerShape(12.dp))
+                    .clickable { onSharePdf() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = tokens.text, modifier = Modifier.size(14.dp))
+                    Text("PDF İndir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.text)
+                }
+            }
+        }
+
+        // RESMİ A4 PDF GÖRÜNÜMÜ KARTI (Tasarım Prototipindeki gibi A4 Belge Görünümü)
+        ProposalDocumentCard(proposal = proposal)
+    }
+}
+
+@Composable
+fun ProposalDocumentCard(
+    proposal: Proposal,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(16.dp)),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE2E8F0))
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Belge Üst Anteti (Logo + Başlık + Teklif No)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Image(
+                        painter = painterResource(com.example.R.drawable.logo_sancakkombi),
+                        contentDescription = "Sancak Kombi Logo",
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(8.dp)),
+                        contentScale = ContentScale.Fit
+                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                             Text(
-                                text = "SANCAK KOMBİ",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
+                                text = "SANCAK",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color(0xFF1E293B)
+                            )
+                            Text(
+                                text = "KOMBİ",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
                                 color = Color(0xFFDC2626)
                             )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(Color(0xFF0F172A))
+                                .padding(horizontal = 5.dp, vertical = 2.dp)
+                        ) {
                             Text(
                                 text = "TEKNİK SERVİS",
+                                fontSize = 8.sp,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 11.sp,
-                                color = Color.DarkGray
+                                color = Color.White
                             )
-                            Text("GÜVENLİK • KALİTE • HİZMET", fontSize = 9.sp, color = Color.Gray)
-                        }
-
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "FİYAT TEKLİFİ",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp,
-                                color = Color.Black
-                            )
-                            Text("Teklif No: ${proposal.quoteNumber.ifEmpty { proposal.id }}", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
-                            Text("Tarih: ${proposal.date}", fontSize = 10.sp, color = Color.Gray)
-                            Text("Hazırlayan: ${proposal.preparedBy}", fontSize = 10.sp, color = Color.Gray)
                         }
                     }
+                }
 
-                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = Color.LightGray)
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "FİYAT TEKLİFİ",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF0F172A)
+                    )
+                    Text(
+                        text = "GÜVENLİK • KALİTE • HİZMET",
+                        fontSize = 7.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B)
+                    )
+                }
 
-                    // Customer Details Card
-                    Card(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
-                    ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("TEKLİF VERİLEN MÜŞTERİ BİLGİLERİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text("Sayın ${proposal.customerName}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                            if (proposal.customerPhone.isNotBlank()) Text("Tel: ${proposal.customerPhone}", fontSize = 11.sp, color = Color.DarkGray)
-                            if (proposal.customerAddress.isNotBlank()) Text("Adres: ${proposal.customerAddress}", fontSize = 11.sp, color = Color.Gray)
-                            if (proposal.deviceBrand.isNotBlank()) Text("Cihaz: ${proposal.deviceBrand} ${proposal.deviceModel}", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Black)
-                        }
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "TEKLİF NO",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF64748B)
+                    )
+                    Text(
+                        text = proposal.quoteNumber.ifBlank { proposal.id },
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Black,
+                        fontFamily = FontFamily.Monospace,
+                        color = Color(0xFFDC2626)
+                    )
+                    Text(
+                        text = proposal.date,
+                        fontSize = 8.5.sp,
+                        color = Color(0xFF64748B)
+                    )
+                }
+            }
+
+            // İletişim Şeridi
+            Text(
+                text = "Kocatepe, Şehir Parkı Cad. No:113 Bayrampaşa / İstanbul • Tel: 0212 581 75 74 • info@sancakkombi.com.tr • sancakkombi.com.tr",
+                fontSize = 7.5.sp,
+                color = Color(0xFF64748B),
+                modifier = Modifier.fillMaxWidth()
+            )
+
+            HorizontalDivider(color = Color(0xFFE5E7EB), thickness = 1.dp)
+
+            // 2 Sütunlu MÜŞTERİ BİLGİLERİ ve KURUM BİLGİLERİ
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Sol Sütun: MÜŞTERİ BİLGİLERİ
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF9FAFB))
+                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(8.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "MÜŞTERİ BİLGİLERİ",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF64748B)
+                    )
+                    Text(
+                        text = "Ad Soyad: ${proposal.customerName}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
+                    if (proposal.customerPhone.isNotBlank()) {
+                        Text(
+                            text = "Telefon: ${proposal.customerPhone}",
+                            fontSize = 9.sp,
+                            color = Color(0xFF475569)
+                        )
                     }
+                    if (proposal.customerAddress.isNotBlank()) {
+                        Text(
+                            text = "Adres: ${proposal.customerAddress}",
+                            fontSize = 8.5.sp,
+                            color = Color(0xFF475569),
+                            maxLines = 2
+                        )
+                    }
+                    val dev = listOf(proposal.deviceBrand, proposal.deviceModel).filter { it.isNotBlank() }.joinToString(" ")
+                    if (dev.isNotBlank()) {
+                        Text(
+                            text = "Cihaz: $dev",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF1E293B)
+                        )
+                    }
+                }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                // Sağ Sütun: KURUM BİLGİLERİ
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF9FAFB))
+                        .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(8.dp))
+                        .padding(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    Text(
+                        text = "KURUM BİLGİLERİ",
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF64748B)
+                    )
+                    Text(
+                        text = "Firma: Sancak Kombi Isıtma Sistemleri",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF1E293B)
+                    )
+                    Text(
+                        text = "Yetkili: ${proposal.preparedBy.ifBlank { "Sancak Kombi Yetkili Servisi" }}",
+                        fontSize = 8.5.sp,
+                        color = Color(0xFF475569)
+                    )
+                    Text(
+                        text = "Telefon: 0212 581 75 74",
+                        fontSize = 8.5.sp,
+                        color = Color(0xFF475569)
+                    )
+                    Text(
+                        text = "Adres: Bayrampaşa, İstanbul",
+                        fontSize = 8.5.sp,
+                        color = Color(0xFF475569)
+                    )
+                }
+            }
 
-                    Text("TEKLİF DETAYLARI", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            // Teklif Detayları & Kalemleri
+            Text(
+                text = "TEKLİF DETAYLARI & HİZMET KALEMLERİ",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF111827)
+            )
 
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Line Items Table
-                    proposal.items.forEachIndexed { index, item ->
+            if (proposal.items.isEmpty()) {
+                Text(
+                    text = "Belirtilen kalem bulunamadı.",
+                    fontSize = 11.sp,
+                    color = Color(0xFF6B7280)
+                )
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    proposal.items.forEachIndexed { i, item ->
+                        val bgRow = if (i % 2 == 0) Color(0xFFF9FAFB) else Color(0xFFFFFFFF)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(if (index % 2 == 0) Color(0xFFF9FAFB) else Color.White)
-                                .padding(vertical = 8.dp, horizontal = 6.dp),
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(bgRow)
+                                .padding(horizontal = 8.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("${index + 1}.", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray, modifier = Modifier.width(24.dp))
-                            Text(item.title, fontSize = 12.sp, color = Color.Black, modifier = Modifier.weight(1f))
-                            Text("₺%.2f".format(item.totalPrice).replace(".", ","), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                            Text(
+                                text = "${i + 1}.",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF6B7280),
+                                modifier = Modifier.width(22.dp)
+                            )
+                            Text(
+                                text = item.title,
+                                fontSize = 11.sp,
+                                color = Color(0xFF111827),
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text(
+                                text = "${item.quantity} Adet",
+                                fontSize = 11.sp,
+                                color = Color(0xFF4B5563),
+                                modifier = Modifier.padding(horizontal = 6.dp)
+                            )
+                            Text(
+                                text = formatProposalCurrency(item.totalPrice),
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF111827)
+                            )
                         }
-                        HorizontalDivider(color = Color(0xFFF3F4F6))
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Totals & Payment Summary Box
-                    Card(
+            // Genel Toplam Kutusu
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFF9FAFB))
+                    .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(8.dp))
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                if (proposal.discount > 0.0) {
+                    Row(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(6.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFF9FAFB)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFE5E7EB))
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column(modifier = Modifier.padding(12.dp)) {
-                            Text("ÖDEME VE TEKLİF ÖZETİ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                            Spacer(modifier = Modifier.height(6.dp))
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Ara Toplam", fontSize = 12.sp, color = Color.Black)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("₺%.2f".format(proposal.subtotal).replace(".", ","), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            if (proposal.discount > 0) {
-                                Row(modifier = Modifier.fillMaxWidth()) {
-                                    Text("İskonto", fontSize = 12.sp, color = Color(0xFFEF4444))
-                                    Spacer(modifier = Modifier.weight(1f))
-                                    Text("-₺%.2f".format(proposal.discount).replace(".", ","), fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444))
-                                }
-                            }
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Peşinat (Nakit)", fontSize = 12.sp, color = Color.DarkGray)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("₺%.2f".format(proposal.downPayment).replace(".", ","), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Kalan Tutar", fontSize = 12.sp, color = Color.DarkGray)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("₺%.2f".format(proposal.remainingAmount).replace(".", ","), fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("Kalan Ödeme Şekli", fontSize = 11.sp, color = Color.Gray)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text(proposal.remainingPaymentType, fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Black)
-                            }
-
-                            HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = Color.LightGray)
-
-                            Row(modifier = Modifier.fillMaxWidth()) {
-                                Text("GENEL TOPLAM (KDV Dahil)", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                                Spacer(modifier = Modifier.weight(1f))
-                                Text("₺%.2f".format(proposal.grandTotal).replace(".", ","), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color(0xFF10B981))
-                            }
-                        }
+                        Text("Ara Toplam:", fontSize = 11.sp, color = Color(0xFF6B7280))
+                        Text(formatProposalCurrency(proposal.subtotal), fontSize = 11.sp, color = Color(0xFF374151))
                     }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Terms & Notes
-                    Text("TEKLİF ŞARTLARI", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
-                    Text("• Teklifimiz ${proposal.validUntilDate} tarihine kadar geçerlidir.", fontSize = 10.sp, color = Color.DarkGray)
-                    Text("• Montaj ve işçilik Sancak Kombi güvencesiyle 1 yıl garantilidir.", fontSize = 10.sp, color = Color.DarkGray)
-                    if (proposal.note.isNotBlank()) {
-                        Text("• ${proposal.note}", fontSize = 10.sp, color = Color.DarkGray)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("İskonto:", fontSize = 11.sp, color = Color(0xFFDC2626))
+                        Text("-${formatProposalCurrency(proposal.discount)}", fontSize = 11.sp, color = Color(0xFFDC2626))
                     }
+                }
 
-                    Spacer(modifier = Modifier.height(20.dp))
-
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Sancak Kombi Isıtma Sistemleri • Bayrampaşa, İstanbul • 0212 581 75 74 • www.sancakkombi.com.tr",
-                        fontSize = 9.sp,
-                        color = Color.Gray,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth()
+                        text = "GENEL TOPLAM (KDV DAHİL)",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF374151)
+                    )
+                    Text(
+                        text = formatProposalCurrency(proposal.grandTotal),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color(0xFF10B981)
+                    )
+                }
+
+                if (proposal.downPayment > 0.0) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Alınan Peşinat:", fontSize = 11.sp, color = Color(0xFF6B7280))
+                        Text(formatProposalCurrency(proposal.downPayment), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF111827))
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text("Kalan Bakiye (${proposal.remainingPaymentType}):", fontSize = 11.sp, color = Color(0xFF6B7280))
+                        Text(formatProposalCurrency(proposal.remainingAmount), fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFDC2626))
+                    }
+                }
+            }
+
+            // Teklif Şartları & Notlar
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(3.dp)
+            ) {
+                Text(
+                    text = "TEKLİF ŞARTLARI & GARANTİ",
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF6B7280)
+                )
+                Text(
+                    text = "• Teklifimiz ${proposal.validUntilDate.ifBlank { "15 gün" }} geçerlidir.",
+                    fontSize = 10.sp,
+                    color = Color(0xFF374151)
+                )
+                Text(
+                    text = "• Montaj ve işçilik Sancak Kombi güvencesiyle 1 yıl garantilidir.",
+                    fontSize = 10.sp,
+                    color = Color(0xFF374151)
+                )
+                if (proposal.note.isNotBlank()) {
+                    Text(
+                        text = "• Not: ${proposal.note}",
+                        fontSize = 10.sp,
+                        color = Color(0xFF374151)
+                    )
+                }
+                if (proposal.preparedBy.isNotBlank()) {
+                    Text(
+                        text = "Teklifi Hazırlayan: ${proposal.preparedBy}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF111827),
+                        modifier = Modifier.padding(top = 4.dp)
                     )
                 }
             }

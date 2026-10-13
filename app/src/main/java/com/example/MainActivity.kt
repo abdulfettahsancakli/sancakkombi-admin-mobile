@@ -189,7 +189,17 @@ class MainActivity : ComponentActivity() {
                                         onAddCustomers = { list -> viewModel.addCustomers(list) },
                                         onUpdateCustomer = { cust -> viewModel.updateCustomer(cust) },
                                         onDeleteCustomer = { id, callback -> viewModel.deleteCustomer(id, callback) },
-                                        onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) }
+                                        onFetchDeviceHistory = { id -> viewModel.getDeviceHistory(id) },
+                                        financeRecords = financeRecords,
+                                        messageLogs = messageLogs,
+                                        onAddAppointment = { appt, callback -> viewModel.addAppointment(appt, callback) },
+                                        onUpdateFinanceRecordStatus = { id, status, onResult ->
+                                            viewModel.updateFinanceRecordStatus(id, status, onResult)
+                                        },
+                                        onViewReceipt = { record ->
+                                            viewModel.selectFinanceRecordForReceipt(record)
+                                            viewModel.navigateTo("service_receipt")
+                                        }
                                     )
                                 }
                                 "finance", "finans" -> {
@@ -227,7 +237,11 @@ class MainActivity : ComponentActivity() {
                                             viewModel.selectProposal(prop)
                                             viewModel.navigateTo("proposal_detail")
                                         },
-                                        onDeleteProposal = { id -> viewModel.deleteProposal(id) }
+                                        onDeleteProposal = { id -> viewModel.deleteProposal(id) },
+                                        catalogItems = catalogItems,
+                                        onUpdateProposalStatus = { id, st -> viewModel.updateProposalStatus(id, st) },
+                                        onCreateProposal = { prop -> viewModel.addProposal(prop) },
+                                        onSelectProposal = { prop -> viewModel.selectProposal(prop) }
                                     )
                                 }
                                 "new_proposal" -> {

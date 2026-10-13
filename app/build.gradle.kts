@@ -1,9 +1,20 @@
+import java.util.Properties
+
 plugins {
   alias(libs.plugins.android.application)
   alias(libs.plugins.kotlin.compose)
   alias(libs.plugins.google.devtools.ksp)
   alias(libs.plugins.roborazzi)
 }
+
+val localProperties = Properties().apply {
+  val propertiesFile = rootProject.file("local.properties")
+  if (propertiesFile.exists()) propertiesFile.inputStream().use(::load)
+}
+val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
+  ?: System.getenv("MAPS_API_KEY")
+  ?: localProperties.getProperty("MAPS_API_KEY").orEmpty()
+val escapedMapsApiKey = mapsApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
 
 android {
   namespace = "com.example"
@@ -15,6 +26,9 @@ android {
     targetSdk = 36
     versionCode = 5
     versionName = "1.4"
+
+    manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
+    buildConfigField("String", "MAPS_API_KEY", "\"$escapedMapsApiKey\"")
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -82,6 +96,7 @@ dependencies {
   implementation(libs.androidx.room.runtime)
   implementation(libs.coil.compose)
   implementation(libs.google.code.scanner)
+  implementation(libs.maps.compose)
   implementation(libs.converter.moshi)
   implementation(libs.kotlinx.coroutines.android)
   implementation(libs.kotlinx.coroutines.core)
