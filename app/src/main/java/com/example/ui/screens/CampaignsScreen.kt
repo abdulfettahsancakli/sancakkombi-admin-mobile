@@ -1,6 +1,8 @@
 package com.example.ui.screens
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -30,6 +32,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
@@ -73,6 +77,8 @@ import com.example.R
 import com.example.data.remote.CampaignCustomerDto
 import com.example.data.remote.CampaignDashboardDto
 import com.example.data.remote.CampaignDto
+import com.example.data.remote.CustomerImportResponseDto
+import com.example.data.remote.ImportedContactDto
 import java.time.OffsetDateTime
 import java.time.Year
 import java.time.format.DateTimeFormatter
@@ -101,6 +107,8 @@ fun CampaignsScreen(
     onRefresh: () -> Unit,
     onCreateAndSend: (String, List<String>, (String) -> Unit, (Result<Unit>) -> Unit) -> Unit,
     onResumeCampaign: (String, (String) -> Unit, (Result<Unit>) -> Unit) -> Unit,
+    onSetConsent: (List<String>, String, (Result<Int>) -> Unit) -> Unit,
+    onImportContacts: (List<ImportedContactDto>, Boolean, (Result<CustomerImportResponseDto>) -> Unit) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -138,7 +146,7 @@ fun CampaignsScreen(
     val messageBody = dashboard.messageBody.ifBlank { dashboard.campaigns.firstOrNull()?.messageBody.orEmpty() }
 
     LaunchedEffect(customers) {
-        selectedIds = selectedIds.intersect(eligible.mapTo(mutableSetOf()) { it.id })
+        selectedIds = selectedIds.intersect(customers.mapTo(mutableSetOf()) { it.id })
         if (customers.none { it.id == previewId }) previewId = null
     }
 
@@ -155,9 +163,7 @@ fun CampaignsScreen(
 
     fun toggleCustomer(customer: CampaignCustomerDto) {
         previewId = customer.id
-        if (customer.consentStatus == "granted") {
-            selectedIds = if (customer.id in selectedIds) selectedIds - customer.id else selectedIds + customer.id
-        }
+        selectedIds = if (customer.id in selectedIds) selectedIds - customer.id else selectedIds + customer.id
     }
 
     val shared = CampaignCallbacks(
@@ -171,7 +177,32 @@ fun CampaignsScreen(
         onPreview = { previewId = it.id },
         onCampaignNameChange = { campaignName = it },
         onSend = { confirmNew = true },
-        onResume = { campaignToResume = it }
+        onResume = { campaignToResume = it },
+        onGrantSelected = {
+            if (selectedIds.isNotEmpty()) {
+                busy = true
+                onSetConsent(selectedIds.toList(), "granted") { result ->
+                    busy = false
+                    result.onSuccess { count ->
+                        selectedIds = emptySet()
+                        Toast.makeText(context, "$count müşterinin iletişim tercihi güncellendi.", Toast.LENGTH_SHORT).show()
+                    }.onFailure { Toast.makeText(context, it.message ?: "İzin durumu kaydedilemedi.", Toast.LENGTH_LONG).show() }
+                }
+            }
+        },
+        onRejectSelected = {
+            if (selectedIds.isNotEmpty()) {
+                busy = true
+                onSetConsent(selectedIds.toList(), "rejected") { result ->
+                    busy = false
+                    result.onSuccess { count ->
+                        selectedIds = emptySet()
+                        Toast.makeText(context, "$count müşterinin iletişim tercihi güncellendi.", Toast.LENGTH_SHORT).show()
+                    }.onFailure { Toast.makeText(context, it.message ?: "İzin durumu kaydedilemedi.", Toast.LENGTH_LONG).show() }
+                }
+            }
+        },
+        onImportContacts = onImportContacts
     )
 
     BoxWithConstraints(modifier.fillMaxSize()) {
@@ -241,7 +272,10 @@ private data class CampaignCallbacks(
     val onPreview: (CampaignCustomerDto) -> Unit,
     val onCampaignNameChange: (String) -> Unit,
     val onSend: () -> Unit,
-    val onResume: (CampaignDto) -> Unit
+    val onResume: (CampaignDto) -> Unit,
+    val onGrantSelected: () -> Unit,
+    val onRejectSelected: () -> Unit,
+    val onImportContacts: (List<ImportedContactDto>, Boolean, (Result<CustomerImportResponseDto>) -> Unit) -> Unit
 )
 
 @Composable
@@ -304,9 +338,10 @@ private fun PhoneCampaignLayout(
             item {
                 PreviewAndSend(
                     previewCustomer, messageBody, dashboard.templateName, campaignName,
-                    selectedIds.size, eligible.size, busy, progress, callbacks
+                    customers.count { it.id in selectedIds && it.consentStatus == "granted" }, eligible.size, busy, progress, callbacks
                 )
             }
+            item { ContactImportCard(callbacks.onImportContacts) }
             item { History(dashboard.campaigns, busy, compact = true, onResume = callbacks.onResume) }
         }
     }
@@ -360,8 +395,10 @@ private fun TabletCampaignLayout(
                 Column(Modifier.weight(1f)) {
                     PreviewAndSend(
                         previewCustomer, messageBody, dashboard.templateName, campaignName,
-                        selectedIds.size, eligible.size, busy, progress, callbacks
+                        customers.count { it.id in selectedIds && it.consentStatus == "granted" }, eligible.size, busy, progress, callbacks
                     )
+                    Spacer(Modifier.height(12.dp))
+                    ContactImportCard(callbacks.onImportContacts)
                 }
             }
         }
@@ -530,6 +567,18 @@ private fun RecipientToolbar(
                 modifier = Modifier.weight(1f).height(46.dp), contentPadding = PaddingValues(horizontal = 7.dp)
             ) { Text("Görünenleri Seç", maxLines = 1, fontSize = 11.sp) }
         }
+        if (selectedCount > 0) {
+            Spacer(Modifier.height(8.dp))
+            Text("TOPLU İZİN", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(callbacks.onGrantSelected, modifier = Modifier.weight(1f).height(44.dp)) {
+                    Text("Seçilenlere İzin Ver", maxLines = 1, fontSize = 11.sp)
+                }
+                OutlinedButton(callbacks.onRejectSelected, modifier = Modifier.weight(1f).height(44.dp)) {
+                    Text("Kampanya İstemiyor", maxLines = 1, fontSize = 11.sp)
+                }
+            }
+        }
     }
     if (insideCard) Column(content = body) else SectionCard(content = body)
 }
@@ -542,7 +591,6 @@ private fun CustomerRow(
     onToggle: () -> Unit,
     onPreview: () -> Unit
 ) {
-    val eligible = customer.consentStatus == "granted"
     Card(
         Modifier.fillMaxWidth().clickable(onClick = onToggle),
         colors = CardDefaults.cardColors(containerColor = if (previewed) CampaignGreen.copy(alpha = .08f) else MaterialTheme.colorScheme.surface),
@@ -550,7 +598,7 @@ private fun CustomerRow(
         shape = RoundedCornerShape(12.dp)
     ) {
         Row(Modifier.padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(selected, { onToggle() }, enabled = eligible)
+            Checkbox(selected, { onToggle() })
             Surface(shape = CircleShape, color = CampaignGreen.copy(alpha = .12f), modifier = Modifier.size(36.dp)) {
                 Box(contentAlignment = Alignment.Center) {
                     Text(customer.name.trim().firstOrNull()?.uppercase() ?: "?", color = CampaignGreen, fontWeight = FontWeight.ExtraBold)
@@ -726,6 +774,87 @@ private fun MiniSummary(value: String, label: String, modifier: Modifier) {
 }
 
 @Composable
+private fun ContactImportCard(
+    onImportContacts: (List<ImportedContactDto>, Boolean, (Result<CustomerImportResponseDto>) -> Unit) -> Unit
+) {
+    val context = LocalContext.current
+    var expanded by remember { mutableStateOf(false) }
+    var contacts by remember { mutableStateOf(emptyList<ImportedContactDto>()) }
+    var consentConfirmed by remember { mutableStateOf(false) }
+    var importing by remember { mutableStateOf(false) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }.orEmpty()
+            }.onSuccess { text ->
+                contacts = parseContacts(text).take(1000)
+                Toast.makeText(
+                    context,
+                    if (contacts.isEmpty()) "Dosyada isim ve telefon bilgisi bulunamadı."
+                    else "${contacts.size} kişi dosyadan okundu.",
+                    Toast.LENGTH_SHORT
+                ).show()
+            }.onFailure {
+                Toast.makeText(context, "Rehber dosyası okunamadı.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    SectionCard {
+        Row(
+            Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(vertical = 3.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text("Rehberden Müşteri Yükle", fontWeight = FontWeight.ExtraBold)
+                Text(".vcf veya .csv dosyasından en fazla 1000 kişi", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore, null, modifier = Modifier.size(20.dp))
+        }
+        if (expanded) {
+            Spacer(Modifier.height(10.dp))
+            OutlinedButton(
+                onClick = { launcher.launch(arrayOf("text/vcard", "text/x-vcard", "text/csv", "text/comma-separated-values", "text/plain")) },
+                modifier = Modifier.fillMaxWidth().height(46.dp)
+            ) { Text("Rehber Dosyası Seç (.vcf / .csv)") }
+            if (contacts.isNotEmpty()) {
+                Spacer(Modifier.height(9.dp))
+                Text("${contacts.size} kişi bulundu", color = CampaignGreen, fontWeight = FontWeight.Bold)
+                contacts.take(3).forEach { contact ->
+                    Text("${contact.name} · ${contact.phone}", style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                if (contacts.size > 3) Text("+ ${contacts.size - 3} kişi daha", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Checkbox(consentConfirmed, { consentConfirmed = it })
+                    Text("Bu kişiler WhatsApp bakım kampanyası için izin verdi.", style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f))
+                }
+                Button(
+                    onClick = {
+                        importing = true
+                        onImportContacts(contacts, consentConfirmed) { result ->
+                            importing = false
+                            result.onSuccess { response ->
+                                Toast.makeText(context, "${response.imported} yeni müşteri aktarıldı, ${response.matched} kayıt eşleştirildi.", Toast.LENGTH_LONG).show()
+                                contacts = emptyList()
+                                consentConfirmed = false
+                            }.onFailure {
+                                Toast.makeText(context, it.message ?: "Rehber aktarılamadı.", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    },
+                    enabled = !importing,
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = CampaignGreen)
+                ) {
+                    if (importing) CircularProgressIndicator(Modifier.size(18.dp), color = Color.White, strokeWidth = 2.dp)
+                    else Text("Rehberi Panele Aktar")
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun History(campaigns: List<CampaignDto>, busy: Boolean, compact: Boolean, onResume: (CampaignDto) -> Unit) {
     SectionCard {
         Text("Kampanya Geçmişi & Raporlar", fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
@@ -840,4 +969,38 @@ private fun formatDate(value: String?, includeTime: Boolean = true): String {
         val pattern = if (includeTime) "dd MMM yyyy HH:mm" else "dd MMM yyyy"
         OffsetDateTime.parse(value).format(DateTimeFormatter.ofPattern(pattern, Locale("tr", "TR")))
     }.getOrDefault(value.take(10))
+}
+
+private fun parseContacts(text: String): List<ImportedContactDto> =
+    if (text.contains("BEGIN:VCARD", ignoreCase = true)) parseVcards(text) else parseCsvContacts(text)
+
+private fun parseVcards(text: String): List<ImportedContactDto> = text
+    .split(Regex("BEGIN:VCARD", RegexOption.IGNORE_CASE))
+    .mapNotNull { block ->
+        val lines = block.lines()
+        val name = lines.firstOrNull { it.startsWith("FN", ignoreCase = true) }
+            ?.substringAfter(':')?.trim().orEmpty()
+        val phone = lines.firstOrNull { it.startsWith("TEL", ignoreCase = true) }
+            ?.substringAfter(':')?.trim().orEmpty()
+        if (name.isBlank() || phone.isBlank()) null else ImportedContactDto(name, phone)
+    }
+    .distinctBy { it.phone.filter(Char::isDigit).takeLast(10) }
+
+private fun parseCsvContacts(text: String): List<ImportedContactDto> {
+    val rows = text.lines().filter { it.isNotBlank() }
+    if (rows.isEmpty()) return emptyList()
+    val separator = if (rows.first().count { it == ';' } > rows.first().count { it == ',' }) ';' else ','
+    val header = rows.first().split(separator).map { it.trim().trim('"').lowercase(Locale.forLanguageTag("tr-TR")) }
+    val nameIndex = header.indexOfFirst { it in setOf("name", "isim", "ad", "ad soyad", "full name") }
+    val phoneIndex = header.indexOfFirst { it in setOf("phone", "telefon", "tel", "mobile", "cep") }
+    val hasHeader = nameIndex >= 0 || phoneIndex >= 0
+    val start = if (hasHeader) 1 else 0
+    return rows.drop(start).mapNotNull { row ->
+        val cells = row.split(separator).map { it.trim().trim('"') }
+        val resolvedNameIndex = if (nameIndex >= 0) nameIndex else 0
+        val resolvedPhoneIndex = if (phoneIndex >= 0) phoneIndex else 1
+        val name = cells.getOrNull(resolvedNameIndex).orEmpty()
+        val phone = cells.getOrNull(resolvedPhoneIndex).orEmpty()
+        if (name.isBlank() || phone.count(Char::isDigit) < 7) null else ImportedContactDto(name, phone)
+    }.distinctBy { it.phone.filter(Char::isDigit).takeLast(10) }
 }

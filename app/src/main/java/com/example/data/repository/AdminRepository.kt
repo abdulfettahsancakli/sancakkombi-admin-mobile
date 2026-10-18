@@ -125,6 +125,11 @@ interface AdminRepository {
     suspend fun getCampaignDashboard(): Result<com.example.data.remote.CampaignDashboardDto>
     suspend fun createCampaign(name: String, customerIds: List<String>): Result<String>
     suspend fun sendCampaign(campaignId: String): Result<com.example.data.remote.CampaignSendResponseDto>
+    suspend fun setCampaignConsent(customerIds: List<String>, status: String): Result<Int>
+    suspend fun importCustomerContacts(
+        contacts: List<com.example.data.remote.ImportedContactDto>,
+        marketingConsentConfirmed: Boolean
+    ): Result<com.example.data.remote.CustomerImportResponseDto>
 
     // WhatsApp Status
     fun getWhatsAppStatus(): Flow<com.example.data.model.WhatsAppStatus>

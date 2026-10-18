@@ -297,3 +297,34 @@ data class CampaignSendResponseDto(
     val failures: Int = 0,
     val error: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class CampaignConsentRequestDto(
+    val customerIds: List<String>,
+    val status: String,
+    val source: String = "campaign_panel_admin_confirmation"
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignConsentResponseDto(
+    val success: Boolean = false,
+    val updated: Int = 0,
+    val error: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class ImportedContactDto(val name: String, val phone: String)
+
+@JsonClass(generateAdapter = true)
+data class CustomerImportRequestDto(
+    val contacts: List<ImportedContactDto>,
+    val marketingConsentConfirmed: Boolean
+)
+
+@JsonClass(generateAdapter = true)
+data class CustomerImportResponseDto(
+    val success: Boolean = false,
+    val imported: Int = 0,
+    val matched: Int = 0,
+    val error: String? = null
+)

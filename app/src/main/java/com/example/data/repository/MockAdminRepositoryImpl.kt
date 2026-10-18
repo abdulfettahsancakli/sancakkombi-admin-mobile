@@ -1176,6 +1176,15 @@ class MockAdminRepositoryImpl : AdminRepository {
     override suspend fun getCampaignDashboard(): Result<com.example.data.remote.CampaignDashboardDto> =
         Result.success(com.example.data.remote.CampaignDashboardDto())
 
+    override suspend fun setCampaignConsent(customerIds: List<String>, status: String): Result<Int> =
+        Result.success(customerIds.size)
+
+    override suspend fun importCustomerContacts(
+        contacts: List<com.example.data.remote.ImportedContactDto>,
+        marketingConsentConfirmed: Boolean
+    ): Result<com.example.data.remote.CustomerImportResponseDto> =
+        Result.success(com.example.data.remote.CustomerImportResponseDto(success = true, imported = contacts.size))
+
     override suspend fun createCampaign(name: String, customerIds: List<String>): Result<String> =
         Result.success("mock-campaign")
 

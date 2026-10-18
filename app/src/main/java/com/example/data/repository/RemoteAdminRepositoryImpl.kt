@@ -854,6 +854,33 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun setCampaignConsent(customerIds: List<String>, status: String): Result<Int> = requireToken { token ->
+        val response = api.setCampaignConsent(
+            authHeader(token),
+            com.example.data.remote.CampaignConsentRequestDto(customerIds, status)
+        )
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(response.body()!!.updated)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
+
+    override suspend fun importCustomerContacts(
+        contacts: List<com.example.data.remote.ImportedContactDto>,
+        marketingConsentConfirmed: Boolean
+    ): Result<com.example.data.remote.CustomerImportResponseDto> = requireToken { token ->
+        val response = api.importCustomerContacts(
+            authHeader(token),
+            com.example.data.remote.CustomerImportRequestDto(contacts, marketingConsentConfirmed)
+        )
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
+
     // WhatsApp (bağlanma akışı web admin'de kalıyor, mutasyon yok - sadece token'a bağlı okuma)
 
     @OptIn(ExperimentalCoroutinesApi::class)

@@ -428,6 +428,26 @@ class MainViewModel(
         }
     }
 
+    fun setCampaignConsent(customerIds: List<String>, status: String, onResult: (Result<Int>) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.setCampaignConsent(customerIds, status)
+            if (result.isSuccess) fetchCampaigns()
+            onResult(result)
+        }
+    }
+
+    fun importCampaignContacts(
+        contacts: List<com.example.data.remote.ImportedContactDto>,
+        marketingConsentConfirmed: Boolean,
+        onResult: (Result<com.example.data.remote.CustomerImportResponseDto>) -> Unit
+    ) {
+        viewModelScope.launch {
+            val result = repository.importCustomerContacts(contacts, marketingConsentConfirmed)
+            if (result.isSuccess) fetchCampaigns()
+            onResult(result)
+        }
+    }
+
     private suspend fun processCampaignBatches(
         campaignId: String,
         onProgress: (String) -> Unit,

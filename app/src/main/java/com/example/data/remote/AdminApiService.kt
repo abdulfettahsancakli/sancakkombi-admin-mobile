@@ -279,6 +279,18 @@ interface AdminApiService {
         @Path("id") id: String
     ): Response<CampaignSendResponseDto>
 
+    @POST("api/admin/campaigns/consent")
+    suspend fun setCampaignConsent(
+        @Header("Authorization") auth: String,
+        @Body body: CampaignConsentRequestDto
+    ): Response<CampaignConsentResponseDto>
+
+    @POST("api/admin/customers/import")
+    suspend fun importCustomerContacts(
+        @Header("Authorization") auth: String,
+        @Body body: CustomerImportRequestDto
+    ): Response<CustomerImportResponseDto>
+
     // WhatsApp
     @GET("api/admin/whatsapp/status")
     suspend fun getWhatsAppStatus(@Header("Authorization") auth: String): Response<WhatsAppStatus>

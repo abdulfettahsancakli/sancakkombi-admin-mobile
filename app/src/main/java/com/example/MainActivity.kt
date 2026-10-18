@@ -423,6 +423,12 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onResumeCampaign = { id, onProgress, callback ->
                                             viewModel.resumeCampaign(id, onProgress, callback)
+                                        },
+                                        onSetConsent = { ids, status, callback ->
+                                            viewModel.setCampaignConsent(ids, status, callback)
+                                        },
+                                        onImportContacts = { contacts, confirmed, callback ->
+                                            viewModel.importCampaignContacts(contacts, confirmed, callback)
                                         }
                                     )
                                 }
