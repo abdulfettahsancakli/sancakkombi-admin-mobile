@@ -62,7 +62,7 @@ internal fun isPrimaryDestinationSelected(destination: String, currentRoute: Str
     if (destination == "finance" && currentRoute in setOf("finans", "service_receipt", "makbuz")) return true
     return destination == "modules" && currentRoute in setOf(
         "quotes", "teklifler", "new_proposal", "proposal_detail",
-        "messages", "mesajlar", "maintenance", "bakim", "reports", "raporlar",
+        "messages", "mesajlar", "message_templates", "maintenance", "bakim", "reports", "raporlar",
         "ads", "google_ads", "googleads", "reklamlar", "quick_iban", "hizli_iban",
         "iban_gonder", "usta_iban", "catalog", "stock", "stok", "campaigns", "whatsapp_status"
     )

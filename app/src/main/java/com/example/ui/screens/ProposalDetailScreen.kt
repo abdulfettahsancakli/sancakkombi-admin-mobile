@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -278,8 +279,12 @@ fun ProposalDetailContent(
                         onClick = { onUpdateStatus(ProposalStatus.APPROVED) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (proposal.status == ProposalStatus.APPROVED) tokens.primary else tokens.primaryC,
-                            contentColor = if (proposal.status == ProposalStatus.APPROVED) tokens.onPrimary else tokens.primary
+                            containerColor = tokens.surface,
+                            contentColor = tokens.text
+                        ),
+                        border = BorderStroke(
+                            if (proposal.status == ProposalStatus.APPROVED) 2.dp else 1.dp,
+                            if (proposal.status == ProposalStatus.APPROVED) tokens.text else tokens.border
                         ),
                         modifier = Modifier.height(36.dp)
                     ) {
@@ -292,8 +297,12 @@ fun ProposalDetailContent(
                         onClick = { onUpdateStatus(ProposalStatus.REJECTED) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (proposal.status == ProposalStatus.REJECTED) Color(0xFFEF4444) else Color(0xFFEF4444).copy(alpha = 0.2f),
-                            contentColor = if (proposal.status == ProposalStatus.REJECTED) Color.White else Color(0xFFEF4444)
+                            containerColor = tokens.surface,
+                            contentColor = if (proposal.status == ProposalStatus.REJECTED) tokens.red else tokens.text
+                        ),
+                        border = BorderStroke(
+                            if (proposal.status == ProposalStatus.REJECTED) 2.dp else 1.dp,
+                            if (proposal.status == ProposalStatus.REJECTED) tokens.red else tokens.border
                         ),
                         modifier = Modifier.height(36.dp)
                     ) {

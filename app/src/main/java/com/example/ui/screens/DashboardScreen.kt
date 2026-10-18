@@ -116,6 +116,7 @@ fun DashboardScreen(
     stats: DashboardStats,
     appointments: List<com.example.data.model.Appointment> = emptyList(),
     onNavigateToModule: (AdminModule) -> Unit,
+    onOpenWhatsAppTemplates: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     var showNotificationDialog by remember { mutableStateOf(false) }
@@ -332,11 +333,11 @@ fun DashboardScreen(
 
             item {
                 QuickActionGridCard(
-                    title = "WhatsApp Gönder",
-                    subtitle = "Müşteriye bildir",
+                    title = "WhatsApp Şablonları",
+                    subtitle = "Meta onaylı mesajlar",
                     icon = "💬",
                     accentColor = Color(0xFF25D366),
-                    onClick = { onNavigateToModule(AdminModule.MESAJ_SISTEMI) }
+                    onClick = onOpenWhatsAppTemplates
                 )
             }
 

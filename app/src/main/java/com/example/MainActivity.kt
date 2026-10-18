@@ -189,6 +189,9 @@ class MainActivity : ComponentActivity() {
                                         appointments = appointments,
                                         onNavigateToModule = { module ->
                                             viewModel.navigateTo(module.id, module)
+                                        },
+                                        onOpenWhatsAppTemplates = {
+                                            viewModel.navigateTo("message_templates", com.example.data.model.AdminModule.MESAJ_SISTEMI)
                                         }
                                     )
                                 }
@@ -313,6 +316,22 @@ class MainActivity : ComponentActivity() {
                                         onUpdateStaffSettings = { s -> viewModel.updateStaffMessagingSettings(s) },
                                         onUpdateTemplate = { t -> viewModel.updateMessageTemplate(t) },
                                         onRetryJob = { id -> viewModel.retryMessageJob(id) }
+                                    )
+                                }
+                                "message_templates" -> {
+                                    MessagesScreen(
+                                        stats = messagingStats,
+                                        customerSettings = customerMessagingSettings,
+                                        staffSettings = staffMessagingSettings,
+                                        templates = messageTemplates,
+                                        jobs = messageJobs,
+                                        logs = messageLogs,
+                                        onBackClick = { viewModel.navigateTo("dashboard") },
+                                        onUpdateCustomerSettings = { s -> viewModel.updateCustomerMessagingSettings(s) },
+                                        onUpdateStaffSettings = { s -> viewModel.updateStaffMessagingSettings(s) },
+                                        onUpdateTemplate = { t -> viewModel.updateMessageTemplate(t) },
+                                        onRetryJob = { id -> viewModel.retryMessageJob(id) },
+                                        initialTab = 1
                                     )
                                 }
                                 "maintenance", "bakim" -> {

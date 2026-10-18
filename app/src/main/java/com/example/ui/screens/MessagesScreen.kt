@@ -90,10 +90,11 @@ fun MessagesScreen(
     onUpdateStaffSettings: ((StaffMessagingSettings) -> Unit)? = null,
     onUpdateTemplate: (MessageTemplate) -> Unit = {},
     onRetryJob: (String) -> Unit = {},
+    initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var selectedTab by remember { mutableIntStateOf(0) } // Varsayılan: Müşteri WhatsApp Ayarları
+    var selectedTab by remember(initialTab) { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
 
     // Local copy of customer settings
     var custActive by remember(customerSettings) { mutableStateOf(customerSettings.isNotificationsActive) }
