@@ -1420,7 +1420,6 @@ fun AppointmentCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
     val (startT, endT) = parseSlotTimes(appointment.timeSlot)
@@ -1592,7 +1591,7 @@ fun AppointmentCard(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // 4-Button Primary Action Row (1f : 1f : 1f : 1.3f)
+            // Primary action row: Ara / Rota / Tamamla veya Fiş
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1615,32 +1614,6 @@ fun AppointmentCard(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = t.primary
-                        )
-                    }
-                }
-
-                // Bu aksiyon yalnızca Cloud API göndericisi sağlandığında gösterilir.
-                if (cloudWhatsApp != null) Surface(
-                    onClick = {
-                        val message = "Merhaba ${appointment.customerName}, Sancak Kombi olarak ${appointment.date} ${appointment.timeSlot} randevunuz hakkında iletişime geçiyoruz."
-                        cloudWhatsApp.sendMessage(
-                            appointment.phone, message, appointment.customerId, appointment.id
-                        ) { result ->
-                            onShowToast(if (result.isSuccess) "WhatsApp mesajı Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}")
-                        }
-                    },
-                    shape = RoundedCornerShape(11.dp),
-                    color = t.greenC,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(40.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "WhatsApp",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = t.green
                         )
                     }
                 }

@@ -634,7 +634,6 @@ fun AppointmentDetailPane(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
     var activeViewerPhotoUrl by remember { mutableStateOf<String?>(null) }
@@ -706,7 +705,7 @@ fun AppointmentDetailPane(
                 }
             }
 
-            // 3 Big Action Buttons: Ara / WhatsApp / Rota
+            // Randevu detayında yalnızca doğrudan ve açık aksiyonlar bulunur.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -729,30 +728,6 @@ fun AppointmentDetailPane(
                     ) {
                         Text("📞", fontSize = 16.sp)
                         Text("Ara", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = t.primary)
-                    }
-                }
-
-                if (cloudWhatsApp != null) Surface(
-                    onClick = {
-                        val message = "Merhaba ${appointment.customerName}, Sancak Kombi olarak ${appointment.date} ${appointment.timeSlot} randevunuz hakkında iletişime geçiyoruz."
-                        cloudWhatsApp.sendMessage(
-                            appointment.phone, message, appointment.customerId, appointment.id
-                        ) { result ->
-                            onShowToast(if (result.isSuccess) "WhatsApp mesajı Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}")
-                        }
-                    },
-                    shape = RoundedCornerShape(14.dp),
-                    color = t.greenC,
-                    border = BorderStroke(1.dp, t.green),
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(54.dp)
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
-                    ) {
-                        Text("WhatsApp", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold, color = t.green)
                     }
                 }
 
