@@ -414,16 +414,15 @@ class MainActivity : ComponentActivity() {
                                 "campaigns" -> {
                                     CampaignsScreen(
                                         dashboard = campaignDashboard,
-                                        customers = customers,
                                         isLoading = isCampaignsLoading,
                                         error = campaignsError,
                                         onBackClick = { viewModel.navigateTo("modules") },
                                         onRefresh = { viewModel.fetchCampaigns() },
-                                        onCreateCampaign = { name, ids, callback ->
-                                            viewModel.createCampaign(name, ids, callback)
+                                        onCreateAndSend = { name, ids, onProgress, callback ->
+                                            viewModel.createAndSendCampaign(name, ids, onProgress, callback)
                                         },
-                                        onSendCampaign = { id, callback ->
-                                            viewModel.sendCampaign(id, callback)
+                                        onResumeCampaign = { id, onProgress, callback ->
+                                            viewModel.resumeCampaign(id, onProgress, callback)
                                         }
                                     )
                                 }

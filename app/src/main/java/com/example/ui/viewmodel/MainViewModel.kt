@@ -402,19 +402,55 @@ class MainViewModel(
         }
     }
 
-    fun createCampaign(name: String, customerIds: List<String>, onResult: (Result<Unit>) -> Unit) {
+    fun createAndSendCampaign(
+        name: String,
+        customerIds: List<String>,
+        onProgress: (String) -> Unit,
+        onResult: (Result<Unit>) -> Unit
+    ) {
         viewModelScope.launch {
-            val result = repository.createCampaign(name, customerIds)
-            if (result.isSuccess) fetchCampaigns()
-            onResult(result)
+            onProgress("Kampanya hazırlanıyor")
+            val campaignId = repository.createCampaign(name, customerIds).getOrElse {
+                onResult(Result.failure(it))
+                return@launch
+            }
+            processCampaignBatches(campaignId, onProgress, onResult)
         }
     }
 
-    fun sendCampaign(campaignId: String, onResult: (Result<Unit>) -> Unit) {
+    fun resumeCampaign(
+        campaignId: String,
+        onProgress: (String) -> Unit,
+        onResult: (Result<Unit>) -> Unit
+    ) {
         viewModelScope.launch {
-            val result = repository.sendCampaign(campaignId)
-            if (result.isSuccess) fetchCampaigns()
-            onResult(result)
+            processCampaignBatches(campaignId, onProgress, onResult)
+        }
+    }
+
+    private suspend fun processCampaignBatches(
+        campaignId: String,
+        onProgress: (String) -> Unit,
+        onResult: (Result<Unit>) -> Unit
+    ) {
+        var remaining = 1
+        var batch = 0
+        while (remaining > 0 && batch < 200) {
+            batch += 1
+            onProgress("Gönderim sürüyor · parti $batch")
+            val response = repository.sendCampaign(campaignId).getOrElse {
+                fetchCampaigns()
+                onResult(Result.failure(it))
+                return
+            }
+            remaining = response.remaining
+            onProgress(if (remaining > 0) "$remaining mesaj kuyrukta" else "Gönderim tamamlandı")
+        }
+        fetchCampaigns()
+        if (remaining > 0) {
+            onResult(Result.failure(IllegalStateException("Gönderim güvenlik sınırında durdu; kampanyadan devam edebilirsiniz.")))
+        } else {
+            onResult(Result.success(Unit))
         }
     }
 

@@ -271,13 +271,13 @@ interface AdminApiService {
     suspend fun createCampaign(
         @Header("Authorization") auth: String,
         @Body body: CampaignCreateRequestDto
-    ): Response<SuccessResponseDto>
+    ): Response<CampaignCreateResponseDto>
 
     @POST("api/admin/campaigns/{id}/send")
     suspend fun sendCampaign(
         @Header("Authorization") auth: String,
         @Path("id") id: String
-    ): Response<SuccessResponseDto>
+    ): Response<CampaignSendResponseDto>
 
     // WhatsApp
     @GET("api/admin/whatsapp/status")

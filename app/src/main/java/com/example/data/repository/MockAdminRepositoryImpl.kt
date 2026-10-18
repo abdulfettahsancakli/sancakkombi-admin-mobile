@@ -1176,11 +1176,11 @@ class MockAdminRepositoryImpl : AdminRepository {
     override suspend fun getCampaignDashboard(): Result<com.example.data.remote.CampaignDashboardDto> =
         Result.success(com.example.data.remote.CampaignDashboardDto())
 
-    override suspend fun createCampaign(name: String, customerIds: List<String>): Result<Unit> =
-        Result.success(Unit)
+    override suspend fun createCampaign(name: String, customerIds: List<String>): Result<String> =
+        Result.success("mock-campaign")
 
-    override suspend fun sendCampaign(campaignId: String): Result<Unit> =
-        Result.success(Unit)
+    override suspend fun sendCampaign(campaignId: String): Result<com.example.data.remote.CampaignSendResponseDto> =
+        Result.success(com.example.data.remote.CampaignSendResponseDto(success = true, status = "completed"))
 
     // WhatsApp Status Implementation
     private val _whatsAppStatus = MutableStateFlow(

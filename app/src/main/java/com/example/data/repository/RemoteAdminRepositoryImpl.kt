@@ -835,19 +835,20 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
-    override suspend fun createCampaign(name: String, customerIds: List<String>): Result<Unit> = requireToken { token ->
+    override suspend fun createCampaign(name: String, customerIds: List<String>): Result<String> = requireToken { token ->
         val response = api.createCampaign(authHeader(token), CampaignCreateRequestDto(name, customerIds))
-        if (response.isSuccessful && response.body()?.success == true) {
-            Result.success(Unit)
+        val campaignId = response.body()?.campaign?.id
+        if (response.isSuccessful && response.body()?.success == true && !campaignId.isNullOrBlank()) {
+            Result.success(campaignId)
         } else {
             Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
         }
     }
 
-    override suspend fun sendCampaign(campaignId: String): Result<Unit> = requireToken { token ->
+    override suspend fun sendCampaign(campaignId: String): Result<com.example.data.remote.CampaignSendResponseDto> = requireToken { token ->
         val response = api.sendCampaign(authHeader(token), campaignId)
         if (response.isSuccessful && response.body()?.success == true) {
-            Result.success(Unit)
+            Result.success(response.body()!!)
         } else {
             Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
         }

@@ -123,8 +123,8 @@ interface AdminRepository {
 
     // Customer campaigns
     suspend fun getCampaignDashboard(): Result<com.example.data.remote.CampaignDashboardDto>
-    suspend fun createCampaign(name: String, customerIds: List<String>): Result<Unit>
-    suspend fun sendCampaign(campaignId: String): Result<Unit>
+    suspend fun createCampaign(name: String, customerIds: List<String>): Result<String>
+    suspend fun sendCampaign(campaignId: String): Result<com.example.data.remote.CampaignSendResponseDto>
 
     // WhatsApp Status
     fun getWhatsAppStatus(): Flow<com.example.data.model.WhatsAppStatus>

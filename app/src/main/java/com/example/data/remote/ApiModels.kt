@@ -240,17 +240,60 @@ data class CampaignDto(
     @Json(name = "message_body") val messageBody: String? = null,
     val status: String = "draft",
     @Json(name = "recipient_count") val recipientCount: Int = 0,
-    @Json(name = "created_at") val createdAt: String? = null
+    @Json(name = "created_at") val createdAt: String? = null,
+    val counts: Map<String, Int> = emptyMap(),
+    val recipients: List<CampaignRecipientDto> = emptyList()
 )
 
 @JsonClass(generateAdapter = true)
 data class CampaignDashboardDto(
+    val customers: List<CampaignCustomerDto> = emptyList(),
     val campaigns: List<CampaignDto> = emptyList(),
-    val migrationRequired: Boolean = false
+    val migrationRequired: Boolean = false,
+    val messageBody: String = "",
+    val templateName: String = "sonbahar_bakim_kampanyasi"
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignCustomerDto(
+    val id: String = "",
+    val name: String = "",
+    @Json(name = "phone_raw") val phone: String = "",
+    val district: String? = null,
+    @Json(name = "marketing_consent_status") val consentStatus: String = "unknown",
+    val totalAppointments: Int = 0,
+    val lastServiceDate: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignRecipientDto(
+    val id: String = "",
+    @Json(name = "customer_name") val customerName: String = "",
+    val phone: String = "",
+    val status: String = "queued",
+    @Json(name = "sent_at") val sentAt: String? = null,
+    @Json(name = "created_at") val createdAt: String? = null
 )
 
 @JsonClass(generateAdapter = true)
 data class CampaignCreateRequestDto(
     val name: String,
     val customerIds: List<String>
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignCreateResponseDto(
+    val success: Boolean = false,
+    val campaign: CampaignDto? = null,
+    val error: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignSendResponseDto(
+    val success: Boolean = false,
+    val processed: Int = 0,
+    val remaining: Int = 0,
+    val status: String = "",
+    val failures: Int = 0,
+    val error: String? = null
 )
