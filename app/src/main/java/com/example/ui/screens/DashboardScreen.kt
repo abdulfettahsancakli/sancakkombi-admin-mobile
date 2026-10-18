@@ -576,7 +576,7 @@ private fun RevenueHeroBentoCard(
     growthPercentage: String,
     onCardClick: () -> Unit
 ) {
-    var isRevenueVisible by rememberSaveable { mutableStateOf(true) }
+    var isRevenueVisible by rememberSaveable { mutableStateOf(false) }
 
     Card(
         modifier = Modifier

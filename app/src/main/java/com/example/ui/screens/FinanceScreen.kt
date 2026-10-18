@@ -3,7 +3,6 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -1442,6 +1441,7 @@ private fun ReceivableActionBottomSheet(
     onDismiss: () -> Unit,
     onMarkCollected: () -> Unit
 ) {
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val paymentAccount = bankAccounts.firstOrNull { account ->
         account.isReady &&
             account.bankName.isNotBlank() &&
@@ -1511,11 +1511,18 @@ private fun ReceivableActionBottomSheet(
                         Anlayışınız için teşekkür ederiz.
                     """.trimIndent().format(remainingAmount)
 
-                    val intent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, reminderText)
+                    val actions = cloudWhatsApp
+                    if (actions == null) {
+                        Toast.makeText(context, "WhatsApp Cloud API bağlantısı hazır değil.", Toast.LENGTH_LONG).show()
+                        return@Button
                     }
-                    context.startActivity(Intent.createChooser(intent, "WhatsApp'tan Ödeme Hatırlatması Gönder"))
+                    actions.sendFinanceReminder(record.id, reminderText) { result ->
+                        Toast.makeText(
+                            context,
+                            if (result.isSuccess) "Ödeme hatırlatması WhatsApp Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
                 },
                 modifier = Modifier.fillMaxWidth(),
                 enabled = paymentAccount != null,

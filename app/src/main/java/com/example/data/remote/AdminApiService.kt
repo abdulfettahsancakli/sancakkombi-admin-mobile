@@ -86,6 +86,12 @@ interface AdminApiService {
         @Body body: SendBankTransferRequestDto
     ): Response<SuccessResponseDto>
 
+    @POST("api/admin/whatsapp/send")
+    suspend fun sendWhatsAppMessage(
+        @Header("Authorization") auth: String,
+        @Body body: WhatsAppSendRequestDto
+    ): Response<SuccessResponseDto>
+
     @GET("api/admin/appointments/available-slots")
     suspend fun getAvailableSlots(
         @Header("Authorization") auth: String,
@@ -177,6 +183,12 @@ interface AdminApiService {
 
     @DELETE("api/admin/quotes/{id}")
     suspend fun deleteProposal(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
+
+    @POST("api/admin/quotes/{id}/whatsapp")
+    suspend fun sendProposalWhatsApp(
+        @Header("Authorization") auth: String,
+        @Path("id") id: String
+    ): Response<SuccessResponseDto>
 
     // Mesajlaşma
     @GET("api/admin/messages/stats")

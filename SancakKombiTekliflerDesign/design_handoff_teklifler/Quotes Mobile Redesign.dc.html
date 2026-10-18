@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#0b0e14;font-family:'Roboto',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#0EA5E9}
+  a:hover{color:#38BDF8}
+  ::-webkit-scrollbar{display:none}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:48px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:24px;color:#E2E8F0">
+
+  <div style="max-width:1100px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#131B2E;border:1px solid #334155;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#0EA5E9;letter-spacing:.4px;margin-bottom:14px;white-space:nowrap">TEKLİFLER · TELEFON + TABLET</div>
+    <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;color:#F8FAFC">Fiyat Teklifleri</h1>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#94A3B8;max-width:720px;text-wrap:pretty">Web yönetim panelindeki teklif listesi ve yeni teklif formu telefon ve tablete uyarlandı. Modüller ekranındaki Teklifler butonları bu sayfaya yönlendirir.</p>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+    <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+      <div style="display:flex;gap:4px;background:#131B2E;border:1px solid #334155;border-radius:14px;padding:4px">
+        <sc-for list="{{ phoneTabs }}" as="pt" hint-placeholder-count="2">
+          <div onClick="{{ pt.go }}" style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;background:{{ pt.bg }};color:{{ pt.color }}">{{ pt.label }}</div>
+        </sc-for>
+      </div>
+
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ isDark }}" width="{{ 412 }}" height="{{ 892 }}" hint-size="412,892">
+        <div style="background:{{ theme.bg }};height:100%;overflow:hidden;display:flex;flex-direction:column;font-family:'Roboto',system-ui,sans-serif;position:relative;transition:background .3s">
+
+          <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:10px;left:16px;right:16px;z-index:20;background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+          </sc-if>
+
+          <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <img src="app/src/main/res/drawable/logo_sancakkombi.jpg" alt="Sancak Kombi Logo" style="width:34px;height:34px;border-radius:8px;object-fit:cover;display:block">
+                  <div style="display:flex;align-items:baseline;gap:4px">
+                    <span style="font-weight:700;font-size:15px;font-family:monospace;color:{{ theme.text }}">sancakkombi</span>
+                    <span style="font-weight:500;font-size:13px;font-family:monospace;color:{{ theme.primary }}">/admin</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:4px;background:{{ theme.surface2 }};border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:{{ theme.text }}"><span style="font-size:14px">🚪</span>Çıkış</div><div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div></div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:14px 12px 130px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <span style="font-size:18px;font-weight:800;color:{{ theme.text }};letter-spacing:-0.3px;white-space:nowrap">Fiyat Teklifleri</span>
+                  <span style="font-size:10px;font-weight:800;color:{{ theme.primary }};background:{{ theme.primaryC }};border-radius:8px;padding:3px 8px;white-space:nowrap">{{ countTxt }}</span>
+                </div>
+                <div style="font-size:11.5px;line-height:1.5;color:{{ theme.text2 }}">Arıza, montaj, bakım ve kurumsal servis fiyat tekliflerini oluşturun ve durumlarını takip edin.</div>
+
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px">
+                  <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:10px">
+                      <div style="font-size:8.5px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.3px">{{ k.l }}</div>
+                      <div style="font-size:15px;font-weight:900;color:{{ theme.text }};margin-top:3px">{{ k.v }}</div>
+                      <div style="font-size:9.5px;color:{{ theme.text2 }};margin-top:2px">{{ k.s }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="display:flex;align-items:center;gap:8px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:10px 12px;font-size:12px;color:{{ theme.text2 }}">🔍 Müşteri, telefon, teklif no ara…</div>
+
+                <div style="display:flex;gap:6px;overflow-x:auto;scrollbar-width:none">
+                  <sc-for list="{{ filterChips }}" as="fc" hint-placeholder-count="5">
+                    <div onClick="{{ fc.go }}" style="flex:none;font-size:11px;font-weight:700;padding:6px 10px;border-radius:12px;cursor:pointer;background:{{ fc.bg }};color:{{ fc.color }};border:1px solid {{ fc.border }}">{{ fc.label }}</div>
+                  </sc-for>
+                </div>
+
+                <sc-for list="{{ listRows }}" as="q" hint-placeholder-count="4">
+                  <div onClick="{{ q.open }}" style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-left:3px solid {{ q.accent }};border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px;cursor:pointer">
+                    <div style="display:flex;align-items:center;gap:10px">
+                      <div style="width:36px;height:36px;flex:none;border-radius:10px;background:{{ theme.surface2 }};display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:{{ theme.text2 }}">{{ q.mono }}</div>
+                      <div style="flex:1;min-width:0">
+                        <div style="font-size:13px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.brand }} · {{ q.model }}</div>
+                        <div style="font-size:10px;font-family:monospace;color:{{ theme.primary }};margin-top:2px">{{ q.no }}</div>
+                      </div>
+                      <span style="flex:none;font-size:9.5px;font-weight:800;color:{{ q.tc }};background:{{ q.tbg }};border-radius:8px;padding:3px 7px">{{ q.statusLabel }}</span>
+                    </div>
+                    <div style="display:flex;justify-content:space-between;align-items:flex-end;gap:8px">
+                      <div style="min-width:0">
+                        <div style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">{{ q.customer }}</div>
+                        <div style="font-size:10.5px;color:{{ theme.text2 }};margin-top:2px">{{ q.phone }} · {{ q.date }}</div>
+                      </div>
+                      <div style="text-align:right;flex:none">
+                        <div style="font-size:8.5px;font-weight:800;color:{{ theme.text2 }}">TOPLAM</div>
+                        <div style="font-size:14px;font-weight:900;color:{{ theme.primary }}">{{ q.total }}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex;gap:6px">
+                      <div onClick="{{ q.wa }}" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:#25D366;background:rgba(37,211,102,0.12);border-radius:10px;padding:8px 0">WhatsApp</div>
+                      <div onClick="{{ q.call }}" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:{{ theme.primary }};background:{{ theme.primaryC }};border-radius:10px;padding:8px 0">Ara</div>
+                      <div onClick="{{ q.pdf }}" style="flex:1;text-align:center;font-size:11px;font-weight:800;color:{{ theme.text }};background:{{ theme.surface2 }};border-radius:10px;padding:8px 0">PDF</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="position:absolute;left:14px;right:14px;bottom:14px">
+                <div onClick="{{ openForm }}" style="text-align:center;font-size:14px;font-weight:800;color:{{ theme.onPrimary }};background:{{ theme.primary }};border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);cursor:pointer">+ Yeni Teklif Oluştur</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onClick="{{ backToList }}">
+                  <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:{{ theme.text }}">‹</div>
+                  <span style="font-size:14px;font-weight:700;color:{{ theme.text2 }}">Teklifler</span>
+                </div>
+                <div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div>
+              </div>
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:14px 12px 24px;display:flex;flex-direction:column;gap:12px">
+                <div onClick="{{ doc.pdf }}" style="text-align:center;font-size:13px;font-weight:800;color:{{ theme.onPrimary }};background:{{ theme.primary }};border-radius:14px;padding:12px;cursor:pointer">📄 Fiyat Teklifi PDF</div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:12px;padding:10px">
+                  <span style="font-size:12px;font-weight:800;color:{{ theme.text }}">Müşteri Onayı:</span>
+                  <div style="display:flex;gap:6px">
+                    <div onClick="{{ doc.approve }}" style="font-size:11px;font-weight:800;color:#FFFFFF;background:#10B981;border-radius:8px;padding:7px 10px;cursor:pointer">✓ Kabul Edildi</div>
+                    <div onClick="{{ doc.reject }}" style="font-size:11px;font-weight:800;color:#FFFFFF;background:#EF4444;border-radius:8px;padding:7px 10px;cursor:pointer">✕ Reddedildi</div>
+                  </div>
+                </div>
+                <div style="background:#FFFFFF;color:#111827;border:1px solid #D1D5DB;border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:0 4px 14px rgba(0,0,0,.25)">
+                  <div style="display:flex;justify-content:space-between;gap:8px">
+                    <div><div style="font-size:16px;font-weight:900;color:#DC2626">SANCAK KOMBİ</div><div style="font-size:10px;font-weight:800;color:#374151">TEKNİK SERVİS</div><div style="font-size:8px;color:#6B7280">GÜVENLİK • KALİTE • HİZMET</div></div>
+                    <div style="text-align:right"><div style="font-size:13px;font-weight:900;color:#111827">FİYAT TEKLİFİ</div><div style="font-size:10px;font-weight:800;color:#DC2626">Teklif No: {{ doc.no }}</div><div style="font-size:9px;color:#6B7280">Tarih: {{ doc.date }}</div></div>
+                  </div>
+                  <div style="height:1px;background:#D1D5DB"></div>
+                  <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;padding:10px;display:flex;flex-direction:column;gap:3px">
+                    <div style="font-size:8.5px;font-weight:800;color:#6B7280">TEKLİF VERİLEN MÜŞTERİ BİLGİLERİ</div>
+                    <div style="font-size:13px;font-weight:800;color:#111827">Sayın {{ doc.customer }}</div>
+                    <div style="font-size:10px;color:#374151">Tel: {{ doc.phone }}</div>
+                    <div style="font-size:10px;font-weight:500;color:#111827">Cihaz: {{ doc.brand }} {{ doc.model }}</div>
+                  </div>
+                  <div style="font-size:11px;font-weight:800;color:#111827">TEKLİF DETAYLARI</div>
+                  <sc-for list="{{ doc.lines }}" as="ln" hint-placeholder-count="2">
+                    <div style="display:flex;align-items:center;gap:8px;background:{{ ln.bg }};padding:8px 6px;font-size:11px;color:#111827"><span style="width:18px;font-weight:800;color:#6B7280">{{ ln.n }}.</span><span style="flex:1">{{ ln.t }}</span></div>
+                  </sc-for>
+                  <div style="background:#F9FAFB;border:1px solid #E5E7EB;border-radius:6px;padding:10px;display:flex;justify-content:space-between;align-items:center">
+                    <span style="font-size:9px;font-weight:800;color:#6B7280">GENEL TOPLAM (KDV DAHİL)</span>
+                    <span style="font-size:15px;font-weight:900;color:#10B981">{{ doc.total }}</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;gap:3px">
+                    <div style="font-size:9px;font-weight:800;color:#6B7280">TEKLİF ŞARTLARI</div>
+                    <div style="font-size:9.5px;color:#374151">• Teklifimiz 15 gün geçerlidir.</div>
+                    <div style="font-size:9.5px;color:#374151">• Montaj ve işçilik Sancak Kombi güvencesiyle 1 yıl garantilidir.</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onClick="{{ backToList }}">
+                  <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:{{ theme.text }}">‹</div>
+                  <span style="font-size:14px;font-weight:700;color:{{ theme.text2 }}">Teklifler</span>
+                </div>
+                <div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:14px 12px 100px;display:flex;flex-direction:column;gap:12px">
+  <div><div style="font-size:18px;font-weight:800;color:{{ theme.text }}">Yeni Fiyat Teklifi</div><div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:3px">Müşteriye verilecek fiyat teklifini oluşturun.</div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Müşteri Bilgileri</div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Ad Soyad *</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Müşteri adı soyadı</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Telefon</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">05XX xxx xx xx</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">E-posta</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">ornek@mail.com</div></div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">İlçe</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Bayrampaşa</div></div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Adres</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;min-height:44px">Mahalle, cadde, bina no…</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Cihaz Marka</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: DemirDöküm</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Cihaz Model</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Nötron Plus</div></div></div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Teklif Kalemleri</div><div style="font-size:10px;color:{{ theme.text2 }}">Hazır hizmet / ürün fiyatları</div><div style="background:{{ theme.surface2 }};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Ürün / Hizmet</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Kombi bakım &amp; servis</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Adet</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">1</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Birim Fiyat</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">0</div></div></div></div><div style="font-size:11px;font-weight:800;color:{{ theme.primary }};border:1px dashed {{ theme.border }};border-radius:12px;padding:10px;text-align:center">+ Kalem Ekle</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:{{ theme.text2 }}"><span>Ara Toplam</span><span>₺0,00</span></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">İskonto</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">0</div></div></div><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;color:#22C55E"><span>Genel Toplam</span><span>₺0,00</span></div></div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Ödeme Planı</div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Peşinat Tutarı</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">0</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Kalan Ödeme Şekli</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: 3 taksit</div></div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Ek Bilgiler</div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Geçerlilik Tarihi (gg.aa.yyyy)</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">gg.aa.yyyy</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Teklifi Hazırlayan</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Ad soyad</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Not / Şartlar</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;min-height:44px">Ödeme ve garanti şartları</div></div></div>
+</div>
+              <div style="position:absolute;left:14px;right:14px;bottom:14px">
+                <div onClick="{{ createQuote }}" style="text-align:center;font-size:14px;font-weight:800;color:{{ theme.onPrimary }};background:{{ theme.primary }};border-radius:16px;padding:14px;box-shadow:0 8px 24px rgba(0,0,0,.3);cursor:pointer">Teklifi Oluştur</div>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </x-import>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;max-width:100%">
+      <div style="font-size:12px;font-weight:700;color:#94A3B8">Tablet · yatay</div>
+      <div style="width:100%;max-width:1040px;height:640px;box-sizing:border-box;background:{{ theme.bg }};border:1px solid #334155;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;font-family:'Roboto',system-ui,sans-serif;position:relative;transition:background .3s">
+
+        <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="app/src/main/res/drawable/logo_sancakkombi.jpg" alt="Sancak Kombi Logo" style="width:34px;height:34px;border-radius:8px;object-fit:cover;display:block">
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-weight:700;font-size:15px;font-family:monospace;color:{{ theme.text }}">sancakkombi</span>
+              <span style="font-weight:500;font-size:13px;font-family:monospace;color:{{ theme.primary }}">/admin</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:4px;background:{{ theme.surface2 }};border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:{{ theme.text }}"><span style="font-size:14px">🚪</span>Çıkış</div><div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div></div>
+        </div>
+
+        <div style="flex:1;display:flex;min-height:0">
+
+          <div style="width:380px;flex:none;border-right:1px solid {{ theme.border }};overflow-y:auto;scrollbar-width:none;padding:18px 14px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:8px">
+              <span style="font-size:18px;font-weight:800;color:{{ theme.text }};white-space:nowrap">Fiyat Teklifleri</span>
+              <span style="font-size:10px;font-weight:800;color:{{ theme.primary }};background:{{ theme.primaryC }};border-radius:8px;padding:3px 8px;white-space:nowrap">{{ countTxt }}</span><div onClick="{{ openDialog }}" style="margin-left:auto;font-size:11px;font-weight:800;color:{{ theme.onPrimary }};background:{{ theme.primary }};border-radius:10px;padding:7px 10px;cursor:pointer;white-space:nowrap">+ Yeni Teklif</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px">
+              <sc-for list="{{ kpis }}" as="k" hint-placeholder-count="4">
+                <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:12px;padding:8px">
+                  <div style="font-size:8px;font-weight:800;color:{{ theme.text2 }}">{{ k.l }}</div>
+                  <div style="font-size:14px;font-weight:900;color:{{ theme.text }};margin-top:2px">{{ k.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px">
+              <sc-for list="{{ filterChips }}" as="fc" hint-placeholder-count="5">
+                <div onClick="{{ fc.go }}" style="font-size:10.5px;font-weight:700;padding:5px 9px;border-radius:10px;cursor:pointer;background:{{ fc.bg }};color:{{ fc.color }};border:1px solid {{ fc.border }}">{{ fc.label }}</div>
+              </sc-for>
+            </div>
+            <sc-for list="{{ listRowsT }}" as="q" hint-placeholder-count="5">
+              <div onClick="{{ q.pick }}" style="display:flex;align-items:center;gap:10px;background:{{ q.rowBg }};border:1px solid {{ q.border }};border-left:3px solid {{ q.accent }};border-radius:14px;padding:10px;cursor:pointer">
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:12.5px;font-weight:800;color:{{ theme.text }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ q.customer }}</div>
+                  <div style="font-size:10px;font-family:monospace;color:{{ theme.primary }};margin-top:2px">{{ q.no }}</div>
+                </div>
+                <div style="text-align:right;flex:none">
+                  <div style="font-size:12px;font-weight:900;color:{{ theme.text }}">{{ q.total }}</div>
+                  <span style="font-size:9px;font-weight:800;color:{{ q.tc }};background:{{ q.tbg }};border-radius:7px;padding:2px 6px">{{ q.statusLabel }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex:1;min-width:0;overflow-y:auto;scrollbar-width:none;padding:24px 28px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px">
+              <div style="min-width:0">
+                <div style="font-size:11px;font-family:monospace;color:{{ theme.primary }}">{{ detail.no }}</div>
+                <div style="font-size:22px;font-weight:900;color:{{ theme.text }};letter-spacing:-0.4px;margin-top:4px">{{ detail.customer }}</div>
+                <div style="font-size:12px;color:{{ theme.text2 }};margin-top:3px">{{ detail.phone }} · {{ detail.date }} · {{ detail.brand }} {{ detail.model }}</div>
+              </div>
+              <div style="text-align:right;flex:none">
+                <span style="font-size:11px;font-weight:800;color:{{ detail.tc }};background:{{ detail.tbg }};border-radius:9px;padding:5px 10px">{{ detail.statusLabel }}</span>
+                <div style="font-size:20px;font-weight:900;color:{{ theme.primary }};margin-top:8px">{{ detail.total }}</div>
+              </div>
+            </div>
+
+            <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:8px">
+              <div style="font-size:10px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">İŞ KAPSAMI</div>
+              <sc-for list="{{ detail.lines }}" as="ln" hint-placeholder-count="2">
+                <div style="font-size:12.5px;font-weight:700;color:{{ theme.text }};background:{{ theme.surface2 }};border-radius:10px;padding:9px 12px">1x {{ ln }}</div>
+              </sc-for>
+            </div>
+
+            <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <span style="font-size:11px;font-weight:800;color:{{ theme.text2 }}">DURUM</span>
+              <div style="display:flex;gap:6px">
+                <sc-for list="{{ detail.durum }}" as="d" hint-placeholder-count="3">
+                  <div onClick="{{ d.go }}" style="font-size:11px;font-weight:800;padding:6px 10px;border-radius:9px;cursor:pointer;background:{{ d.bg }};color:{{ d.color }};border:1px solid {{ d.border }}">{{ d.label }}</div>
+                </sc-for>
+              </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px">
+              <div onClick="{{ detail.wa }}" style="text-align:center;font-size:12px;font-weight:800;color:#25D366;background:rgba(37,211,102,0.12);border-radius:12px;padding:12px 0;cursor:pointer">WhatsApp Teklifi</div>
+              <div onClick="{{ detail.call }}" style="text-align:center;font-size:12px;font-weight:800;color:{{ theme.primary }};background:{{ theme.primaryC }};border-radius:12px;padding:12px 0;cursor:pointer">Ara</div>
+              <div onClick="{{ detail.pdf }}" style="text-align:center;font-size:12px;font-weight:800;color:{{ theme.text }};background:{{ theme.surface2 }};border-radius:12px;padding:12px 0;cursor:pointer">PDF</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div onClick="{{ detail.edit }}" style="text-align:center;font-size:12px;font-weight:800;color:{{ theme.text }};background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:12px;padding:11px 0;cursor:pointer">✏️ Düzenle</div>
+              <div onClick="{{ detail.del }}" style="text-align:center;font-size:12px;font-weight:800;color:#F87171;background:rgba(248,113,113,0.12);border-radius:12px;padding:11px 0;cursor:pointer">🗑️ Sil</div>
+            </div>
+          </div>
+
+        </div>
+
+        <sc-if value="{{ dialog }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;z-index:30">
+            <div style="width:560px;max-width:92%;height:92%;background:{{ theme.bg }};border:1px solid {{ theme.border }};border-radius:20px;display:flex;flex-direction:column;overflow:hidden;position:relative;box-shadow:0 20px 50px rgba(0,0,0,.4)">
+              <div onClick="{{ closeDialog }}" style="position:absolute;top:12px;right:12px;z-index:2;width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:{{ theme.text2 }};background:{{ theme.surface }};cursor:pointer">✕</div>
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:14px 12px 100px;display:flex;flex-direction:column;gap:12px">
+  <div><div style="font-size:18px;font-weight:800;color:{{ theme.text }}">Yeni Fiyat Teklifi</div><div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:3px">Müşteriye verilecek fiyat teklifini oluşturun.</div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Müşteri Bilgileri</div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Ad Soyad *</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Müşteri adı soyadı</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Telefon</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">05XX xxx xx xx</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">E-posta</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">ornek@mail.com</div></div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">İlçe</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Bayrampaşa</div></div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Adres</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;min-height:44px">Mahalle, cadde, bina no…</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Cihaz Marka</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: DemirDöküm</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Cihaz Model</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Nötron Plus</div></div></div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px"><div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Teklif Kalemleri</div><div style="font-size:10px;color:{{ theme.text2 }}">Hazır hizmet / ürün fiyatları</div><div style="background:{{ theme.surface2 }};border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Ürün / Hizmet</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">Örn: Kombi bakım &amp; servis</div></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Adet</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">1</div></div><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Birim Fiyat</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">0</div></div></div></div><div style="font-size:11px;font-weight:800;color:{{ theme.primary }};border:1px dashed {{ theme.border }};border-radius:12px;padding:10px;text-align:center">+ Kalem Ekle</div><div style="display:flex;flex-direction:column;gap:6px;margin-top:4px"><div style="display:flex;justify-content:space-between;font-size:12px;font-weight:500;color:{{ theme.text2 }}"><span>Ara Toplam</span><span>₺0,00</span></div><div style="display:flex;gap:8px"><div style="display:flex;flex-direction:column;gap:4px;flex:1;min-width:0"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">İskonto</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;">0</div></div></div><div style="display:flex;justify-content:space-between;font-size:14px;font-weight:900;color:#22C55E"><span>Genel Toplam</span><span>₺0,00</span></div></div></div>
+  <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:12px">
+  <div style="font-size:13px;font-weight:800;color:{{ theme.text }}">Ödeme Koşulları &amp; Teklif Notları</div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Peşinat Tutarı (TL)</div><div style="display:flex;flex-wrap:wrap;gap:6px"><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺1000</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺1500</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺2000</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺2500</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺3000</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺4000</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">₺5000</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;color:#EF4444;border:1px solid #EF4444">Sıfırla</div></div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px">₺ 0</div></div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Kalan Ödeme Şekli</div><div style="display:flex;gap:6px"><div style="flex:1;min-width:0;border-radius:12px;padding:10px;border:2px solid {{ theme.primary }};background:{{ theme.primaryC }}"><div style="font-size:12px;font-weight:800;color:{{ theme.text }}">Nakit</div><div style="font-size:9.5px;color:{{ theme.text2 }};margin-top:2px">Peşin tahsilat</div></div><div style="flex:1;min-width:0;border-radius:12px;padding:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }}"><div style="font-size:12px;font-weight:800;color:{{ theme.text }}">Kredi Kartı</div><div style="font-size:9.5px;color:{{ theme.text2 }};margin-top:2px">Taksitli ödeme</div></div><div style="flex:1;min-width:0;border-radius:12px;padding:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }}"><div style="font-size:12px;font-weight:800;color:{{ theme.text }}">Havale / EFT</div><div style="font-size:9.5px;color:{{ theme.text2 }};margin-top:2px">IBAN ile</div></div></div></div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Teklif Geçerlilik Süresi</div><div style="display:flex;gap:6px"><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">7 Gün</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.primary }};background:{{ theme.primaryC }};color:{{ theme.primary }}">15 Gün</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">30 Gün</div></div></div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Teklifi Hazırlayan</div><div style="font-size:12px;color:{{ theme.text }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px">Sancak Kombi Yetkili Servisi</div></div>
+  <div style="display:flex;flex-direction:column;gap:6px"><div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }}">Not / Şartlar</div><div style="font-size:12px;color:{{ theme.text2 }};background:{{ theme.surface2 }};border:1px solid {{ theme.border }};border-radius:10px;padding:10px 12px;min-height:56px">Müşteriye iletilecek ödeme ve garanti şartları…</div><div style="display:flex;flex-wrap:wrap;gap:6px"><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">+ Garanti Notu</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">+ Ödeme Notu</div><div style="font-size:11px;font-weight:700;padding:6px 10px;border-radius:10px;border:1px solid {{ theme.border }};background:{{ theme.surface2 }};color:{{ theme.text2 }}">+ İşçilik Notu</div></div></div>
+</div></div>
+              
+              <div style="padding:12px 14px;border-top:1px solid {{ theme.border }};background:{{ theme.surface }};display:flex;gap:8px">
+                <div onClick="{{ closeDialog }}" style="flex:1;text-align:center;font-size:13px;font-weight:800;color:{{ theme.text }};background:{{ theme.surface2 }};border-radius:12px;padding:12px;cursor:pointer">İptal</div>
+                <div onClick="{{ createFromDialog }}" style="flex:1.4;text-align:center;font-size:13px;font-weight:800;color:{{ theme.onPrimary }};background:{{ theme.primary }};border-radius:12px;padding:12px;cursor:pointer">Teklifi Oluştur</div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 18px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const QUOTES = [
+  { no: 'TF-202610-97C2BA', brand: 'DemirDöküm', model: 'Nötron Plus', customer: 'Fettah Sancaklı', phone: '0541 328 06 98', date: '7 Eki 2026', total: '₺1.940,00', st: 'pending', lines: ['3 Yollu Vana Motoru & Kartuş Değişimi', 'İşçilik'] },
+  { no: 'TF-202610-5ED489', brand: 'E.C.A.', model: 'Revizyonlu Hermetik', customer: 'FERDİ MUHASEBE', phone: '0536 599 79 50', date: '6 Eki 2026', total: '₺21.000,00', st: 'pending', lines: ['2.El Full Revizyonlu Hermetik Kombi', 'Sayaç Flexi', 'Proje ve Açılış'] },
+  { no: 'TF-202610-61A5A9', brand: 'E.C.A.', model: 'Proteus Plus', customer: 'İHSAN CANTÜRK', phone: '0535 411 51 77', date: '1 Eki 2026', total: '₺12.000,00', st: 'approved', lines: ['ECA revizyonlu kombi hermetik'] },
+  { no: 'TF-202609-45C6B7', brand: 'Buderus', model: 'GB022i 20 HK', customer: 'LEVENT DOGAN', phone: '0545 305 57 24', date: '25 Eyl 2026', total: '₺40.000,00', st: 'expired', lines: ['Buderus GB 022 Yoğunlaşmalı Kombi', 'Petek Temizleme İlaçlı'] },
+  { no: 'TF-202608-024EFE', brand: 'Genel Cihaz', model: 'Kombi / Tesisat', customer: 'Ömer Yazan', phone: '0546 254 77 43', date: '4 Ağu 2026', total: '₺60.000,00', st: 'pending', lines: [] }
+];
+const ST = { pending: 'Beklemede', approved: 'Kabul Edildi', rejected: 'Reddedildi', expired: 'Süresi Doldu' };
+const FILTERS = ['Tümü', 'Beklemede', 'Kabul Edildi', 'Reddedildi', 'Süresi Doldu'];
+const BRANDS = ['DemirDöküm', 'E.C.A.', 'Vaillant', 'Baymak', 'Bosch', 'Buderus', 'Viessmann', 'Ariston', 'Airfel', 'Ferroli', 'Protherm', 'Alarko'];
+
+class Component extends DCLogic {
+  state = { isDark: true, screen: 'list', filter: 'Tümü', sel: 'TF-202610-97C2BA', toast: '', dialog: false };
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this.setState({ toast: '' }), 1800);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = { bg: '#090D16', surface: '#131B2E', surface2: '#1E293B', border: '#334155', text: '#F8FAFC', text2: '#94A3B8', primary: '#0EA5E9', primaryC: '#0F2233', onPrimary: '#090D16', green: '#4ADE80', greenC: 'rgba(74,222,128,0.14)', amber: '#FBBF24', amberC: 'rgba(251,191,36,0.14)', red: '#F87171', redC: 'rgba(248,113,113,0.14)' };
+    const light = { bg: '#F4F7FA', surface: '#FFFFFF', surface2: '#E7EEF2', border: 'rgba(0,0,0,0.08)', text: '#1A1A1A', text2: '#757575', primary: '#0284C7', primaryC: '#E0F2FE', onPrimary: '#FFFFFF', green: '#16A34A', greenC: 'rgba(22,163,74,0.10)', amber: '#B45309', amberC: 'rgba(217,119,6,0.12)', red: '#B91C1C', redC: 'rgba(220,38,38,0.10)' };
+    const t = s.isDark ? dark : light;
+
+    const tone = k => ({
+      pending: { tc: '#B45309', tbg: '#FEF3C7', accent: '#F59E0B' },
+      approved: { tc: '#065F46', tbg: '#D1FAE5', accent: '#22C55E' },
+      rejected: { tc: '#991B1B', tbg: '#FEE2E2', accent: '#EF4444' },
+      expired: { tc: '#374151', tbg: '#F3F4F6', accent: t.border }
+    })[k];
+
+    const counts = { 'Tümü': QUOTES.length, 'Beklemede': QUOTES.filter(q => q.st === 'pending').length, 'Kabul Edildi': QUOTES.filter(q => q.st === 'approved').length, 'Reddedildi': QUOTES.filter(q => q.st === 'rejected').length, 'Süresi Doldu': QUOTES.filter(q => q.st === 'expired').length };
+
+    const view = q => {
+      const on = s.sel === q.no;
+      return {
+        ...q, mono: q.brand.slice(0, 2).toUpperCase(), statusLabel: ST[q.st], ...tone(q.st),
+        border: on ? t.primary : t.border, rowBg: on ? t.primaryC : t.surface,
+        pick: () => this.setState({ sel: q.no }),
+        open: () => this.setState({ sel: q.no, screen: 'detail' }),
+        wa: () => this.flash('WhatsApp teklifi gönderildi'),
+        call: () => this.flash('Arama başlatıldı'),
+        pdf: () => this.flash('PDF hazırlandı')
+      };
+    };
+
+    const filtered = QUOTES.filter(q => s.filter === 'Tümü' || ST[q.st] === s.filter);
+    const sel = QUOTES.find(q => q.no === s.sel) || QUOTES[0];
+    const durum = [['pending', 'Beklemede'], ['approved', 'Kabul'], ['rejected', 'Red']].map(([k, label]) => {
+      const on = sel.st === k;
+      return { label, go: () => this.flash(label + ' olarak işaretlendi'), bg: on ? tone(k).tbg : 'transparent', color: on ? tone(k).tc : t.text2, border: on ? tone(k).tc : t.border };
+    });
+
+    return {
+      theme: t, isDark: s.isDark, toast: s.toast, onPrimary: t.onPrimary,
+      themeIcon: s.isDark ? '☀️' : '🌙',
+      toggleTheme: () => this.setState({ isDark: !s.isDark }),
+      isList: s.screen === 'list', isForm: s.screen === 'form', isDetail: s.screen === 'detail',
+      dialog: s.dialog,
+      openDialog: () => this.setState({ dialog: true }),
+      closeDialog: () => this.setState({ dialog: false }),
+      createFromDialog: () => { this.setState({ dialog: false }); this.flash('Teklif oluşturuldu'); },
+      doc: {
+        no: sel.no, date: sel.date, customer: sel.customer, phone: sel.phone, brand: sel.brand, model: sel.model, total: sel.total,
+        lines: sel.lines.map((l, i) => ({ n: i + 1, t: l, bg: i % 2 === 0 ? '#F9FAFB' : '#FFFFFF' })),
+        pdf: () => this.flash('PDF hazırlandı'), approve: () => this.flash('Teklif kabul edildi'), reject: () => this.flash('Teklif reddedildi')
+      },
+      openForm: () => this.setState({ screen: 'form' }),
+      backToList: () => this.setState({ screen: 'list' }),
+      createQuote: () => { this.flash('Teklif oluşturuldu'); this.setState({ screen: 'list' }); },
+      phoneTabs: [
+        { label: '📋 Liste', go: () => this.setState({ screen: 'list' }), bg: s.screen === 'list' ? t.primaryC : 'transparent', color: s.screen === 'list' ? t.primary : t.text2 },
+        { label: '✍️ Yeni Teklif', go: () => this.setState({ screen: 'form' }), bg: s.screen === 'form' ? t.primaryC : 'transparent', color: s.screen === 'form' ? t.primary : t.text2 }
+      ],
+      countTxt: `${QUOTES.length} kayıt`,
+      kpis: [
+        { l: 'TOPLAM TEKLİF HACMİ', v: '₺134.940,00', s: `${QUOTES.length} adet teklif` },
+        { l: 'BEKLEYEN', v: String(counts['Beklemede']), s: '₺82.940,00 potansiyel' },
+        { l: 'KABUL EDİLEN', v: String(counts['Kabul Edildi']), s: '%20 başarı' },
+        { l: 'RED / SÜRESİ DOLAN', v: `${counts['Reddedildi']} Red`, s: `${counts['Süresi Doldu']} süresi doldu` }
+      ],
+      filterChips: FILTERS.map(f => ({ label: `${f} ${counts[f]}`, go: () => this.setState({ filter: f }), bg: s.filter === f ? t.primary : t.surface, color: s.filter === f ? t.onPrimary : t.text2, border: s.filter === f ? t.primary : t.border })),
+      listRows: filtered.map(view),
+      listRowsT: filtered.map(view),
+      brands: BRANDS,
+      detail: {
+        ...sel, statusLabel: ST[sel.st], ...tone(sel.st), mono: sel.brand.slice(0, 2).toUpperCase(), durum,
+        wa: () => this.flash('WhatsApp teklifi gönderildi'), call: () => this.flash('Arama başlatıldı'), pdf: () => this.flash('PDF hazırlandı'),
+        edit: () => this.flash('Düzenleme formu açılacak'), del: () => this.flash('Teklif silindi')
+      }
+    };
+  }
+}
+
+</script>
+</body>
+</html>

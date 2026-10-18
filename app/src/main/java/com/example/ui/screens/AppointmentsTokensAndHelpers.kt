@@ -368,13 +368,23 @@ fun quickDateSub(baseTodayIso: String, offsetDays: Int): String {
 }
 
 fun parseSlotTimes(timeSlot: String): Pair<String, String> {
-    val cleaned = timeSlot.replace("–", "-").replace("—", "-")
+    val cleaned = timeSlot
+        .replace(Regex("\\s+"), "")
+        .replace("–", "-")
+        .replace("—", "-")
     val parts = cleaned.split("-").map { it.trim() }.filter { it.isNotEmpty() }
-    val start = parts.getOrNull(0)?.take(5) ?: "09:00"
-    val end = parts.getOrNull(1)?.take(5) ?: run {
+    fun normalizeTime(raw: String?): String? {
+        val match = raw?.let { Regex("^(\\d{1,2}):(\\d{1,2})").find(it) } ?: return null
+        val hour = match.groupValues[1].toIntOrNull() ?: return null
+        val minute = match.groupValues[2].toIntOrNull() ?: return null
+        if (hour !in 0..23 || minute !in 0..59) return null
+        return "%02d:%02d".format(Locale.US, hour, minute)
+    }
+    val start = normalizeTime(parts.getOrNull(0)) ?: "09:00"
+    val end = normalizeTime(parts.getOrNull(1)) ?: run {
         val h = start.take(2).toIntOrNull() ?: 9
         val nextH = (h + 1) % 24
-        "%02d:00".format(nextH)
+        "%02d:00".format(Locale.US, nextH)
     }
     return start to end
 }
@@ -410,21 +420,6 @@ fun launchDialer(context: Context, phone: String) {
     try {
         val cleanPhone = phone.filter { it.isDigit() || it == '+' }
         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:$cleanPhone")).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (_: Exception) {
-    }
-}
-
-fun launchWhatsApp(context: Context, phone: String, message: String = "") {
-    try {
-        var digits = phone.filter { it.isDigit() }
-        if (digits.startsWith("0")) digits = "90" + digits.drop(1)
-        else if (!digits.startsWith("90") && digits.length == 10) digits = "90$digits"
-        val encodedMsg = if (message.isNotBlank()) "&text=${Uri.encode(message)}" else ""
-        val url = "https://api.whatsapp.com/send?phone=$digits$encodedMsg"
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         context.startActivity(intent)

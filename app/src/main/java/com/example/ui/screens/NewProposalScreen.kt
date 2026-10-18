@@ -444,7 +444,8 @@ fun NewProposalFormContent(
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 BrandLogoBadge(
                                     brand = brand,
-                                    size = 22.dp
+                                    size = 22.dp,
+                                    tokens = tokens
                                 )
                                 Text(
                                     text = brand,

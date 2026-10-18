@@ -160,26 +160,6 @@ fun dialCustomerPhone(context: Context, phone: String) {
     }
 }
 
-fun openCustomerWhatsApp(context: Context, phone: String, message: String = "") {
-    val digits = phone.filter { it.isDigit() }
-    val normalized = when {
-        digits.startsWith("90") && digits.length == 12 -> digits
-        digits.startsWith("0") && digits.length == 11 -> "90" + digits.drop(1)
-        digits.length == 10 -> "90$digits"
-        else -> digits
-    }
-    if (normalized.isBlank()) return
-    val encodedText = if (message.isNotBlank()) "?text=${Uri.encode(message)}" else ""
-    try {
-        val uri = Uri.parse("https://wa.me/$normalized$encodedText")
-        val intent = Intent(Intent.ACTION_VIEW, uri).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (_: Exception) {
-    }
-}
-
 fun normalizeTrPhoneDigits(raw: String): String {
     val d = raw.filter { it.isDigit() }
     if (d.length == 12 && d.startsWith("90")) return "0" + d.substring(2)

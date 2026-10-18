@@ -19,3 +19,4 @@ secrets.properties
 debug.keystore
 my-upload-key.jks
 .graphify/
+/apk-releases/

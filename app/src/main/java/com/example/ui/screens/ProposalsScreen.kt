@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -131,23 +132,25 @@ fun ProposalsPhoneView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val coroutineScope = rememberCoroutineScope()
     var isDownloadingPdf by remember { mutableStateOf(false) }
 
     var searchQuery by remember { mutableStateOf("") }
     var selectedTab by remember { mutableStateOf("Tümü") }
-    var selectedBrand by remember { mutableStateOf("Tüm Markalar") }
 
     val kpis = remember(proposals) { calculateProposalKpis(proposals) }
 
-    val filteredProposals = remember(proposals, searchQuery, selectedTab, selectedBrand) {
+    val filteredProposals = remember(proposals, searchQuery, selectedTab) {
         val q = searchQuery.trim().lowercase(Locale("tr"))
         proposals.filter { p ->
             val matchQuery = q.isEmpty() ||
                 p.customerName.lowercase(Locale("tr")).contains(q) ||
                 p.customerPhone.contains(q) ||
                 p.quoteNumber.lowercase(Locale("tr")).contains(q) ||
-                p.id.lowercase(Locale("tr")).contains(q)
+                p.id.lowercase(Locale("tr")).contains(q) ||
+                p.deviceBrand.lowercase(Locale("tr")).contains(q) ||
+                p.deviceModel.lowercase(Locale("tr")).contains(q)
 
             val matchStatus = when (selectedTab) {
                 "Beklemede" -> p.status == ProposalStatus.PENDING
@@ -157,8 +160,7 @@ fun ProposalsPhoneView(
                 else -> true
             }
 
-            val matchBrand = if (selectedBrand == "Tüm Markalar") true else p.deviceBrand.equals(selectedBrand, ignoreCase = true)
-            matchQuery && matchStatus && matchBrand
+            matchQuery && matchStatus
         }
     }
 
@@ -174,64 +176,71 @@ fun ProposalsPhoneView(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item {
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    // Geri Barı
+                    // Kompakt Üst Bar (Randevular / Müşteriler ile uyumlu)
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp, bottom = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        OutlinedButton(
-                            onClick = onBackClick,
-                            shape = RoundedCornerShape(10.dp),
-                            contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = tokens.text),
-                            modifier = Modifier.testTag("back_button")
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Geri",
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Text("Geri", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                            Surface(
+                                onClick = onBackClick,
+                                shape = RoundedCornerShape(12.dp),
+                                color = tokens.surface,
+                                border = BorderStroke(1.dp, tokens.border),
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .testTag("back_button")
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Geri",
+                                        tint = tokens.text,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                            Column {
+                                Text(
+                                    text = "Fiyat Teklifleri",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = tokens.text,
+                                    letterSpacing = (-0.4).sp
+                                )
+                                Text(
+                                    text = "Teklif takip ve onay sistemi",
+                                    fontSize = 11.sp,
+                                    color = tokens.text2
+                                )
+                            }
                         }
-                    }
 
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            text = "Fiyat Teklifleri",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Black,
-                            color = tokens.text
-                        )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(tokens.primaryC)
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = tokens.primaryC
                         ) {
                             Text(
-                                text = "${proposals.size} kayıt",
-                                fontSize = 11.sp,
+                                text = "${proposals.size} Kayıt",
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.ExtraBold,
-                                color = tokens.primary
+                                color = tokens.primary,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                             )
                         }
                     }
-                    Text(
-                        text = "Arıza, montaj, bakım ve kurumsal servis fiyat tekliflerini oluşturun ve durumlarını takip edin.",
-                        fontSize = 12.sp,
-                        color = tokens.text2
-                    )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
-                    // 4 KPI KARTI (2x2 GRID)
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                    // 4 Kompakt KPI Kartı (2x2 Grid)
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             PhoneKpiCard(
                                 title = "TOPLAM TEKLİF HACMİ",
                                 value = formatProposalCurrencyShort(kpis.totalVolume),
@@ -247,7 +256,7 @@ fun ProposalsPhoneView(
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
                             PhoneKpiCard(
                                 title = "KABUL EDİLEN",
                                 value = "${kpis.approvedCount}",
@@ -265,21 +274,21 @@ fun ProposalsPhoneView(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Arama Kutusu
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("🔍 Müşteri, telefon, teklif no ara…", fontSize = 12.sp, color = tokens.text2) },
+                        placeholder = { Text("🔍 Müşteri, telefon, marka, teklif no…", fontSize = 11.5.sp, color = tokens.text2) },
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(50.dp),
+                            .height(46.dp),
                         singleLine = true,
                         shape = RoundedCornerShape(12.dp)
                     )
 
-                    Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
                     // Filtre Çipleri
                     Row(
@@ -303,7 +312,7 @@ fun ProposalsPhoneView(
                                     .background(if (isSel) tokens.primary else tokens.surface)
                                     .border(1.dp, if (isSel) tokens.primary else tokens.border, RoundedCornerShape(10.dp))
                                     .clickable { selectedTab = tab }
-                                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
                                 Text(
                                     text = "$tab $count",
@@ -311,46 +320,6 @@ fun ProposalsPhoneView(
                                     fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
                                     color = if (isSel) tokens.onPrimary else tokens.text2
                                 )
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    // Marka Filtresi (MARKA FİLTRESİ:)
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "MARKA:",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = tokens.text2
-                        )
-                        val brandList = listOf("Tüm Markalar") + PROPOSAL_BRANDS
-                        brandList.forEach { brand ->
-                            val isSel = selectedBrand == brand
-                            val brandCount = if (brand == "Tüm Markalar") proposals.size else proposals.count { it.deviceBrand.equals(brand, ignoreCase = true) }
-                            if (brand == "Tüm Markalar" || brandCount > 0) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (isSel) tokens.primaryC else tokens.surface2)
-                                        .border(1.dp, if (isSel) tokens.primary else tokens.border, RoundedCornerShape(8.dp))
-                                        .clickable { selectedBrand = brand }
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text(
-                                        text = if (brand == "Tüm Markalar") "Tümü ($brandCount)" else "$brand ($brandCount)",
-                                        fontSize = 10.5.sp,
-                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isSel) tokens.primary else tokens.text
-                                    )
-                                }
                             }
                         }
                     }
@@ -384,21 +353,20 @@ fun ProposalsPhoneView(
                 } else {
                     items(filteredProposals, key = { it.id }) { proposal ->
                         val vis = getProposalStatusVisual(proposal.status, tokens)
-                        val mono = getBrandMonogram(proposal.deviceBrand)
 
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onViewProposalDetail(proposal) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = CardDefaults.cardColors(containerColor = tokens.surface),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, tokens.border)
+                            border = BorderStroke(1.dp, tokens.border)
                         ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                // Sol Kenarlık Durum Vurgu Çizgisi (3.5dp border-left accent)
+                                // Sol Kenarlık Durum Vurgu Çizgisi (3dp border-left accent)
                                 Box(
                                     modifier = Modifier
-                                        .width(3.5.dp)
+                                        .width(3.dp)
                                         .matchParentSize()
                                         .background(vis.accentColor)
                                 )
@@ -406,264 +374,185 @@ fun ProposalsPhoneView(
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 14.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        .padding(start = 14.dp, top = 11.dp, end = 12.dp, bottom = 11.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                // 1. Satır: Monogram + Marka/Model + Teklif No + Durum Rozeti
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    BrandLogoBadge(
-                                        brand = proposal.deviceBrand,
-                                        size = 38.dp
-                                    )
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        val dev = listOf(proposal.deviceBrand, proposal.deviceModel)
-                                            .filter { it.isNotBlank() }
-                                            .joinToString(" · ")
-                                        Text(
-                                            text = dev.ifBlank { "Genel Cihaz" },
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = tokens.text,
-                                            maxLines = 1
-                                        )
-                                        Text(
-                                            text = proposal.quoteNumber.ifBlank { proposal.id },
-                                            fontSize = 10.sp,
-                                            fontFamily = FontFamily.Monospace,
-                                            color = tokens.primary
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(vis.bgColor)
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                                    ) {
-                                        Text(
-                                            text = vis.label,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = vis.textColor
-                                        )
-                                    }
-                                }
-
-                                // 2. Satır: Müşteri Adı, İlçe, Telefon, Tarih ve TOPLAM
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.Bottom
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                            Text(
-                                                text = proposal.customerName,
-                                                fontSize = 14.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = tokens.text
-                                            )
-                                            if (proposal.customerDistrict.isNotBlank()) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(tokens.surface2)
-                                                        .padding(horizontal = 5.dp, vertical = 2.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "📍 ${proposal.customerDistrict}",
-                                                        fontSize = 9.5.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = tokens.text2
-                                                    )
-                                                }
-                                            }
-                                        }
-                                        Text(
-                                            text = "${proposal.customerPhone} · ${proposal.date}",
-                                            fontSize = 11.sp,
-                                            color = tokens.text2
-                                        )
-                                    }
-
-                                    Column(horizontalAlignment = Alignment.End) {
-                                        Text(
-                                            text = "TOPLAM",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = tokens.text2
-                                        )
-                                        Text(
-                                            text = formatProposalCurrency(proposal.grandTotal),
-                                            fontSize = 15.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = tokens.primary
-                                        )
-                                        if (proposal.downPayment > 0.0) {
-                                            Text(
-                                                text = "Peşinat: ${formatProposalCurrency(proposal.downPayment)}",
-                                                fontSize = 9.5.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = tokens.amber
-                                            )
-                                        }
-                                    }
-                                }
-
-                                // 3. Satır: İŞ KAPSAMI Kapsülleri (Web Tasarımı ile Uyumlu)
-                                if (proposal.items.isNotEmpty()) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Text(
-                                            text = "İŞ KAPSAMI (${proposal.items.size} KALEM):",
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = tokens.text2
-                                        )
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .horizontalScroll(rememberScrollState()),
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            proposal.items.take(4).forEach { item ->
-                                                Box(
-                                                    modifier = Modifier
-                                                        .clip(RoundedCornerShape(6.dp))
-                                                        .background(tokens.surface2)
-                                                        .padding(horizontal = 6.dp, vertical = 3.dp)
-                                                ) {
-                                                    Text(
-                                                        text = "${item.quantity}x ${item.title}",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.SemiBold,
-                                                        color = tokens.text,
-                                                        maxLines = 1
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // 4. Satır: Varsa Teklif Notu
-                                if (proposal.note.isNotBlank()) {
-                                    Text(
-                                        text = "📝 ${proposal.note}",
-                                        fontSize = 10.sp,
-                                        color = tokens.text2,
-                                        maxLines = 2
-                                    )
-                                }
-
-                                // 5. Satır: Durum Değiştirme Butonları (Web Kartı ile Uyumlu)
-                                if (onUpdateStatus != null) {
+                                    // 1. Satır: Marka Kutusu + Marka/Model + Teklif No + Durum Rozeti
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Text("Durum:", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = tokens.text2)
-                                        Spacer(modifier = Modifier.width(6.dp))
-                                        listOf(
-                                            ProposalStatus.PENDING to "Bekliyor",
-                                            ProposalStatus.APPROVED to "✓ Kabul",
-                                            ProposalStatus.REJECTED to "✕ Red"
-                                        ).forEach { (st, lbl) ->
-                                            val isCur = proposal.status == st
-                                            val stVisual = getProposalStatusVisual(st, tokens)
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(6.dp))
-                                                    .background(if (isCur) stVisual.bgColor else tokens.surface2)
-                                                    .border(0.5.dp, if (isCur) stVisual.accentColor else tokens.border, RoundedCornerShape(6.dp))
-                                                    .clickable { onUpdateStatus(proposal.id, st) }
-                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                                            ) {
-                                                Text(
-                                                    text = lbl,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = if (isCur) FontWeight.ExtraBold else FontWeight.Medium,
-                                                    color = if (isCur) stVisual.textColor else tokens.text2
-                                                )
-                                            }
-                                            Spacer(modifier = Modifier.width(4.dp))
+                                        BrandLogoBadge(
+                                            brand = proposal.deviceBrand,
+                                            size = 36.dp,
+                                            tokens = tokens
+                                        )
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            val dev = listOf(proposal.deviceBrand, proposal.deviceModel)
+                                                .filter { it.isNotBlank() }
+                                                .joinToString(" · ")
+                                            Text(
+                                                text = dev.ifBlank { "Genel Cihaz" },
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = tokens.text,
+                                                maxLines = 1
+                                            )
+                                            Text(
+                                                text = proposal.quoteNumber.ifBlank { proposal.id },
+                                                fontSize = 10.sp,
+                                                fontFamily = FontFamily.Monospace,
+                                                color = tokens.primary
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(vis.bgColor)
+                                                .padding(horizontal = 8.dp, vertical = 3.dp)
+                                        ) {
+                                            Text(
+                                                text = vis.label,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = vis.textColor
+                                            )
                                         }
                                     }
-                                }
 
-                                // 6. Satır: Hızlı Aksiyon Butonları (WhatsApp, Ara, PDF)
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(Color(0xFF25D366).copy(alpha = 0.12f))
-                                            .clickable { sendProposalWhatsApp(context, proposal) }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
+                                    // 2. Satır: Müşteri Adı, Telefon, Tarih ve TOPLAM
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.Bottom
                                     ) {
-                                        Text(
-                                            text = "WhatsApp",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = Color(0xFF25D366)
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(tokens.primaryC)
-                                            .clickable { dialProposalPhone(context, proposal.customerPhone) }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "Ara",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = tokens.primary
-                                        )
-                                    }
-
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .clip(RoundedCornerShape(10.dp))
-                                            .background(tokens.surface2)
-                                            .clickable {
-                                                if (!isDownloadingPdf) {
-                                                    coroutineScope.launch {
-                                                        downloadAndShareQuotePdf(
-                                                            context = context,
-                                                            quoteId = proposal.id,
-                                                            quoteNumber = proposal.quoteNumber.ifBlank { proposal.id },
-                                                            onLoadingStateChange = { isDownloadingPdf = it }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Text(
+                                                    text = proposal.customerName,
+                                                    fontSize = 13.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = tokens.text
+                                                )
+                                                if (proposal.customerDistrict.isNotBlank()) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(tokens.surface2)
+                                                            .padding(horizontal = 5.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Text(
+                                                            text = "📍 ${proposal.customerDistrict}",
+                                                            fontSize = 9.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = tokens.text2
                                                         )
                                                     }
                                                 }
                                             }
-                                            .padding(vertical = 8.dp),
-                                        contentAlignment = Alignment.Center
+                                            Text(
+                                                text = "${proposal.customerPhone} · ${proposal.date}",
+                                                fontSize = 10.5.sp,
+                                                color = tokens.text2
+                                            )
+                                        }
+
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(
+                                                text = "TOPLAM",
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = tokens.text2
+                                            )
+                                            Text(
+                                                text = formatProposalCurrency(proposal.grandTotal),
+                                                fontSize = 14.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = tokens.primary
+                                            )
+                                            if (proposal.downPayment > 0.0) {
+                                                Text(
+                                                    text = "Peşinat: ${formatProposalCurrency(proposal.downPayment)}",
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    color = tokens.text2
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    // 3. Satır: Hızlı Aksiyon Butonları (WhatsApp, Ara, PDF)
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
-                                        Text(
-                                            text = "PDF",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = tokens.text
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(Color(0xFF25D366).copy(alpha = 0.12f))
+                                                .clickable { sendProposalWhatsApp(context, proposal, cloudWhatsApp) }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "WhatsApp",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = Color(0xFF25D366)
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(tokens.primaryC)
+                                                .clickable { dialProposalPhone(context, proposal.customerPhone) }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "Ara",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = tokens.primary
+                                            )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(tokens.surface2)
+                                                .clickable {
+                                                    if (!isDownloadingPdf) {
+                                                        coroutineScope.launch {
+                                                            downloadAndShareQuotePdf(
+                                                                context = context,
+                                                                quoteId = proposal.id,
+                                                                quoteNumber = proposal.quoteNumber.ifBlank { proposal.id },
+                                                                onLoadingStateChange = { isDownloadingPdf = it }
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = if (isDownloadingPdf) "..." else "PDF",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = tokens.text
+                                            )
+                                        }
                                     }
                                 }
                             }
-                        }
                         }
                     }
                 }
@@ -714,15 +603,15 @@ fun PhoneKpiCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = tokens.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, tokens.border)
+        border = BorderStroke(1.dp, tokens.border)
     ) {
-        Column(modifier = Modifier.padding(10.dp)) {
-            Text(text = title, fontSize = 8.5.sp, fontWeight = FontWeight.ExtraBold, color = tokens.text2)
+        Column(modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp)) {
+            Text(text = title, fontSize = 8.sp, fontWeight = FontWeight.ExtraBold, color = tokens.text2, letterSpacing = 0.2.sp)
             Spacer(modifier = Modifier.height(2.dp))
-            Text(text = value, fontSize = 15.sp, fontWeight = FontWeight.Black, color = tokens.text)
-            Text(text = subtitle, fontSize = 9.5.sp, color = tokens.text2)
+            Text(text = value, fontSize = 13.5.sp, fontWeight = FontWeight.Black, color = tokens.text)
+            Text(text = subtitle, fontSize = 8.5.sp, color = tokens.text2)
         }
     }
 }

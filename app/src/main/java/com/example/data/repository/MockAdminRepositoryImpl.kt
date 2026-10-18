@@ -625,6 +625,16 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.success("whatsapp")
     }
 
+    override suspend fun sendWhatsAppMessage(
+        phone: String,
+        message: String,
+        customerId: String?,
+        appointmentId: String?
+    ): Result<Unit> {
+        delay(250)
+        return Result.success(Unit)
+    }
+
     override suspend fun getAvailableSlots(dateIso: String): Result<List<String>> {
         delay(200)
         return Result.success(listOf("09:00 - 11:00", "13:00 - 15:00", "17:00 - 19:00"))
@@ -928,6 +938,11 @@ class MockAdminRepositoryImpl : AdminRepository {
         val newList = _proposals.value.toMutableList()
         newList.removeAll { it.id == id }
         _proposals.value = newList
+        return Result.success(Unit)
+    }
+
+    override suspend fun sendProposalWhatsApp(id: String): Result<Unit> {
+        delay(250)
         return Result.success(Unit)
     }
 

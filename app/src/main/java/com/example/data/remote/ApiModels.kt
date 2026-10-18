@@ -72,6 +72,14 @@ data class SendBankTransferRequestDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class WhatsAppSendRequestDto(
+    val phone: String,
+    val message: String,
+    val customerId: String? = null,
+    val appointmentId: String? = null
+)
+
+@JsonClass(generateAdapter = true)
 data class StatusUpdateRequestDto(
     val status: String,
     val cancellationReason: String? = null

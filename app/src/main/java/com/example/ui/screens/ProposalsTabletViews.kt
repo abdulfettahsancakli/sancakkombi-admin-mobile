@@ -83,6 +83,7 @@ fun ProposalsTabletLandscapeSplitView(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val coroutineScope = rememberCoroutineScope()
     var isDownloadingPdf by remember { mutableStateOf(false) }
 
@@ -368,7 +369,8 @@ fun ProposalsTabletLandscapeSplitView(
                                 ) {
                                     BrandLogoBadge(
                                         brand = proposal.deviceBrand,
-                                        size = 36.dp
+                                        size = 36.dp,
+                                        tokens = tokens
                                     )
 
                                     Column(modifier = Modifier.weight(1f)) {
@@ -627,7 +629,7 @@ fun ProposalsTabletLandscapeSplitView(
                             .clip(RoundedCornerShape(12.dp))
                             .background(Color(0xFF25D366).copy(alpha = 0.14f))
                             .border(1.dp, Color(0xFF25D366).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                            .clickable { sendProposalWhatsApp(context, activeProposal) }
+                            .clickable { sendProposalWhatsApp(context, activeProposal, cloudWhatsApp) }
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {

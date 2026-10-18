@@ -38,6 +38,7 @@ import com.example.data.remote.DashboardStatsDto
 import com.example.data.remote.FinanceStatusUpdateRequestDto
 import com.example.data.remote.LoginRequestDto
 import com.example.data.remote.StatusUpdateRequestDto
+import com.example.data.remote.WhatsAppSendRequestDto
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -321,6 +322,23 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun sendWhatsAppMessage(
+        phone: String,
+        message: String,
+        customerId: String?,
+        appointmentId: String?
+    ): Result<Unit> = requireToken { token ->
+        val response = api.sendWhatsAppMessage(
+            authHeader(token),
+            WhatsAppSendRequestDto(phone, message, customerId, appointmentId)
+        )
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
     override suspend fun getAvailableSlots(dateIso: String): Result<List<String>> = requireToken { token ->
         val response = api.getAvailableSlots(authHeader(token), dateIso)
         if (response.isSuccessful && response.body() != null) {
@@ -586,6 +604,15 @@ class RemoteAdminRepositoryImpl(
         val response = api.deleteProposal(authHeader(token), id)
         if (response.isSuccessful) {
             proposalsTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun sendProposalWhatsApp(id: String): Result<Unit> = requireToken { token ->
+        val response = api.sendProposalWhatsApp(authHeader(token), id)
+        if (response.isSuccessful && response.body()?.success == true) {
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))

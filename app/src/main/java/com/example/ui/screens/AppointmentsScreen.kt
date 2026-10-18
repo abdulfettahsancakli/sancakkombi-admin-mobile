@@ -780,8 +780,8 @@ private fun PhoneAppointmentsListContent(
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 6.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // 1. Header Row
         item(key = "header_row") {
@@ -792,7 +792,7 @@ private fun PhoneAppointmentsListContent(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Surface(
                         onClick = onBackClick,
@@ -815,14 +815,14 @@ private fun PhoneAppointmentsListContent(
                     Column {
                         Text(
                             text = "Randevular",
-                            fontSize = 18.sp,
+                            fontSize = 17.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = t.text,
                             letterSpacing = (-0.4).sp
                         )
                         Text(
                             text = "Saha ekibi anlık senkron 🟢",
-                            fontSize = 11.5.sp,
+                            fontSize = 10.5.sp,
                             color = t.text2
                         )
                     }
@@ -833,7 +833,7 @@ private fun PhoneAppointmentsListContent(
                     color = t.primaryC
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -864,33 +864,33 @@ private fun PhoneAppointmentsListContent(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFF0EA5E9))
-                        .clip(RoundedCornerShape(16.dp))
+                        .shadow(6.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFF0EA5E9))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(t.primaryGradient)
                         .clickable { onOpenNewAppointment() }
-                        .padding(12.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
                         .testTag("new_appointment_button")
                 ) {
                     Column {
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(text = "📅", fontSize = 15.sp)
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "Yeni Randevu",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
                         )
                         Text(
                             text = "Telefonla gelen iş",
-                            fontSize = 10.5.sp,
+                            fontSize = 9.5.sp,
                             color = Color.White.copy(alpha = 0.85f)
                         )
                     }
@@ -900,33 +900,33 @@ private fun PhoneAppointmentsListContent(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .shadow(8.dp, RoundedCornerShape(16.dp), spotColor = Color(0xFFF59E0B))
-                        .clip(RoundedCornerShape(16.dp))
+                        .shadow(6.dp, RoundedCornerShape(14.dp), spotColor = Color(0xFFF59E0B))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(t.amberGradient)
                         .clickable { onOpenServiceReceipt() }
-                        .padding(12.dp)
+                        .padding(horizontal = 10.dp, vertical = 8.dp)
                         .testTag("service_receipt_button")
                 ) {
                     Column {
                         Box(
                             modifier = Modifier
-                                .size(30.dp)
+                                .size(26.dp)
                                 .clip(CircleShape)
                                 .background(Color.White.copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(text = "🧾", fontSize = 15.sp)
                         }
-                        Spacer(modifier = Modifier.height(6.dp))
+                        Spacer(modifier = Modifier.height(3.dp))
                         Text(
                             text = "Servis Fişi Kes",
-                            fontSize = 13.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
                         )
                         Text(
                             text = "Randevusuz · Acil / Yerinde",
-                            fontSize = 10.5.sp,
+                            fontSize = 9.5.sp,
                             color = Color.White.copy(alpha = 0.88f)
                         )
                     }
@@ -967,23 +967,23 @@ private fun PhoneAppointmentsListContent(
                         modifier = Modifier.weight(1f)
                     ) {
                         Column(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                         ) {
                             Text(
                                 text = count.toString(),
-                                fontSize = 19.sp,
+                                fontSize = 17.sp,
                                 fontWeight = FontWeight.Black,
                                 color = accent,
                                 lineHeight = 21.sp
                             )
-                            Spacer(modifier = Modifier.height(2.dp))
+                            Spacer(modifier = Modifier.height(1.dp))
                             Text(
                                 text = label,
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = t.text2
                             )
-                            Spacer(modifier = Modifier.height(5.dp))
+                            Spacer(modifier = Modifier.height(3.dp))
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -1420,6 +1420,7 @@ fun AppointmentCard(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
     val (startT, endT) = parseSlotTimes(appointment.timeSlot)
@@ -1448,7 +1449,7 @@ fun AppointmentCard(
                     shape = RoundedCornerShape(12.dp),
                     color = t.surface2,
                     border = BorderStroke(1.dp, t.border),
-                    modifier = Modifier.width(54.dp)
+                    modifier = Modifier.width(58.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(vertical = 6.dp, horizontal = 4.dp),
@@ -1460,14 +1461,18 @@ fun AppointmentCard(
                             fontWeight = FontWeight.Black,
                             fontFamily = FontFamily.Monospace,
                             color = t.text,
-                            lineHeight = 16.sp
+                            lineHeight = 16.sp,
+                            maxLines = 1,
+                            softWrap = false
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = endT,
                             fontSize = 10.sp,
                             fontFamily = FontFamily.Monospace,
-                            color = t.text2
+                            color = t.text2,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -1617,8 +1622,12 @@ fun AppointmentCard(
                 // WA
                 Surface(
                     onClick = {
-                        onShowToast("💬 WhatsApp mesajı açılıyor: ${appointment.customerName}")
-                        launchWhatsApp(context, appointment.phone)
+                        val message = "Merhaba ${appointment.customerName}, Sancak Kombi olarak ${appointment.date} ${appointment.timeSlot} randevunuz hakkında iletişime geçiyoruz."
+                        cloudWhatsApp?.sendMessage(
+                            appointment.phone, message, appointment.customerId, appointment.id
+                        ) { result ->
+                            onShowToast(if (result.isSuccess) "WhatsApp mesajı Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}")
+                        } ?: onShowToast("WhatsApp Cloud API bağlantısı hazır değil")
                     },
                     shape = RoundedCornerShape(11.dp),
                     color = t.greenC,

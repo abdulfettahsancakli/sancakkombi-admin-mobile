@@ -143,6 +143,7 @@ fun ProposalDetailScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val tokens = rememberProposalTokens()
     val coroutineScope = rememberCoroutineScope()
     var isDownloadingPdf by remember { mutableStateOf(false) }
@@ -256,6 +257,7 @@ fun ProposalDetailContent(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val visual = getProposalStatusVisual(proposal.status, tokens)
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -326,7 +328,7 @@ fun ProposalDetailContent(
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color(0xFF25D366).copy(alpha = 0.14f))
                     .border(1.dp, Color(0xFF25D366).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .clickable { sendProposalWhatsApp(context, proposal) }
+                    .clickable { sendProposalWhatsApp(context, proposal, cloudWhatsApp) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
             ) {

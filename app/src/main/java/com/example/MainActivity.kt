@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -23,6 +24,8 @@ import com.example.ui.components.BottomNavBar
 import com.example.ui.components.TopHeaderBar
 import com.example.ui.screens.AppointmentsScreen
 import com.example.ui.screens.CustomersScreen
+import com.example.ui.screens.CloudWhatsAppActions
+import com.example.ui.screens.LocalCloudWhatsAppActions
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.FinanceScreen
 import com.example.ui.screens.GoogleAdsScreen
@@ -146,6 +149,19 @@ class MainActivity : ComponentActivity() {
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding)
+                        ) {
+                        CompositionLocalProvider(
+                            LocalCloudWhatsAppActions provides CloudWhatsAppActions(
+                                sendMessage = { phone, message, customerId, appointmentId, callback ->
+                                    viewModel.sendWhatsAppMessage(phone, message, customerId, appointmentId, callback)
+                                },
+                                sendProposal = { proposalId, callback ->
+                                    viewModel.sendProposalWhatsApp(proposalId, callback)
+                                },
+                                sendFinanceReminder = { recordId, message, callback ->
+                                    viewModel.sendFinanceWhatsAppReminder(recordId, message, callback)
+                                }
+                            )
                         ) {
                         when (currentRoute) {
                             "dashboard" -> {
@@ -361,6 +377,7 @@ class MainActivity : ComponentActivity() {
                                     )
                                 }
                             }
+                        }
                         }
                     }
                 }

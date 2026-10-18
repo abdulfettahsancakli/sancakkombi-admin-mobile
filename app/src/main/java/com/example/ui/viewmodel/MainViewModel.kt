@@ -430,6 +430,39 @@ class MainViewModel(
         }
     }
 
+    fun sendWhatsAppMessage(
+        phone: String,
+        message: String,
+        customerId: String? = null,
+        appointmentId: String? = null,
+        onResult: (Result<Unit>) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(repository.sendWhatsAppMessage(phone, message, customerId, appointmentId))
+        }
+    }
+
+    fun sendProposalWhatsApp(id: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            onResult(repository.sendProposalWhatsApp(id))
+        }
+    }
+
+    fun sendFinanceWhatsAppReminder(recordId: String, message: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val detail = repository.getReceiptDetail(recordId)
+            val receipt = detail.getOrElse {
+                onResult(Result.failure(it))
+                return@launch
+            }
+            if (receipt.customerPhone.isBlank()) {
+                onResult(Result.failure(IllegalStateException("Müşteri telefon numarası bulunamadı.")))
+                return@launch
+            }
+            onResult(repository.sendWhatsAppMessage(receipt.customerPhone, message, null, receipt.appointmentId))
+        }
+    }
+
     fun getAvailableSlots(dateIso: String, onResult: (Result<List<String>>) -> Unit) {
         viewModelScope.launch {
             val res = repository.getAvailableSlots(dateIso)

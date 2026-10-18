@@ -15,6 +15,8 @@ val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
   ?: System.getenv("MAPS_API_KEY")
   ?: localProperties.getProperty("MAPS_API_KEY").orEmpty()
 val escapedMapsApiKey = mapsApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
+val appVersionCode = 6
+val appVersionName = "1.5"
 
 android {
   namespace = "com.example"
@@ -24,8 +26,8 @@ android {
     applicationId = "com.aistudio.sancakkombi.admin"
     minSdk = 24
     targetSdk = 36
-    versionCode = 5
-    versionName = "1.4"
+    versionCode = appVersionCode
+    versionName = appVersionName
 
     manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
     buildConfigField("String", "MAPS_API_KEY", "\"$escapedMapsApiKey\"")
@@ -68,6 +70,16 @@ android {
     includeInApk = false
     includeInBundle = true
   }
+}
+
+val copyVersionedDebugApk by tasks.registering(Copy::class) {
+  from(layout.buildDirectory.file("outputs/apk/debug/app-debug.apk"))
+  into(rootProject.layout.projectDirectory.dir("apk-releases"))
+  rename("app-debug.apk", "SancakKombi-v$appVersionName-build$appVersionCode-debug.apk")
+}
+
+tasks.matching { it.name == "assembleDebug" }.configureEach {
+  finalizedBy(copyVersionedDebugApk)
 }
 
 // Some unused dependencies are commented out below instead of being removed.

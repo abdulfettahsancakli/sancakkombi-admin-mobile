@@ -3,8 +3,6 @@ package com.example.ui.screens
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import android.content.Intent
-import android.net.Uri
 import android.widget.Toast
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.BorderStroke
@@ -83,7 +81,6 @@ import com.example.data.model.Customer
 import com.example.data.model.FinanceRecord
 import com.example.data.model.FinanceType
 import com.example.utils.parseLocalizedDouble
-import java.net.URLEncoder
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -102,6 +99,7 @@ fun QuickIbanScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
 
     // Only use accounts received from the backend. Never invent or fall back to
     // a hardcoded IBAN on a payment screen.
@@ -189,42 +187,6 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
         }
 
         return amount
-    }
-
-    // Send WhatsApp Action
-    fun sendWhatsApp() {
-        if (validatePaymentDetails() == null) return
-
-        val cleanDigits = customerPhone.filter { it.isDigit() }
-        val finalPhone = when {
-            cleanDigits.startsWith("90") -> cleanDigits
-            cleanDigits.startsWith("0") -> "90${cleanDigits.substring(1)}"
-            cleanDigits.length == 10 -> "90$cleanDigits"
-            else -> cleanDigits
-        }
-
-        if (finalPhone.length < 10) {
-            Toast.makeText(context, "Lütfen geçerli bir telefon numarası girin veya yukarıdan bir randevu seçin.", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        try {
-            val encodedMsg = URLEncoder.encode(generatedMessage, "UTF-8")
-            val uri = Uri.parse("https://api.whatsapp.com/send?phone=$finalPhone&text=$encodedMsg")
-            val intent = Intent(Intent.ACTION_VIEW, uri)
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            try {
-                // Fallback to generic share intent
-                val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, generatedMessage)
-                }
-                context.startActivity(Intent.createChooser(shareIntent, "IBAN Bilgisini Paylaş"))
-            } catch (ex: Exception) {
-                Toast.makeText(context, "WhatsApp açılamadı: ${e.message}", Toast.LENGTH_SHORT).show()
-            }
-        }
     }
 
     // Copy Action
@@ -812,8 +774,20 @@ Sağlıklı ve sıcak günlerde kullanmanızı dileriz.
                             }
                         }
                     } else {
-                        // Fallback if no appointment found in system
-                        sendWhatsApp()
+                        val actions = cloudWhatsApp
+                        if (actions == null) {
+                            Toast.makeText(context, "WhatsApp Cloud API bağlantısı hazır değil.", Toast.LENGTH_LONG).show()
+                            return@Button
+                        }
+                        isSendingCloudApi = true
+                        actions.sendMessage(customerPhone, generatedMessage, null, targetApptId) { result ->
+                            isSendingCloudApi = false
+                            result.onSuccess {
+                                Toast.makeText(context, "WhatsApp IBAN mesajı Meta Cloud API ile gönderildi!", Toast.LENGTH_LONG).show()
+                            }.onFailure { err ->
+                                Toast.makeText(context, "Cloud API Hatası: ${err.message}", Toast.LENGTH_LONG).show()
+                            }
+                        }
                     }
                 },
                 modifier = Modifier

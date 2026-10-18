@@ -48,6 +48,12 @@ interface AdminRepository {
         amount: Double? = null,
         promisedPaymentDate: String? = null
     ): Result<String>
+    suspend fun sendWhatsAppMessage(
+        phone: String,
+        message: String,
+        customerId: String? = null,
+        appointmentId: String? = null
+    ): Result<Unit>
     suspend fun getAvailableSlots(dateIso: String): Result<List<String>>
     suspend fun deleteAppointment(id: String): Result<Unit>
 
@@ -82,6 +88,7 @@ interface AdminRepository {
     suspend fun addProposal(proposal: Proposal): Result<Unit>
     suspend fun updateProposalStatus(id: String, status: ProposalStatus): Result<Unit>
     suspend fun deleteProposal(id: String): Result<Unit>
+    suspend fun sendProposalWhatsApp(id: String): Result<Unit>
 
     // Messaging
     fun getMessagingStats(): Flow<MessagingStats>

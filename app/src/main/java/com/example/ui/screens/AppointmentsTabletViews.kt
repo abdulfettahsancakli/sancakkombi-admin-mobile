@@ -634,6 +634,7 @@ fun AppointmentDetailPane(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
     var activeViewerPhotoUrl by remember { mutableStateOf<String?>(null) }
@@ -733,8 +734,12 @@ fun AppointmentDetailPane(
 
                 Surface(
                     onClick = {
-                        onShowToast("💬 WhatsApp mesajı açılıyor: ${appointment.customerName}")
-                        launchWhatsApp(context, appointment.phone)
+                        val message = "Merhaba ${appointment.customerName}, Sancak Kombi olarak ${appointment.date} ${appointment.timeSlot} randevunuz hakkında iletişime geçiyoruz."
+                        cloudWhatsApp?.sendMessage(
+                            appointment.phone, message, appointment.customerId, appointment.id
+                        ) { result ->
+                            onShowToast(if (result.isSuccess) "WhatsApp mesajı Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}")
+                        } ?: onShowToast("WhatsApp Cloud API bağlantısı hazır değil")
                     },
                     shape = RoundedCornerShape(14.dp),
                     color = t.greenC,

@@ -101,6 +101,7 @@ fun CustomersScreen(
 ) {
     val tokens = rememberAppointmentTokens()
     val context = LocalContext.current
+    val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val scope = rememberCoroutineScope()
 
     // Local session state so UI reacts immediately even before remote refresh completes
@@ -244,37 +245,25 @@ fun CustomersScreen(
 
     fun handleSendWaMessage(target: ResolvedCustomerProfile, templateTitle: String, text: String, openExternal: Boolean) {
         val cid = target.customer.id
-        val nowStr = SimpleDateFormat("dd.MM.yyyy · HH:mm", TrLocale).format(Date())
-        val msgId = "m_${System.currentTimeMillis()}"
-        val newItem = CustomerMessageItem(
-            id = msgId,
-            date = nowStr,
-            channel = "WhatsApp",
-            template = templateTitle,
-            status = "Gönderildi",
-            preview = text
-        )
-        sessionMessagesByCustomer[cid] = listOf(newItem) + sessionMessagesByCustomer[cid].orEmpty()
-        waDrawerTarget = null
-
-        if (openExternal) {
-            openCustomerWhatsApp(context, target.displayPhone, text)
-            showToast("💬 WhatsApp açılıyor…")
-        } else {
-            activeDetailTab = "messages"
-            showToast("💬 WhatsApp mesajı kuyruğa alındı")
+        if (cloudWhatsApp == null) {
+            showToast("WhatsApp Cloud API bağlantısı hazır değil")
+            return
         }
-
-        // Simulate delivery -> read status progression
-        scope.launch {
-            delay(900)
-            sessionMessagesByCustomer[cid] = sessionMessagesByCustomer[cid].orEmpty().map {
-                if (it.id == msgId) it.copy(status = "İletildi") else it
-            }
-            delay(1300)
-            sessionMessagesByCustomer[cid] = sessionMessagesByCustomer[cid].orEmpty().map {
-                if (it.id == msgId) it.copy(status = "Okundu") else it
-            }
+        cloudWhatsApp.sendMessage(target.displayPhone, text, cid, null) { result ->
+            result.onSuccess {
+                val newItem = CustomerMessageItem(
+                    id = "m_${System.currentTimeMillis()}",
+                    date = SimpleDateFormat("dd.MM.yyyy · HH:mm", TrLocale).format(Date()),
+                    channel = "WhatsApp",
+                    template = templateTitle,
+                    status = "Gönderildi",
+                    preview = text
+                )
+                sessionMessagesByCustomer[cid] = listOf(newItem) + sessionMessagesByCustomer[cid].orEmpty()
+                waDrawerTarget = null
+                activeDetailTab = "messages"
+                showToast("WhatsApp mesajı Cloud API ile gönderildi")
+            }.onFailure { showToast("WhatsApp gönderilemedi: ${it.message.orEmpty()}") }
         }
     }
 

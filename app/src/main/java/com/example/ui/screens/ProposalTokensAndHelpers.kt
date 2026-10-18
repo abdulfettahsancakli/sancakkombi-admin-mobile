@@ -145,26 +145,26 @@ data class ProposalStatusVisual(
 fun getProposalStatusVisual(status: ProposalStatus, tokens: ProposalTokens): ProposalStatusVisual {
     return when (status) {
         ProposalStatus.PENDING -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
-            bgColor = if (tokens.isDark) Color(0x2EFEF3C7) else Color(0xFFFEF3C7),
+            textColor = if (tokens.isDark) Color(0xFFFCD34D) else Color(0xFFB45309),
+            bgColor = if (tokens.isDark) Color(0x33F59E0B) else Color(0x1FF59E0B),
             accentColor = Color(0xFFF59E0B),
             label = "Beklemede"
         )
         ProposalStatus.APPROVED -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFF4ADE80) else Color(0xFF065F46),
-            bgColor = if (tokens.isDark) Color(0x2ED1FAE5) else Color(0xFFD1FAE5),
+            textColor = if (tokens.isDark) Color(0xFF4ADE80) else Color(0xFF15803D),
+            bgColor = if (tokens.isDark) Color(0x3322C55E) else Color(0x1F22C55E),
             accentColor = Color(0xFF22C55E),
             label = "Kabul Edildi"
         )
         ProposalStatus.REJECTED -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFFF87171) else Color(0xFF991B1B),
-            bgColor = if (tokens.isDark) Color(0x2EFEE2E2) else Color(0xFFFEE2E2),
+            textColor = if (tokens.isDark) Color(0xFFF87171) else Color(0xFFB91C1C),
+            bgColor = if (tokens.isDark) Color(0x33EF4444) else Color(0x1FEF4444),
             accentColor = Color(0xFFEF4444),
             label = "Reddedildi"
         )
         ProposalStatus.EXPIRED, ProposalStatus.DRAFT -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFF94A3B8) else Color(0xFF374151),
-            bgColor = if (tokens.isDark) Color(0x20334155) else Color(0xFFF3F4F6),
+            textColor = if (tokens.isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+            bgColor = if (tokens.isDark) Color(0x28334155) else Color(0x14000000),
             accentColor = tokens.border,
             label = if (status == ProposalStatus.EXPIRED) "Süresi Doldu" else "Taslak"
         )
@@ -334,15 +334,20 @@ fun getBrandVisual(brand: String): BrandVisual {
 fun BrandLogoBadge(
     brand: String,
     modifier: Modifier = Modifier,
-    size: Dp = 36.dp
+    size: Dp = 36.dp,
+    tokens: ProposalTokens? = null
 ) {
     val visual = getBrandVisual(brand)
+    val isDark = tokens?.isDark ?: false
+    val bgColor = if (isDark) (tokens?.surface2 ?: Color(0xFF1E293B)) else Color.White
+    val borderColor = if (isDark) (tokens?.border ?: Color(0xFF334155)) else (tokens?.border ?: Color(0xFFE2E8F0))
+
     Box(
         modifier = modifier
             .size(size)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White)
-            .border(1.dp, Color(0xFFE2E8F0), RoundedCornerShape(8.dp)),
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp)),
         contentAlignment = Alignment.Center
     ) {
         if (visual.logoDrawableRes != null) {
@@ -381,42 +386,17 @@ fun formatProposalCurrencyShort(amount: Double): String {
     return "₺" + df.format(amount)
 }
 
-fun sendProposalWhatsApp(context: Context, proposal: Proposal) {
-    try {
-        var digits = proposal.customerPhone.filter { it.isDigit() }
-        if (digits.startsWith("0")) digits = "90" + digits.drop(1)
-        else if (!digits.startsWith("90") && digits.length == 10) digits = "90$digits"
-
-        val code = proposal.quoteNumber.ifBlank { proposal.id }
-        val deviceDesc = listOf(proposal.deviceBrand, proposal.deviceModel)
-            .filter { it.isNotBlank() }
-            .joinToString(" ")
-
-        val message = buildString {
-            append("Sayın *${proposal.customerName}*,\n\n")
-            append("Sancak Kombi olarak hazırladığımız *$code* numaralı resmi fiyat teklifimiz aşağıdadır:\n")
-            if (deviceDesc.isNotBlank()) {
-                append("• Cihaz: $deviceDesc\n")
-            }
-            if (proposal.items.isNotEmpty()) {
-                append("• Kalemler:\n")
-                proposal.items.take(4).forEach { item ->
-                    append("  - ${item.quantity}x ${item.title} (₺${formatProposalCurrency(item.totalPrice)})\n")
-                }
-            }
-            append("• *Toplam Tutar:* ${formatProposalCurrency(proposal.grandTotal)}\n\n")
-            append("Teklifi incelemek ve onaylamak için bu mesajı yanıtlayabilirsiniz.\n")
-            append("Sağlıklı günler dileriz.\n")
-            append("*Sancak Kombi Teknik Servis*")
-        }
-
-        val encodedMsg = Uri.encode(message)
-        val url = "https://api.whatsapp.com/send?phone=$digits&text=$encodedMsg"
-        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        context.startActivity(intent)
-    } catch (_: Exception) {
+fun sendProposalWhatsApp(context: Context, proposal: Proposal, actions: CloudWhatsAppActions?) {
+    if (actions == null) {
+        android.widget.Toast.makeText(context, "WhatsApp Cloud API bağlantısı hazır değil", android.widget.Toast.LENGTH_LONG).show()
+        return
+    }
+    actions.sendProposal(proposal.id) { result ->
+        android.widget.Toast.makeText(
+            context,
+            if (result.isSuccess) "Teklif WhatsApp Cloud API ile gönderildi" else "Teklif gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}",
+            android.widget.Toast.LENGTH_LONG
+        ).show()
     }
 }
 
