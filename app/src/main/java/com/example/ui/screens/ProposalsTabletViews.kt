@@ -627,13 +627,13 @@ fun ProposalsTabletLandscapeSplitView(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF25D366).copy(alpha = 0.14f))
-                            .border(1.dp, Color(0xFF25D366).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .background(tokens.primaryC)
+                            .border(1.dp, tokens.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                             .clickable { sendProposalWhatsApp(context, activeProposal, cloudWhatsApp) }
                             .padding(vertical = 12.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text("WhatsApp Teklifi", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF25D366))
+                        Text("WhatsApp Teklifi", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.primary)
                     }
 
                     Box(

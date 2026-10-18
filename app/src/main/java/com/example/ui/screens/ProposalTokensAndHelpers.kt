@@ -70,10 +70,10 @@ fun rememberProposalTokens(): ProposalTokens {
                 primary = Color(0xFF0EA5E9),
                 primaryC = Color(0xFF0F2233),
                 onPrimary = Color(0xFFFFFFFF),
-                green = Color(0xFF4ADE80),
-                greenC = Color(0x244ADE80),
-                amber = Color(0xFFFBBF24),
-                amberC = Color(0x24FBBF24),
+                green = Color(0xFF38BDF8),
+                greenC = Color(0x2438BDF8),
+                amber = Color(0xFF94A3B8),
+                amberC = Color(0x24334155),
                 red = Color(0xFFF87171),
                 redC = Color(0x24F87171)
             )
@@ -89,10 +89,10 @@ fun rememberProposalTokens(): ProposalTokens {
                 primary = Color(0xFF0284C7),
                 primaryC = Color(0xFFE0F2FE),
                 onPrimary = Color(0xFFFFFFFF),
-                green = Color(0xFF16A34A),
-                greenC = Color(0x1A16A34A),
-                amber = Color(0xFFB45309),
-                amberC = Color(0x1FB45309),
+                green = Color(0xFF0369A1),
+                greenC = Color(0x1A0284C7),
+                amber = Color(0xFF64748B),
+                amberC = Color(0x1F64748B),
                 red = Color(0xFFB91C1C),
                 redC = Color(0x1AB91C1C)
             )
@@ -145,15 +145,15 @@ data class ProposalStatusVisual(
 fun getProposalStatusVisual(status: ProposalStatus, tokens: ProposalTokens): ProposalStatusVisual {
     return when (status) {
         ProposalStatus.PENDING -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFFFCD34D) else Color(0xFFB45309),
-            bgColor = if (tokens.isDark) Color(0x33F59E0B) else Color(0x1FF59E0B),
-            accentColor = Color(0xFFF59E0B),
+            textColor = if (tokens.isDark) Color(0xFFCBD5E1) else Color(0xFF475569),
+            bgColor = if (tokens.isDark) Color(0x33334155) else Color(0x1F64748B),
+            accentColor = Color(0xFF64748B),
             label = "Beklemede"
         )
         ProposalStatus.APPROVED -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFF4ADE80) else Color(0xFF15803D),
-            bgColor = if (tokens.isDark) Color(0x3322C55E) else Color(0x1F22C55E),
-            accentColor = Color(0xFF22C55E),
+            textColor = if (tokens.isDark) Color(0xFF7DD3FC) else Color(0xFF0369A1),
+            bgColor = if (tokens.isDark) Color(0x330EA5E9) else Color(0x1F0284C7),
+            accentColor = Color(0xFF0284C7),
             label = "Kabul Edildi"
         )
         ProposalStatus.REJECTED -> ProposalStatusVisual(
@@ -266,7 +266,7 @@ fun getBrandVisual(brand: String): BrandVisual {
         )
         b.contains("baymak") -> BrandVisual(
             monogram = "BM",
-            brandColor = Color(0xFFD97706),
+            brandColor = Color(0xFF2563EB),
             iconEmoji = "☀️",
             logoDrawableRes = com.example.R.drawable.brand_baymak
         )
@@ -278,13 +278,13 @@ fun getBrandVisual(brand: String): BrandVisual {
         )
         b.contains("vaillant") -> BrandVisual(
             monogram = "VA",
-            brandColor = Color(0xFF059669),
+            brandColor = Color(0xFF0E7490),
             iconEmoji = "🐰",
             logoDrawableRes = com.example.R.drawable.brand_vaillant
         )
         b.contains("e.c.a") || b.contains("eca") -> BrandVisual(
             monogram = "EC",
-            brandColor = Color(0xFFEA580C),
+            brandColor = Color(0xFF4F46E5),
             iconEmoji = "🔥"
         )
         b.contains("buderus") -> BrandVisual(
@@ -294,7 +294,7 @@ fun getBrandVisual(brand: String): BrandVisual {
         )
         b.contains("viessmann") -> BrandVisual(
             monogram = "VS",
-            brandColor = Color(0xFFF97316),
+            brandColor = Color(0xFF7C3AED),
             iconEmoji = "🔶"
         )
         b.contains("ariston") -> BrandVisual(
@@ -319,7 +319,7 @@ fun getBrandVisual(brand: String): BrandVisual {
         )
         b.contains("alarko") -> BrandVisual(
             monogram = "AL",
-            brandColor = Color(0xFF16A34A),
+            brandColor = Color(0xFF0369A1),
             iconEmoji = "⭕"
         )
         else -> BrandVisual(

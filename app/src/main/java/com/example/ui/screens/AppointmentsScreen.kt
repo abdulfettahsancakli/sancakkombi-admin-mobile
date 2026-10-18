@@ -1619,15 +1619,15 @@ fun AppointmentCard(
                     }
                 }
 
-                // WA
-                Surface(
+                // Bu aksiyon yalnızca Cloud API göndericisi sağlandığında gösterilir.
+                if (cloudWhatsApp != null) Surface(
                     onClick = {
                         val message = "Merhaba ${appointment.customerName}, Sancak Kombi olarak ${appointment.date} ${appointment.timeSlot} randevunuz hakkında iletişime geçiyoruz."
-                        cloudWhatsApp?.sendMessage(
+                        cloudWhatsApp.sendMessage(
                             appointment.phone, message, appointment.customerId, appointment.id
                         ) { result ->
                             onShowToast(if (result.isSuccess) "WhatsApp mesajı Cloud API ile gönderildi" else "WhatsApp gönderilemedi: ${result.exceptionOrNull()?.message.orEmpty()}")
-                        } ?: onShowToast("WhatsApp Cloud API bağlantısı hazır değil")
+                        }
                     },
                     shape = RoundedCornerShape(11.dp),
                     color = t.greenC,
@@ -1637,7 +1637,7 @@ fun AppointmentCard(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = "💬 WA",
+                            text = "WhatsApp",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = t.green

@@ -493,7 +493,7 @@ fun ProposalsPhoneView(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(Color(0xFF25D366).copy(alpha = 0.12f))
+                                                .background(tokens.primaryC)
                                                 .clickable { sendProposalWhatsApp(context, proposal, cloudWhatsApp) }
                                                 .padding(vertical = 7.dp),
                                             contentAlignment = Alignment.Center
@@ -502,7 +502,7 @@ fun ProposalsPhoneView(
                                                 text = "WhatsApp",
                                                 fontSize = 11.sp,
                                                 fontWeight = FontWeight.ExtraBold,
-                                                color = Color(0xFF25D366)
+                                                color = tokens.primary
                                             )
                                         }
 

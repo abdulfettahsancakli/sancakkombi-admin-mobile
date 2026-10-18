@@ -293,8 +293,8 @@ fun ProposalDetailContent(
                         onClick = { onUpdateStatus(ProposalStatus.APPROVED) },
                         shape = RoundedCornerShape(8.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (proposal.status == ProposalStatus.APPROVED) Color(0xFF10B981) else Color(0xFF10B981).copy(alpha = 0.2f),
-                            contentColor = if (proposal.status == ProposalStatus.APPROVED) Color.White else Color(0xFF10B981)
+                            containerColor = if (proposal.status == ProposalStatus.APPROVED) tokens.primary else tokens.primaryC,
+                            contentColor = if (proposal.status == ProposalStatus.APPROVED) tokens.onPrimary else tokens.primary
                         ),
                         modifier = Modifier.height(36.dp)
                     ) {
@@ -326,8 +326,8 @@ fun ProposalDetailContent(
                 modifier = Modifier
                     .weight(1.3f)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF25D366).copy(alpha = 0.14f))
-                    .border(1.dp, Color(0xFF25D366).copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                    .background(tokens.primaryC)
+                    .border(1.dp, tokens.primary.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                     .clickable { sendProposalWhatsApp(context, proposal, cloudWhatsApp) }
                     .padding(vertical = 12.dp),
                 contentAlignment = Alignment.Center
@@ -336,7 +336,7 @@ fun ProposalDetailContent(
                     text = "WhatsApp ile İlet",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = Color(0xFF25D366)
+                    color = tokens.primary
                 )
             }
 
@@ -682,7 +682,7 @@ fun ProposalDocumentCard(
                         text = formatProposalCurrency(proposal.grandTotal),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF10B981)
+                        color = Color(0xFF0284C7)
                     )
                 }
 
