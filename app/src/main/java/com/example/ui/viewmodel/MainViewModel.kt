@@ -153,6 +153,15 @@ class MainViewModel(
     private val _togglingCampaignId = MutableStateFlow<String?>(null)
     val togglingCampaignId: StateFlow<String?> = _togglingCampaignId.asStateFlow()
 
+    private val _campaignDashboard = MutableStateFlow(com.example.data.remote.CampaignDashboardDto())
+    val campaignDashboard: StateFlow<com.example.data.remote.CampaignDashboardDto> = _campaignDashboard.asStateFlow()
+
+    private val _isCampaignsLoading = MutableStateFlow(false)
+    val isCampaignsLoading: StateFlow<Boolean> = _isCampaignsLoading.asStateFlow()
+
+    private val _campaignsError = MutableStateFlow<String?>(null)
+    val campaignsError: StateFlow<String?> = _campaignsError.asStateFlow()
+
     // WhatsApp Status State
     private val _whatsAppStatus = MutableStateFlow(com.example.data.model.WhatsAppStatus())
     val whatsAppStatus: StateFlow<com.example.data.model.WhatsAppStatus> = _whatsAppStatus.asStateFlow()
@@ -324,6 +333,7 @@ class MainViewModel(
         if (route in listOf("ads", "google_ads", "googleads", "reklamlar")) {
             fetchAdsData()
         }
+        if (route == "campaigns") fetchCampaigns()
     }
 
     fun syncGoogleAdsSpendToFinance(customSpend: Double? = null, force: Boolean = false) {
@@ -374,6 +384,37 @@ class MainViewModel(
                 onResult(false, "", errMessage)
             }
             _togglingCampaignId.value = null
+        }
+    }
+
+    fun fetchCampaigns(onComplete: ((Result<Unit>) -> Unit)? = null) {
+        viewModelScope.launch {
+            _isCampaignsLoading.value = true
+            val result = repository.getCampaignDashboard()
+            result.onSuccess {
+                _campaignDashboard.value = it
+                _campaignsError.value = null
+            }.onFailure {
+                _campaignsError.value = it.message ?: "Kampanyalar alınamadı."
+            }
+            _isCampaignsLoading.value = false
+            onComplete?.invoke(result.map { Unit })
+        }
+    }
+
+    fun createCampaign(name: String, customerIds: List<String>, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.createCampaign(name, customerIds)
+            if (result.isSuccess) fetchCampaigns()
+            onResult(result)
+        }
+    }
+
+    fun sendCampaign(campaignId: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch {
+            val result = repository.sendCampaign(campaignId)
+            if (result.isSuccess) fetchCampaigns()
+            onResult(result)
         }
     }
 

@@ -85,9 +85,7 @@ fun BottomNavBar(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 items.forEach { item ->
-                    val isSelected = currentRoute == item.route ||
-                            (item.route == "appointments" && currentRoute == "randevular") ||
-                            (item.route == "customers" && currentRoute == "musteriler")
+                    val isSelected = isPrimaryDestinationSelected(item.route, currentRoute)
 
                     val animatedScale by animateFloatAsState(targetValue = if (isSelected) 1.1f else 1.0f, label = "scale")
                     val activeColor by animateColorAsState(

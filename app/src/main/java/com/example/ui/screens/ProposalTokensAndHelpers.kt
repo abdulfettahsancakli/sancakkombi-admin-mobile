@@ -55,49 +55,25 @@ data class ProposalTokens(
 
 @Composable
 fun rememberProposalTokens(): ProposalTokens {
-    val bgLuminance = MaterialTheme.colorScheme.background.luminance()
-    val isDark = bgLuminance < 0.5f
-    return remember(isDark) {
-        if (isDark) {
-            ProposalTokens(
-                isDark = true,
-                bg = Color(0xFF090D16),
-                surface = Color(0xFF131B2E),
-                surface2 = Color(0xFF1E293B),
-                border = Color(0xFF334155),
-                text = Color(0xFFF8FAFC),
-                text2 = Color(0xFF94A3B8),
-                primary = Color(0xFF0EA5E9),
-                primaryC = Color(0xFF0F2233),
-                onPrimary = Color(0xFFFFFFFF),
-                green = Color(0xFF38BDF8),
-                greenC = Color(0x2438BDF8),
-                amber = Color(0xFF94A3B8),
-                amberC = Color(0x24334155),
-                red = Color(0xFFF87171),
-                redC = Color(0x24F87171)
-            )
-        } else {
-            ProposalTokens(
-                isDark = false,
-                bg = Color(0xFFF4F7FA),
-                surface = Color(0xFFFFFFFF),
-                surface2 = Color(0xFFE7EEF2),
-                border = Color(0x14000000),
-                text = Color(0xFF1A1A1A),
-                text2 = Color(0xFF757575),
-                primary = Color(0xFF0284C7),
-                primaryC = Color(0xFFE0F2FE),
-                onPrimary = Color(0xFFFFFFFF),
-                green = Color(0xFF0369A1),
-                greenC = Color(0x1A0284C7),
-                amber = Color(0xFF64748B),
-                amberC = Color(0x1F64748B),
-                red = Color(0xFFB91C1C),
-                redC = Color(0x1AB91C1C)
-            )
-        }
-    }
+    val colors = MaterialTheme.colorScheme
+    return ProposalTokens(
+        isDark = colors.background.luminance() < 0.5f,
+        bg = colors.background,
+        surface = colors.surface,
+        surface2 = colors.surfaceVariant,
+        border = colors.outlineVariant,
+        text = colors.onSurface,
+        text2 = colors.onSurfaceVariant,
+        primary = colors.onSurface,
+        primaryC = colors.surfaceVariant,
+        onPrimary = colors.surface,
+        green = colors.onSurface,
+        greenC = colors.surfaceVariant,
+        amber = colors.onSurfaceVariant,
+        amberC = colors.surfaceVariant,
+        red = colors.error,
+        redC = colors.errorContainer
+    )
 }
 
 data class ProposalKpis(
@@ -145,26 +121,26 @@ data class ProposalStatusVisual(
 fun getProposalStatusVisual(status: ProposalStatus, tokens: ProposalTokens): ProposalStatusVisual {
     return when (status) {
         ProposalStatus.PENDING -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFFCBD5E1) else Color(0xFF475569),
-            bgColor = if (tokens.isDark) Color(0x33334155) else Color(0x1F64748B),
-            accentColor = Color(0xFF64748B),
+            textColor = tokens.text2,
+            bgColor = tokens.surface2,
+            accentColor = tokens.border,
             label = "Beklemede"
         )
         ProposalStatus.APPROVED -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFF7DD3FC) else Color(0xFF0369A1),
-            bgColor = if (tokens.isDark) Color(0x330EA5E9) else Color(0x1F0284C7),
-            accentColor = Color(0xFF0284C7),
+            textColor = tokens.text,
+            bgColor = tokens.surface2,
+            accentColor = tokens.text,
             label = "Kabul Edildi"
         )
         ProposalStatus.REJECTED -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFFF87171) else Color(0xFFB91C1C),
-            bgColor = if (tokens.isDark) Color(0x33EF4444) else Color(0x1FEF4444),
-            accentColor = Color(0xFFEF4444),
+            textColor = tokens.red,
+            bgColor = tokens.redC,
+            accentColor = tokens.red,
             label = "Reddedildi"
         )
         ProposalStatus.EXPIRED, ProposalStatus.DRAFT -> ProposalStatusVisual(
-            textColor = if (tokens.isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-            bgColor = if (tokens.isDark) Color(0x28334155) else Color(0x14000000),
+            textColor = tokens.text2,
+            bgColor = tokens.surface2,
             accentColor = tokens.border,
             label = if (status == ProposalStatus.EXPIRED) "Süresi Doldu" else "Taslak"
         )

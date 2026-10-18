@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700;900&display=swap">
+<style>
+  body{margin:0;background:#0b0e14;font-family:'Roboto',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  a{color:#0EA5E9}
+  a:hover{color:#38BDF8}
+  ::-webkit-scrollbar{display:none}
+  @keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+  input::placeholder{color:inherit;opacity:0.5}
+</style>
+</helmet>
+
+<div style="min-height:100vh;padding:56px 40px;box-sizing:border-box;display:flex;flex-direction:column;gap:28px;color:#E2E8F0">
+
+  <div style="max-width:1100px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#131B2E;border:1px solid #334155;border-radius:20px;padding:5px 12px;font-size:11px;font-weight:700;color:#0EA5E9;letter-spacing:.4px;margin-bottom:14px;white-space:nowrap">MODÜLLER · TELEFON + TABLET</div>
+    <h1 style="margin:0 0 10px;font-size:26px;font-weight:900;color:#F8FAFC">Modül Merkezi</h1>
+    <p style="margin:0;font-size:14px;line-height:1.6;color:#94A3B8;max-width:720px;text-wrap:pretty">Tüm modüllerin durumu tek listede. Bir modüle dokununca açma/kapama, hızlı işlemler ve son hareketler görünür. Tablette liste ve detay yan yana açılır.</p>
+  </div>
+
+  <div style="display:flex;gap:40px;align-items:flex-start;flex-wrap:wrap">
+
+    <div style="display:flex;flex-direction:column;gap:14px;align-items:center">
+      <div style="display:flex;gap:4px;background:#131B2E;border:1px solid #334155;border-radius:14px;padding:4px">
+        <sc-for list="{{ screenTabs }}" as="st" hint-placeholder-count="2">
+          <div onClick="{{ st.go }}" style="padding:8px 14px;border-radius:10px;font-size:12px;font-weight:700;cursor:pointer;background:{{ st.bg }};color:{{ st.color }}">{{ st.label }}</div>
+        </sc-for>
+      </div>
+
+      <x-import component-from-global-scope="AndroidDevice" from="./android-frame.jsx" dark="{{ isDark }}" width="{{ 412 }}" height="{{ 892 }}" hint-size="412,892">
+        <div style="background:{{ theme.bg }};height:100%;overflow:hidden;display:flex;flex-direction:column;font-family:'Roboto',system-ui,sans-serif;position:relative;transition:background .3s">
+
+          <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:10px;left:16px;right:16px;z-index:20;background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 14px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+          </sc-if>
+
+          <sc-if value="{{ screenIsList }}" hint-placeholder-val="{{ true }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 16px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <img src="app/src/main/res/drawable/logo_sancakkombi.jpg" alt="Sancak Kombi Logo" style="width:34px;height:34px;border-radius:8px;object-fit:cover;display:block">
+                  <div style="display:flex;align-items:baseline;gap:4px">
+                    <span style="font-weight:700;font-size:15px;font-family:monospace;color:{{ theme.text }}">sancakkombi</span>
+                    <span style="font-weight:500;font-size:13px;font-family:monospace;color:{{ theme.primary }}">/admin</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:4px;background:{{ theme.surface2 }};border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:{{ theme.text }}"><span style="font-size:14px">🚪</span>Çıkış</div><div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div></div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:14px 12px 110px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-content:start">
+                <div style="grid-column:1/-1;display:flex;align-items:center;justify-content:space-between;animation:fadeUp .5s ease both">
+                  <div>
+                    <div style="font-size:18px;font-weight:800;color:{{ theme.text }};letter-spacing:-0.3px">Modüller</div>
+                    <div style="font-size:11.5px;color:{{ theme.text2 }};margin-top:2px;white-space:nowrap">{{ activeTxt }}</div>
+                  </div>
+                </div>
+
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+                  <div onClick="{{ r.open }}" style="display:flex;flex-direction:column;gap:12px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:18px;padding:14px;cursor:pointer;animation:fadeUp .4s ease both;transition:transform .12s" style-active="transform:scale(.98)"><div style="display:flex;align-items:center;justify-content:space-between"><div style="width:44px;height:44px;border-radius:14px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;font-size:20px">{{ r.emoji }}</div><span style="font-size:10px;font-weight:800;color:{{ r.tc }};background:{{ r.tbg }};border-radius:8px;padding:3px 8px">{{ r.label }}</span></div><div style="display:flex;flex-direction:column;gap:3px;min-width:0"><span style="font-size:14.5px;font-weight:800;color:{{ theme.text }}">{{ r.name }}</span><span style="font-size:11px;line-height:1.4;color:{{ theme.text2 }};display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden">{{ r.desc }}</span></div></div>
+                </sc-for>
+              </div>
+
+              <div style="position:absolute;left:16px;right:16px;bottom:10px;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:28px;box-shadow:0 8px 24px rgba(0,0,0,0.3);display:flex;justify-content:space-between;align-items:center;padding:8px"><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 4px"><div style="width:38px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:transparent;font-size:16px">🏠</div><span style="font-size:11px;font-weight:500;color:{{ theme.text2 }}">Ana Sayfa</span><div style="height:4px"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 4px"><div style="width:38px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:transparent;font-size:16px">📅</div><span style="font-size:11px;font-weight:500;color:{{ theme.text2 }}">İşler</span><div style="height:4px"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 4px"><div style="width:38px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:transparent;font-size:16px">👥</div><span style="font-size:11px;font-weight:500;color:{{ theme.text2 }}">Müşteriler</span><div style="height:4px"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 4px"><div style="width:38px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:transparent;font-size:16px">💳</div><span style="font-size:11px;font-weight:500;color:{{ theme.text2 }}">Finans</span><div style="height:4px"></div></div><div style="display:flex;flex-direction:column;align-items:center;gap:2px;padding:0 4px"><div style="width:38px;height:30px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:{{ theme.primaryC }};font-size:16px">▦</div><span style="font-size:11px;font-weight:800;color:{{ theme.primary }}">Modüller</span><div style="width:4px;height:4px;border-radius:50%;background:{{ theme.primary }}"></div></div></div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ screenIsDetail }}" hint-placeholder-val="{{ false }}">
+            <div style="height:100%;display:flex;flex-direction:column">
+              <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 12px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+                <div style="display:flex;align-items:center;gap:6px;cursor:pointer" onClick="{{ back }}">
+                  <div style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:22px;color:{{ theme.text }}">‹</div>
+                  <span style="font-size:14px;font-weight:700;color:{{ theme.text2 }}">Modüller</span>
+                </div>
+                <div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:4px;background:{{ theme.surface2 }};border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:{{ theme.text }}"><span style="font-size:14px">🚪</span>Çıkış</div><div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div></div>
+              </div>
+
+              <div style="flex:1;overflow-y:auto;scrollbar-width:none;padding:16px 14px 24px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:14px;animation:fadeUp .4s ease both">
+                  <div style="width:60px;height:60px;flex:none;border-radius:18px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;font-size:28px">{{ detail.emoji }}</div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:20px;font-weight:900;color:{{ theme.text }};letter-spacing:-0.3px">{{ detail.name }}</div>
+                    <div style="font-size:12px;color:{{ theme.text2 }};margin-top:3px">{{ detail.desc }}</div>
+                    <span style="display:inline-block;margin-top:8px;font-size:10px;font-weight:800;color:{{ detail.tc }};background:{{ detail.tbg }};border-radius:8px;padding:3px 8px">{{ detail.label }}</span>
+                  </div>
+                </div>
+
+                <div onClick="{{ detail.toggle }}" style="display:flex;align-items:center;justify-content:space-between;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:14px;cursor:pointer">
+                  <span style="font-size:13.5px;font-weight:700;color:{{ theme.text }}">{{ detail.onText }}</span>
+                  <div style="width:48px;height:28px;border-radius:14px;padding:4px;box-sizing:border-box;background:{{ detail.track }};transition:background .2s">
+                    <div style="width:20px;height:20px;border-radius:50%;background:#fff;transform:{{ detail.knob }};transition:transform .2s"></div>
+                  </div>
+                </div>
+
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+                  <sc-for list="{{ detail.kpis }}" as="k" hint-placeholder-count="3">
+                    <div style="background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:10px 8px">
+                      <div style="font-size:16px;font-weight:900;color:{{ theme.text }}">{{ k.v }}</div>
+                      <div style="font-size:9.5px;font-weight:700;color:{{ theme.text2 }};margin-top:2px">{{ k.l }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <div style="font-size:11px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px;margin-top:6px">HIZLI İŞLEMLER</div>
+                <sc-for list="{{ detail.acts }}" as="a" hint-placeholder-count="3">
+                  <div onClick="{{ a.go }}" style="display:flex;align-items:center;justify-content:space-between;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:13px 14px;cursor:pointer;font-size:13.5px;font-weight:700;color:{{ theme.text }}">
+                    <span>{{ a.l }}</span><span style="color:{{ theme.text2 }}">›</span>
+                  </div>
+                </sc-for>
+
+                <div style="font-size:11px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px;margin-top:6px">SON HAREKETLER</div>
+                <sc-for list="{{ detail.log }}" as="g" hint-placeholder-count="2">
+                  <div style="font-size:12.5px;color:{{ theme.text2 }};padding:10px 12px;background:{{ theme.surface2 }};border-radius:12px">{{ g.x }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </x-import>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0;max-width:100%">
+      <div style="font-size:12px;font-weight:700;color:#94A3B8">Tablet · yatay</div>
+      <div style="width:100%;max-width:1040px;height:640px;box-sizing:border-box;background:{{ theme.bg }};border:1px solid #334155;border-radius:28px;overflow:hidden;display:flex;flex-direction:column;font-family:'Roboto',system-ui,sans-serif;position:relative;transition:background .3s">
+
+        <div style="height:60px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;background:{{ theme.surface }};border-bottom:1px solid {{ theme.border }}">
+          <div style="display:flex;align-items:center;gap:10px">
+            <img src="app/src/main/res/drawable/logo_sancakkombi.jpg" alt="Sancak Kombi Logo" style="width:34px;height:34px;border-radius:8px;object-fit:cover;display:block">
+            <div style="display:flex;align-items:baseline;gap:4px">
+              <span style="font-weight:700;font-size:15px;font-family:monospace;color:{{ theme.text }}">sancakkombi</span>
+              <span style="font-weight:500;font-size:13px;font-family:monospace;color:{{ theme.primary }}">/admin</span>
+            </div>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px"><div style="display:flex;align-items:center;gap:4px;background:{{ theme.surface2 }};border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;color:{{ theme.text }}"><span style="font-size:14px">🚪</span>Çıkış</div><div onClick="{{ toggleTheme }}" style="width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px">{{ themeIcon }}</div></div>
+        </div>
+
+        <div style="flex:1;display:flex;min-height:0">
+
+          <div style="width:340px;flex:none;border-right:1px solid {{ theme.border }};overflow-y:auto;scrollbar-width:none;padding:18px 14px;display:flex;flex-direction:column;gap:8px">
+            <div style="font-size:18px;font-weight:800;color:{{ theme.text }};letter-spacing:-0.3px">Modüller</div>
+            <div style="font-size:11.5px;color:{{ theme.text2 }};margin-bottom:8px;white-space:nowrap">{{ activeTxt }}</div>
+            <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+              <div onClick="{{ r.pick }}" style="display:flex;align-items:center;gap:10px;background:{{ r.rowBg }};border:1px solid {{ r.border }};border-radius:16px;padding:10px;cursor:pointer">
+                <div style="width:40px;height:40px;flex:none;border-radius:13px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;font-size:19px">{{ r.emoji }}</div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px">
+                  <span style="font-size:13.5px;font-weight:800;color:{{ theme.text }}">{{ r.name }}</span>
+                  <span style="font-size:11px;color:{{ theme.text2 }};white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.desc }}</span>
+                </div>
+                <span style="flex:none;font-size:10px;font-weight:800;color:{{ r.tc }};background:{{ r.tbg }};border-radius:8px;padding:3px 7px">{{ r.label }}</span>
+              </div>
+            </sc-for>
+          </div>
+
+          <div style="flex:1;min-width:0;overflow-y:auto;scrollbar-width:none;padding:28px 32px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;align-items:center;gap:16px">
+              <div style="width:68px;height:68px;flex:none;border-radius:20px;background:{{ theme.primaryC }};display:flex;align-items:center;justify-content:center;font-size:32px">{{ detail.emoji }}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:24px;font-weight:900;color:{{ theme.text }};letter-spacing:-0.4px">{{ detail.name }}</div>
+                <div style="font-size:13px;color:{{ theme.text2 }};margin-top:3px">{{ detail.desc }}</div>
+              </div>
+              <span style="flex:none;font-size:11px;font-weight:800;color:{{ detail.tc }};background:{{ detail.tbg }};border-radius:9px;padding:5px 10px">{{ detail.label }}</span>
+            </div>
+
+            <div style="display:flex;gap:14px;align-items:stretch">
+              <div onClick="{{ detail.toggle }}" style="flex:1;display:flex;align-items:center;justify-content:space-between;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:16px;cursor:pointer">
+                <span style="font-size:14px;font-weight:700;color:{{ theme.text }}">{{ detail.onText }}</span>
+                <div style="width:48px;height:28px;border-radius:14px;padding:4px;box-sizing:border-box;background:{{ detail.track }};transition:background .2s">
+                  <div style="width:20px;height:20px;border-radius:50%;background:#fff;transform:{{ detail.knob }};transition:transform .2s"></div>
+                </div>
+              </div>
+              <sc-for list="{{ detail.kpis }}" as="k" hint-placeholder-count="3">
+                <div style="flex:1;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:16px;padding:12px 16px">
+                  <div style="font-size:20px;font-weight:900;color:{{ theme.text }}">{{ k.v }}</div>
+                  <div style="font-size:11px;font-weight:700;color:{{ theme.text2 }};margin-top:2px">{{ k.l }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="display:flex;gap:14px;align-items:flex-start;margin-top:8px">
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:11px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">HIZLI İŞLEMLER</div>
+                <sc-for list="{{ detail.acts }}" as="a" hint-placeholder-count="3">
+                  <div onClick="{{ a.go }}" style="display:flex;align-items:center;justify-content:space-between;background:{{ theme.surface }};border:1px solid {{ theme.border }};border-radius:14px;padding:13px 14px;cursor:pointer;font-size:13.5px;font-weight:700;color:{{ theme.text }}">
+                    <span>{{ a.l }}</span><span style="color:{{ theme.text2 }}">›</span>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="flex:1;display:flex;flex-direction:column;gap:8px">
+                <div style="font-size:11px;font-weight:800;color:{{ theme.text2 }};letter-spacing:.4px">SON HAREKETLER</div>
+                <sc-for list="{{ detail.log }}" as="g" hint-placeholder-count="2">
+                  <div style="font-size:12.5px;color:{{ theme.text2 }};padding:12px 14px;background:{{ theme.surface2 }};border-radius:12px">{{ g.x }}</div>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <sc-if value="{{ toast }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:{{ theme.text }};color:{{ theme.bg }};border-radius:14px;padding:12px 18px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.35);animation:fadeUp .3s ease both">{{ toast }}</div>
+        </sc-if>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+const MODS = [
+  { id: 'musteriler', name: 'Müşteriler', emoji: '👥', desc: 'Müşteri kartları, geçmiş servisler ve iletişim notlarını yönetin.', st: 'ok', kpi: [['148', 'Toplam'], ['23', 'Aktif'], ['9', 'Bu hafta yeni']], acts: ['➕ Yeni müşteri', '📇 Rehberi aktar', '📤 Dışa aktar'], log: ['Mehmet Demir eklendi', 'Zeynep Arslan bakım planına alındı'] },
+  { id: 'randevular', name: 'Randevular', emoji: '📅', desc: 'Günlük plan, yeni talepler ve hızlı operasyon aksiyonları tek ekranda.', st: 'ok', kpi: [['6', 'Bugün'], ['2', 'Onay bekliyor'], ['94%', 'Zamanında']], acts: ['➕ Yeni randevu', '🔔 Hatırlatma gönder', '🗓️ Takvimi aç'], log: ['Ahmet Yılmaz · 14:30 onaylandı', 'Elif Kaya · yarın 09:00 bekliyor'] },
+  { id: 'iban', name: 'Hızlı IBAN At', emoji: '⚡', desc: "Serviste müşteriye tek tıkla WhatsApp'tan IBAN ve hesap bilgilerini gönderin.", st: 'ok', kpi: [['3', 'Banka hesabı'], ['WA', 'Kanal'], ['1 dk', 'Gönderim']], acts: ['⚡ WhatsApp ile IBAN gönder', '📋 IBAN’ı kopyala', '💰 Finans’a işle'], log: ['Havale talebi müşteriye iletildi', 'Kuveyttürk hesabı seçildi'] },
+  { id: 'mesaj', name: 'Mesaj Sistemi', emoji: '💬', desc: 'Müşteri ve usta otomatik WhatsApp bildirimleri ve mesaj şablonları.', st: 'ok', kpi: [['212', 'Bu ay mesaj'], ['94%', 'Okunma'], ['4', 'Başarısız']], acts: ['✍️ Yeni mesaj', '⚙️ Şablonları düzenle', '📜 Gönderim geçmişi'], log: ['Usta Yolda mesajı iletildi', 'Ödeme Hatırlatma · 3 mesaj başarısız'] },
+  { id: 'finans', name: 'Finans', emoji: '💳', desc: 'Tahsilatlar, açık alacaklar ve manuel gider kayıtları burada tutulur.', st: 'warn', kpi: [['₺48.200', 'Bu ay gelir'], ['₺3.450', 'Bekleyen'], ['12', 'Açık fiş']], acts: ['🧾 Fiş kes', '💰 Bekleyen ödemeler', '📊 Gelir raporu'], log: ['#1024 fişi kesildi · ₺1.850', '#1021 ödeme hatırlatması gönderildi'] },
+  { id: 'istatistik', name: 'İstatistikler', emoji: '📊', desc: 'Aylık randevu trendleri, hizmet yoğunluğu ve müşteri tekrar oranları.', st: 'ok', kpi: [['4', 'Hazır rapor'], ['Pzt', 'Son gönderim'], ['—', 'Otomatik']], acts: ['📊 Aylık trend', '📥 PDF indir', '🗂️ Rapor ayarları'], log: ['Haftalık özet dün oluşturuldu', 'Aylık gelir raporu hazır'] },
+  { id: 'teklif', name: 'Teklifler', emoji: '📝', desc: 'Fiyat tekliflerini oluşturun, yazdırın ve durumlarını takip edin.', st: 'ok', kpi: [['7', 'Açık'], ['3', 'Onaylandı'], ['2', 'Bekliyor']], acts: ['➕ Yeni teklif', '🖨️ Yazdır', '📌 Açık teklifler'], log: ['Teklif #88 onaylandı', 'Teklif #91 müşteriye gönderildi'] },
+  { id: 'bakim', name: 'Bakım Takvimleri', emoji: '🔧', desc: 'Müşteri bazında otomatik oluşturulan yıllık bakım hatırlatma takvimlerini yönetin.', st: 'ok', kpi: [['31', 'Takvim'], ['5', 'Bu hafta'], ['2', 'Gecikmiş']], acts: ['📅 Takvim oluştur', '🔔 Bu hafta hatırlat', '📋 Tüm takvimler'], log: ['Yıllık bakım takvimi oluşturuldu', 'İlk hatırlatma gönderildi'] },
+  { id: 'ads', name: 'Google Ads', emoji: '📣', desc: 'Kampanya yönetimi, anahtar kelime optimizasyonu ve performans analizi.', st: 'ok', kpi: [['2', 'Kampanya'], ['—', 'Tıklama'], ['—', 'Dönüşüm']], acts: ['📣 Kampanyalar', '🔑 Anahtar kelimeler', '📈 Performans'], log: ['Kampanya durumu güncellendi'] },
+  { id: 'stok', name: 'Stok', emoji: '📦', desc: 'Parça, ürün ve stok hareketlerini yönetin.', st: 'warn', kpi: [['36', 'Parça'], ['3', 'Azalan'], ['1', 'Tükendi']], acts: ['📦 Stok girişi', '⚠️ Azalan parçalar', '🛒 Sipariş oluştur'], log: ['Termostat kartı girildi · 4 adet', 'Kombi pompası azaldı · kalan 1'] }
+];
+
+const TONE = { ok: ['Aktif', 'green', 'greenC'], warn: ['Dikkat', 'amber', 'amberC'], off: ['Kapalı', 'text2', 'surface2'] };
+
+class Component extends DCLogic {
+  state = {
+    isDark: true, screen: 'list', sel: 'iban', toast: '',
+    en: Object.fromEntries(MODS.map(m => [m.id, m.id !== 'google-ads']))
+  };
+
+  flash(msg) {
+    this.setState({ toast: msg });
+    clearTimeout(this._tt);
+    this._tt = setTimeout(() => this.setState({ toast: '' }), 1800);
+  }
+
+  renderVals() {
+    const s = this.state;
+    const dark = { bg: '#090D16', surface: '#131B2E', surface2: '#1E293B', border: '#334155', text: '#F8FAFC', text2: '#94A3B8',
+      primary: '#0EA5E9', primaryC: '#0F2233', green: '#22C55E', greenC: 'rgba(34,197,94,0.14)',
+      amber: '#F59E0B', amberC: 'rgba(245,158,11,0.14)' };
+    const light = { bg: '#F4F7FA', surface: '#FFFFFF', surface2: '#E7EEF2', border: 'rgba(0,0,0,0.08)', text: '#1A1A1A', text2: '#757575',
+      primary: '#0284C7', primaryC: '#E0F2FE', green: '#16A34A', greenC: 'rgba(22,163,74,0.10)',
+      amber: '#B45309', amberC: 'rgba(217,119,6,0.12)' };
+    const t = s.isDark ? dark : light;
+
+    const tone = m => {
+      const k = s.en[m.id] ? m.st : 'off';
+      const [label, c, bg] = TONE[k];
+      return { label, tc: t[c], tbg: t[bg] };
+    };
+    const view = m => ({
+      id: m.id, name: m.name, emoji: m.emoji, desc: m.desc, ...tone(m),
+      open: () => this.setState({ sel: m.id, screen: 'detail' }),
+      pick: () => this.setState({ sel: m.id }),
+      border: s.sel === m.id ? t.primary : t.border,
+      rowBg: s.sel === m.id ? t.primaryC : t.surface
+    });
+
+    const cur = MODS.find(m => m.id === s.sel);
+    const on = !!s.en[cur.id];
+    const detail = {
+      name: cur.name, emoji: cur.emoji, desc: cur.desc, ...tone(cur),
+      onText: on ? 'Modül açık' : 'Modül kapalı',
+      track: on ? t.primary : t.surface2,
+      knob: on ? 'translateX(20px)' : 'translateX(0)',
+      toggle: () => this.setState(st => ({ en: { ...st.en, [cur.id]: !st.en[cur.id] } })),
+      kpis: cur.kpi.map(([v, l]) => ({ v, l })),
+      acts: cur.acts.map(a => ({ l: a, go: () => cur.id === 'teklif' ? (window.location.href = 'Quotes Mobile Redesign.dc.html') : this.flash(a) })),
+      log: cur.log.map(x => ({ x }))
+    };
+
+    const tab = (k, label) => ({ label, go: () => this.setState({ screen: k }), bg: s.screen === k ? t.primaryC : 'transparent', color: s.screen === k ? t.primary : t.text2 });
+
+    return {
+      theme: t, isDark: s.isDark, toast: s.toast,
+      themeIcon: s.isDark ? '☀️' : '🌙',
+      toggleTheme: () => this.setState({ isDark: !s.isDark }),
+      screenIsList: s.screen === 'list', screenIsDetail: s.screen === 'detail',
+      back: () => this.setState({ screen: 'list' }),
+      screenTabs: [tab('list', '📱 Liste'), tab('detail', '📱 Detay')],
+      rows: MODS.map(view),
+      detail,
+      activeTxt: `${MODS.filter(m => s.en[m.id]).length} / ${MODS.length} modül açık`
+    };
+  }
+}
+
+</script>
+</body>
+</html>

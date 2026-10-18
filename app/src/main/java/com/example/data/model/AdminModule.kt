@@ -5,91 +5,48 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.People
-import androidx.compose.material.icons.filled.PhonelinkSetup
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Link
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.People
+import androidx.compose.ui.graphics.vector.ImageVector
+
+enum class ModuleGroup(val title: String) {
+    OPERATION("Operasyon"),
+    FINANCE_PRODUCT("Finans ve Ürün"),
+    COMMUNICATION("İletişim"),
+    ANALYSIS("Analiz"),
+    SETTINGS("Ayarlar")
+}
 
 enum class AdminModule(
     val id: String,
     val title: String,
     val description: String,
     val icon: ImageVector,
+    val group: ModuleGroup,
     val isPrimaryBottomNav: Boolean = false
 ) {
-    MUSTERILER(
-        id = "customers",
-        title = "Müşteriler",
-        description = "Müşteri kartları, geçmiş servisler ve iletişim notlarını yönetin.",
-        icon = Icons.Default.People,
-        isPrimaryBottomNav = true
-    ),
-    RANDEVULAR(
-        id = "appointments",
-        title = "Randevular",
-        description = "Günlük plan, yeni talepler ve hızlı operasyon aksiyonları tek ekranda.",
-        icon = Icons.Default.DateRange,
-        isPrimaryBottomNav = true
-    ),
-    MESAJ_SISTEMI(
-        id = "messages",
-        title = "Mesaj Sistemi",
-        description = "Müşteri ve usta otomatik WhatsApp bildirimleri ve mesaj şablonları.",
-        icon = Icons.AutoMirrored.Filled.Chat,
-        isPrimaryBottomNav = false
-    ),
-    ISTATISTIKLER(
-        id = "reports",
-        title = "İstatistikler",
-        description = "Aylık randevu trendleri, hizmet yoğunluğu ve müşteri tekrar oranları.",
-        icon = Icons.Default.BarChart,
-        isPrimaryBottomNav = false
-    ),
-    FINANS(
-        id = "finance",
-        title = "Finans",
-        description = "Tahsilatlar, açık alacaklar ve manuel gider kayıtları burada tutulur.",
-        icon = Icons.Default.AccountBalance,
-        isPrimaryBottomNav = true
-    ),
-    TEKLIFLER(
-        id = "quotes",
-        title = "Teklifler",
-        description = "Fiyat tekliflerini oluşturun, yazdırın ve durumlarını takip edin.",
-        icon = Icons.Default.Description,
-        isPrimaryBottomNav = false
-    ),
-    BAKIM_TAKVIMLERI(
-        id = "maintenance",
-        title = "Bakım Takvimleri",
-        description = "Müşteri bazında otomatik oluşturulan yıllık bakım hatırlatma takvimlerini yönetin.",
-        icon = Icons.Default.EventAvailable,
-        isPrimaryBottomNav = false
-    ),
-    GOOGLE_ADS(
-        id = "ads",
-        title = "Google Ads",
-        description = "Kampanya yönetimi, anahtar kelime optimizasyonu ve performans analizi.",
-        icon = Icons.Default.Campaign,
-        isPrimaryBottomNav = false
-    ),
-    HIZLI_IBAN(
-        id = "quick_iban",
-        title = "Hızlı IBAN At",
-        description = "Serviste müşteriye tek tıkla WhatsApp'tan IBAN ve hesap bilgilerini gönderin.",
-        icon = Icons.Default.Bolt,
-        isPrimaryBottomNav = false
-    ),
-    STOK(
-        id = "stock",
-        title = "Stok",
-        description = "Parça, ürün ve stok hareketlerini yönetin.",
-        icon = Icons.Default.Inventory2,
-        isPrimaryBottomNav = false
-    )
+    RANDEVULAR("appointments", "Randevular", "Günlük plan ve servis işleri", Icons.Default.DateRange, ModuleGroup.OPERATION, true),
+    MUSTERILER("customers", "Müşteriler", "Müşteri kartları ve servis geçmişi", Icons.Default.People, ModuleGroup.OPERATION, true),
+    TEKLIFLER("quotes", "Teklifler", "Teklif oluşturma ve durum takibi", Icons.Default.Description, ModuleGroup.OPERATION),
+
+    FINANS("finance", "Finans", "Tahsilatlar, alacaklar ve giderler", Icons.Default.AccountBalance, ModuleGroup.FINANCE_PRODUCT, true),
+    HIZLI_IBAN("quick_iban", "Hızlı IBAN", "IBAN ve ödeme bilgisi gönderimi", Icons.Default.Bolt, ModuleGroup.FINANCE_PRODUCT),
+    FIYAT_KATALOGU("catalog", "Fiyat Kataloğu", "Ürün ve hizmet fiyatları", Icons.Default.LocalOffer, ModuleGroup.FINANCE_PRODUCT),
+    STOK("stock", "Stok", "Parça ve stok hareketleri", Icons.Default.Inventory2, ModuleGroup.FINANCE_PRODUCT),
+
+    MESAJ_SISTEMI("messages", "Mesajlar", "WhatsApp bildirimleri ve şablonları", Icons.AutoMirrored.Filled.Chat, ModuleGroup.COMMUNICATION),
+    BAKIM_TAKVIMLERI("maintenance", "Bakım Takvimleri", "Yıllık bakım hatırlatmaları", Icons.Default.EventAvailable, ModuleGroup.COMMUNICATION),
+    KAMPANYALAR("campaigns", "Kampanyalar", "Müşteri kampanyaları ve gönderimler", Icons.Default.Notifications, ModuleGroup.COMMUNICATION),
+
+    ISTATISTIKLER("reports", "İstatistikler", "Operasyon ve gelir raporları", Icons.Default.BarChart, ModuleGroup.ANALYSIS),
+    GOOGLE_ADS("ads", "Google Ads", "Reklam performansı ve kampanyalar", Icons.Default.Campaign, ModuleGroup.ANALYSIS),
+
+    WHATSAPP_DURUMU("whatsapp_status", "WhatsApp bağlantı durumu", "Cloud API bağlantısını kontrol edin", Icons.Default.Link, ModuleGroup.SETTINGS)
 }

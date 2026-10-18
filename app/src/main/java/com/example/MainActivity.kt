@@ -7,6 +7,8 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
@@ -15,14 +17,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.local.TokenStore
 import com.example.data.remote.NetworkModule
 import com.example.data.repository.RemoteAdminRepositoryImpl
 import com.example.ui.components.BottomNavBar
+import com.example.ui.components.AdminNavigationRail
 import com.example.ui.components.TopHeaderBar
 import com.example.ui.screens.AppointmentsScreen
+import com.example.ui.screens.CampaignsScreen
 import com.example.ui.screens.CustomersScreen
 import com.example.ui.screens.CloudWhatsAppActions
 import com.example.ui.screens.LocalCloudWhatsAppActions
@@ -41,6 +46,7 @@ import com.example.ui.screens.QuickIbanScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.ServiceReceiptScreen
 import com.example.ui.screens.StockScreen
+import com.example.ui.screens.WhatsAppStatusScreen
 import com.example.ui.theme.SancakKombiTheme
 import com.example.ui.viewmodel.MainViewModel
 
@@ -106,6 +112,10 @@ class MainActivity : ComponentActivity() {
             val isAdsLoading by viewModel.isAdsLoading.collectAsState()
             val adsError by viewModel.adsError.collectAsState()
             val togglingCampaignId by viewModel.togglingCampaignId.collectAsState()
+            val campaignDashboard by viewModel.campaignDashboard.collectAsState()
+            val isCampaignsLoading by viewModel.isCampaignsLoading.collectAsState()
+            val campaignsError by viewModel.campaignsError.collectAsState()
+            val whatsAppStatus by viewModel.whatsAppStatus.collectAsState()
 
             LaunchedEffect(appointments) {
                 com.example.utils.ReminderManager.scheduleDailySummaryReminders(
@@ -124,6 +134,8 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize()
                     )
                 } else {
+                    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                    val useNavigationRail = maxWidth >= 840.dp
                     Scaffold(
                         modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -137,19 +149,26 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     bottomBar = {
-                        BottomNavBar(
-                            currentRoute = currentRoute,
-                            onNavigate = { route, module ->
-                                viewModel.navigateTo(route, module)
-                            }
-                        )
+                        if (!useNavigationRail) {
+                            BottomNavBar(
+                                currentRoute = currentRoute,
+                                onNavigate = { route, module -> viewModel.navigateTo(route, module) }
+                            )
+                        }
                     }
                     ) { innerPadding ->
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(innerPadding)
                         ) {
+                        if (useNavigationRail) {
+                            AdminNavigationRail(
+                                currentRoute = currentRoute,
+                                onNavigate = { route, module -> viewModel.navigateTo(route, module) }
+                            )
+                        }
+                        Box(modifier = Modifier.weight(1f).fillMaxSize()) {
                         CompositionLocalProvider(
                             LocalCloudWhatsAppActions provides CloudWhatsAppActions(
                                 sendMessage = { phone, message, customerId, appointmentId, callback ->
@@ -361,8 +380,43 @@ class MainActivity : ComponentActivity() {
                                         onCreateMovement = { movement, callback -> viewModel.createStockMovement(movement, callback) }
                                     )
                                 }
+                                "catalog" -> {
+                                    StockScreen(
+                                        catalogItems = catalogItems,
+                                        stockItems = stockItems,
+                                        movements = stockMovements,
+                                        onBackClick = { viewModel.navigateTo("modules") },
+                                        onSaveCatalogItem = { item, callback -> viewModel.saveCatalogItem(item, callback) },
+                                        onSaveStockItem = { item, callback -> viewModel.saveStockItem(item, callback) },
+                                        onCreateMovement = { movement, callback -> viewModel.createStockMovement(movement, callback) },
+                                        initialTab = 1
+                                    )
+                                }
+                                "campaigns" -> {
+                                    CampaignsScreen(
+                                        dashboard = campaignDashboard,
+                                        customers = customers,
+                                        isLoading = isCampaignsLoading,
+                                        error = campaignsError,
+                                        onBackClick = { viewModel.navigateTo("modules") },
+                                        onRefresh = { viewModel.fetchCampaigns() },
+                                        onCreateCampaign = { name, ids, callback ->
+                                            viewModel.createCampaign(name, ids, callback)
+                                        },
+                                        onSendCampaign = { id, callback ->
+                                            viewModel.sendCampaign(id, callback)
+                                        }
+                                    )
+                                }
+                                "whatsapp_status" -> {
+                                    WhatsAppStatusScreen(
+                                        status = whatsAppStatus,
+                                        onBackClick = { viewModel.navigateTo("modules") }
+                                    )
+                                }
                                 "modules" -> {
                                     ModulesGridScreen(
+                                        whatsAppConnected = whatsAppStatus.isConnected,
                                         onNavigateToModule = { module ->
                                             viewModel.navigateTo(module.id, module)
                                         }
@@ -379,6 +433,8 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                         }
+                        }
+                    }
                     }
                 }
             }

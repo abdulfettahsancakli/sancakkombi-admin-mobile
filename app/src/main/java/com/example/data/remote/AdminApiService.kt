@@ -263,6 +263,22 @@ interface AdminApiService {
     @POST("api/admin/ads/campaigns/{id}/toggle")
     suspend fun toggleCampaignStatus(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
 
+    // Müşteri kampanyaları
+    @GET("api/admin/campaigns")
+    suspend fun getCampaignDashboard(@Header("Authorization") auth: String): Response<CampaignDashboardDto>
+
+    @POST("api/admin/campaigns")
+    suspend fun createCampaign(
+        @Header("Authorization") auth: String,
+        @Body body: CampaignCreateRequestDto
+    ): Response<SuccessResponseDto>
+
+    @POST("api/admin/campaigns/{id}/send")
+    suspend fun sendCampaign(
+        @Header("Authorization") auth: String,
+        @Path("id") id: String
+    ): Response<SuccessResponseDto>
+
     // WhatsApp
     @GET("api/admin/whatsapp/status")
     suspend fun getWhatsAppStatus(@Header("Authorization") auth: String): Response<WhatsAppStatus>

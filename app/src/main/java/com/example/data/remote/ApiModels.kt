@@ -4,6 +4,7 @@ import com.example.data.model.FinanceRecord
 import com.example.data.model.MaintenanceRule
 import com.example.data.model.Proposal
 import com.example.data.model.StockItem
+import com.squareup.moshi.Json
 import com.squareup.moshi.JsonClass
 
 @JsonClass(generateAdapter = true)
@@ -229,4 +230,27 @@ data class AdsCampaignDto(
 data class AdsToggleResponseDto(
     val success: Boolean = false,
     val status: String = "PAUSED"
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignDto(
+    val id: String = "",
+    val name: String = "",
+    @Json(name = "template_name") val templateName: String? = null,
+    @Json(name = "message_body") val messageBody: String? = null,
+    val status: String = "draft",
+    @Json(name = "recipient_count") val recipientCount: Int = 0,
+    @Json(name = "created_at") val createdAt: String? = null
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignDashboardDto(
+    val campaigns: List<CampaignDto> = emptyList(),
+    val migrationRequired: Boolean = false
+)
+
+@JsonClass(generateAdapter = true)
+data class CampaignCreateRequestDto(
+    val name: String,
+    val customerIds: List<String>
 )

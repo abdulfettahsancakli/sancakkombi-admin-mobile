@@ -226,20 +226,7 @@ fun ProposalDetailScreen(
             ProposalDetailContent(
                 proposal = proposal,
                 tokens = tokens,
-                onUpdateStatus = onUpdateStatus,
-                onSharePdf = {
-                    if (!isDownloadingPdf) {
-                        coroutineScope.launch {
-                            downloadAndShareQuotePdf(
-                                context = context,
-                                quoteId = proposal.id,
-                                quoteNumber = proposal.quoteNumber.ifEmpty { proposal.id },
-                                onLoadingStateChange = { isDownloadingPdf = it }
-                            )
-                        }
-                    }
-                },
-                isDownloadingPdf = isDownloadingPdf
+                onUpdateStatus = onUpdateStatus
             )
 
             Spacer(modifier = Modifier.height(30.dp))
@@ -252,8 +239,6 @@ fun ProposalDetailContent(
     proposal: Proposal,
     tokens: ProposalTokens,
     onUpdateStatus: (ProposalStatus) -> Unit,
-    onSharePdf: () -> Unit,
-    isDownloadingPdf: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -300,7 +285,7 @@ fun ProposalDetailContent(
                     ) {
                         Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("✓ Kabul Edildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Kabul Edildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -314,13 +299,13 @@ fun ProposalDetailContent(
                     ) {
                         Icon(imageVector = Icons.Default.Close, contentDescription = null, modifier = Modifier.size(14.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("✕ Reddedildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text("Reddedildi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        // Hızlı İletişim Aksiyon Butonları (WhatsApp, Arama, PDF)
+        // Hızlı iletişim aksiyonları. PDF paylaşımı üst çubukta tek aksiyon olarak tutulur.
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             Box(
                 modifier = Modifier
@@ -356,21 +341,6 @@ fun ProposalDetailContent(
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(tokens.surface2)
-                    .border(1.dp, tokens.border, RoundedCornerShape(12.dp))
-                    .clickable { onSharePdf() }
-                    .padding(vertical = 12.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Icon(imageVector = Icons.Default.Description, contentDescription = null, tint = tokens.text, modifier = Modifier.size(14.dp))
-                    Text("PDF İndir", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = tokens.text)
-                }
-            }
         }
 
         // RESMİ A4 PDF GÖRÜNÜMÜ KARTI (Tasarım Prototipindeki gibi A4 Belge Görünümü)
@@ -682,7 +652,7 @@ fun ProposalDocumentCard(
                         text = formatProposalCurrency(proposal.grandTotal),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color(0xFF0284C7)
+                        color = Color(0xFF111827)
                     )
                 }
 

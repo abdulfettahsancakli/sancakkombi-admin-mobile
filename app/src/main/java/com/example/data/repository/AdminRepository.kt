@@ -121,6 +121,11 @@ interface AdminRepository {
     fun getGoogleAdsCampaigns(): Flow<List<com.example.data.model.GoogleAdsCampaign>>
     suspend fun toggleCampaignStatus(campaignId: String): Result<Unit>
 
+    // Customer campaigns
+    suspend fun getCampaignDashboard(): Result<com.example.data.remote.CampaignDashboardDto>
+    suspend fun createCampaign(name: String, customerIds: List<String>): Result<Unit>
+    suspend fun sendCampaign(campaignId: String): Result<Unit>
+
     // WhatsApp Status
     fun getWhatsAppStatus(): Flow<com.example.data.model.WhatsAppStatus>
 }

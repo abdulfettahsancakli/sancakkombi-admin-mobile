@@ -34,6 +34,8 @@ import com.example.data.remote.AdsCampaignDto
 import com.example.data.remote.AdsStatsDto
 import com.example.data.remote.AdminApiService
 import com.example.data.remote.CompleteJobRequestDto
+import com.example.data.remote.CampaignCreateRequestDto
+import com.example.data.remote.CampaignDashboardDto
 import com.example.data.remote.DashboardStatsDto
 import com.example.data.remote.FinanceStatusUpdateRequestDto
 import com.example.data.remote.LoginRequestDto
@@ -821,6 +823,33 @@ class RemoteAdminRepositoryImpl(
             Result.success(Unit)
         } else {
             Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun getCampaignDashboard(): Result<CampaignDashboardDto> = requireToken { token ->
+        val response = api.getCampaignDashboard(authHeader(token))
+        if (response.isSuccessful && response.body() != null) {
+            Result.success(response.body()!!)
+        } else {
+            Result.failure(IllegalStateException(errorMessage(response)))
+        }
+    }
+
+    override suspend fun createCampaign(name: String, customerIds: List<String>): Result<Unit> = requireToken { token ->
+        val response = api.createCampaign(authHeader(token), CampaignCreateRequestDto(name, customerIds))
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
+
+    override suspend fun sendCampaign(campaignId: String): Result<Unit> = requireToken { token ->
+        val response = api.sendCampaign(authHeader(token), campaignId)
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
         }
     }
 

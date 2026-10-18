@@ -76,6 +76,7 @@ fun StockScreen(
     onSaveCatalogItem: (CatalogItem, (Result<Unit>) -> Unit) -> Unit,
     onSaveStockItem: (StockItem, (Result<StockItem>) -> Unit) -> Unit,
     onCreateMovement: (StockMovement, (Result<Unit>) -> Unit) -> Unit,
+    initialTab: Int = 0,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -91,7 +92,7 @@ fun StockScreen(
     var searchQuery by remember { mutableStateOf("") }
     var categoryFilter by remember { mutableStateOf("Tümü") }
     var statusFilter by remember { mutableStateOf("Tümü") }
-    var activeTab by remember { mutableStateOf(0) }
+    var activeTab by remember(initialTab) { mutableStateOf(initialTab.coerceIn(0, 2)) }
     var selectedStock by remember { mutableStateOf<StockItem?>(null) }
     val resetStockForm = {
         stockName = ""
