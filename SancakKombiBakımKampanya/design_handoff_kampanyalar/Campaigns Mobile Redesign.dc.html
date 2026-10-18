@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="_ds/sancak-kombi-design-system-9aed3e86-cc1c-49c0-9e7a-d691afe150c6/tokens/fonts.css">
+<link rel="stylesheet" href="_ds/sancak-kombi-design-system-9aed3e86-cc1c-49c0-9e7a-d691afe150c6/tokens/typography.css">
+<script src="_ds/sancak-kombi-design-system-9aed3e86-cc1c-49c0-9e7a-d691afe150c6/_ds_bundle.js"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+<script>window.addEventListener('load',function(){if(window.lucide)lucide.createIcons({attrs:{'stroke-width':2}});});</script>
+<style>
+  body{margin:0;background:#eef3f8;font-family:var(--font-body);color:#1f2937;-webkit-font-smoothing:antialiased}
+  a{color:#073368;text-decoration:none}
+  a:hover{color:#144983}
+  ::-webkit-scrollbar{display:none}
+  .ic{display:inline-block;flex:none;vertical-align:middle}
+</style>
+</helmet>
+
+<div style="min-height:100vh;box-sizing:border-box;padding:48px 40px;display:flex;flex-direction:column;gap:28px;font-family:var(--font-body)">
+
+  <div style="max-width:900px">
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid rgba(34,197,94,.25);border-radius:20px;padding:5px 12px;font-family:var(--font-sans);font-size:12px;font-weight:800;color:#16a34a;letter-spacing:.06em;text-transform:uppercase;margin-bottom:14px;white-space:nowrap">Kampanyalar · Telefon + Tablet</div>
+    <h1 style="margin:0 0 10px;font-family:var(--font-sans);font-size:26px;font-weight:800;color:#0f172a;white-space:nowrap">Bakım Kampanyaları</h1>
+    <p style="margin:0;font-size:15px;line-height:1.6;color:#5b6678;max-width:680px;text-wrap:pretty">Masaüstündeki iki sütunlu düzen telefonda tek sütuna iner: önce alıcılar, sonra önizleme ve gönderim. Tablette alıcı listesi solda, canlı önizleme sağda kalır.</p>
+  </div>
+
+  <div style="display:flex;gap:48px;align-items:flex-start;flex-wrap:wrap">
+
+    <!-- PHONE 1: ALICILAR -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <div style="font-family:var(--font-sans);font-size:13px;font-weight:800;color:#073368;white-space:nowrap">1 · Telefon — Alıcılar</div>
+      <div style="width:390px;height:844px;box-sizing:border-box;border:10px solid #0e2a47;border-radius:44px;background:#f4f6f9;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(7,51,104,.18)">
+
+        <div style="flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;border-bottom:1px solid #e2e8f0">
+          <img src="sancakkombiservislogo.jpg" alt="Sancak Kombi" style="width:34px;height:34px;border-radius:10px;object-fit:cover;flex:none;border:1.5px solid rgba(34,197,94,.25)">
+          <div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;font-family:monospace">
+            <span style="font-weight:700;font-size:14px;color:#0f172a">sancakkombi</span><span style="font-weight:500;font-size:13px;color:#16a34a">/admin</span>
+          </div>
+        </div>
+        <div style="flex:none;display:flex;gap:3px;overflow-x:auto;padding:8px 10px;background:#fff;border-bottom:1px solid #e2e8f0">
+          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="calendar" class="ic" style="width:13px;height:13px"></i>Randevular</span>
+          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="users" class="ic" style="width:13px;height:13px"></i>Müşteriler</span>
+          <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;box-shadow:0 1px 4px rgba(22,163,74,.3);white-space:nowrap"><i data-lucide="megaphone" class="ic" style="width:13px;height:13px;color:#fff"></i>Kampanyalar</span>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 12px 24px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+
+          <div style="background:#fff;border:1px solid rgba(34,197,94,.25);border-radius:18px;padding:16px;background-image:linear-gradient(135deg,#fff,rgba(22,163,74,.08))">
+            <div style="display:flex;align-items:center;gap:6px;font-family:var(--font-sans);font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap"><svg viewBox="0 0 24 24" width="13" height="13" fill="#25d366" aria-hidden="true" style="flex:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>0212 581 75 74 · Kurumsal WhatsApp Servisi</div>
+            <div style="margin-top:6px;font-family:var(--font-sans);font-size:22px;font-weight:800;color:#0f172a;letter-spacing:-.03em;white-space:nowrap">Bakım Kampanyaları</div>
+            <p style="margin:6px 0 0;font-size:13px;line-height:1.5;color:#5b6678">Müşterilerinize tek tıkla, kendi isimleriyle kişiselleştirilmiş WhatsApp bakım daveti gönderin.</p>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px">
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 6px;text-align:center"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">300</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;margin-top:2px;white-space:nowrap">Kayıtlı Müşteri</div></div>
+              <div style="background:rgba(22,163,74,.08);border:1px solid rgba(34,197,94,.25);border-radius:14px;padding:10px 6px;text-align:center"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">3</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;margin-top:2px;white-space:nowrap">Kampanyaya Uygun</div></div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:10px 6px;text-align:center"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">0</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;margin-top:2px;white-space:nowrap">Seçili Alıcı</div></div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px">
+            <div style="font-family:var(--font-sans);font-size:11px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.06em">1</div>
+            <div style="font-size:13px;font-weight:800;color:#0f172a;margin-top:2px">Alıcıları Belirleyin</div>
+            <div style="font-size:12px;color:#5b6678;line-height:1.4">Filtreleyin veya tek tıkla tüm izinli müşterileri seçin</div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:14px">
+            <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
+              <div>
+                <div style="display:flex;align-items:center;gap:7px;font-family:var(--font-sans);font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap"><i data-lucide="users" class="ic" style="width:17px;height:17px"></i>Alıcıları Seç</div>
+                <div style="font-size:12px;line-height:1.5;color:#5b6678;margin-top:2px">Listeden istediğiniz müşterileri işaretleyin; mesaj sadece izinli olanlara gider.</div>
+              </div>
+              <span style="flex:none;padding:4px 9px;border-radius:999px;background:rgba(22,163,74,.12);color:#16a34a;font-size:11px;font-weight:800;white-space:nowrap">0 seçili</span>
+            </div>
+
+            <div style="display:flex;gap:6px;overflow-x:auto;margin:12px -14px 0;padding:0 14px 2px">
+              <span style="flex:none;padding:7px 12px;border-radius:999px;background:#16a34a;color:#fff;font-size:12px;font-weight:800;white-space:nowrap">Tümü (300)</span>
+              <span style="flex:none;display:inline-flex;align-items:center;gap:4px;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap"><i data-lucide="shield-check" class="ic" style="width:13px;height:13px"></i>İzinli (3)</span>
+              <span style="flex:none;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap">Belirsiz (297)</span>
+              <span style="flex:none;padding:7px 12px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap">İstemiyor (0)</span>
+            </div>
+
+            <div style="margin-top:12px;display:flex;align-items:center;gap:8px;height:44px;box-sizing:border-box;padding:0 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc">
+              <i data-lucide="search" class="ic" style="width:15px;height:15px;color:#94a3b8"></i><span style="font-size:13px;color:#94a3b8;white-space:nowrap">İsim, telefon veya ilçe ile ara...</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+              <div style="height:44px;border-radius:12px;background:#16a34a;color:#fff;display:flex;align-items:center;justify-content:center;gap:6px;font-size:12.5px;font-weight:800;white-space:nowrap"><i data-lucide="sparkles" class="ic" style="width:14px;height:14px;color:#fff"></i>Tüm İzinlileri Seç (3)</div>
+              <div style="height:44px;border-radius:12px;border:1px solid #e2e8f0;color:#1f2937;background:#fff;display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:700;white-space:nowrap">Görünenleri Seç</div>
+            </div>
+
+            <div style="margin-top:10px;padding:10px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0">
+              <div style="font-size:10.5px;font-weight:800;color:#5b6678;letter-spacing:.06em;text-transform:uppercase">Toplu İzin:</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px">
+                <div style="height:38px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#1f2937;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:700;white-space:nowrap"><i data-lucide="shield-check" class="ic" style="width:13px;height:13px"></i>Seçilenlere İzin Ver</div>
+                <div style="height:38px;border-radius:10px;border:1px solid #e2e8f0;background:#fff;color:#1f2937;display:flex;align-items:center;justify-content:center;gap:5px;font-size:11.5px;font-weight:700;white-space:nowrap"><i data-lucide="x-circle" class="ic" style="width:13px;height:13px"></i>Kampanya İstemiyor</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:8px;margin-top:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0;font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap"><i data-lucide="square" class="ic" style="width:15px;height:15px;color:#94a3b8"></i>Tümünü İşaretle (300 müşteri)</div>
+
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;background:rgba(22,163,74,.08);border-left:3px solid #16a34a;border-bottom:1px solid #e2e8f0">
+              <i data-lucide="square" class="ic" style="width:16px;height:16px;color:#94a3b8"></i>
+              <div style="width:34px;height:34px;flex:none;border-radius:50%;background:rgba(22,163,74,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">K</div>
+              <div style="flex:1;min-width:0">
+                <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:13.5px;font-weight:800;color:#0f172a;white-space:nowrap">kamil yolcu</span><span style="font-size:10px;font-weight:800;color:#16a34a;background:rgba(22,163,74,.12);border-radius:999px;padding:2px 7px;white-space:nowrap;display:inline-flex;align-items:center;gap:3px"><i data-lucide="eye" class="ic" style="width:10px;height:10px"></i>Önizleniyor</span></div>
+                <div style="font-size:11.5px;color:#5b6678;margin-top:2px;white-space:nowrap">0536 266 35 15 · Bayrampaşa</div>
+              </div>
+              <div style="flex:none;text-align:right">
+                <span style="display:inline-block;padding:3px 8px;border-radius:999px;background:#fff7e6;color:#a16207;font-size:10.5px;font-weight:800;white-space:nowrap">Belirsiz</span>
+                <div style="font-size:10.5px;color:#5b6678;margin-top:4px;white-space:nowrap">24 Eki 2026</div>
+              </div>
+            </div>
+
+            <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #e2e8f0">
+              <i data-lucide="square" class="ic" style="width:16px;height:16px;color:#94a3b8"></i>
+              <div style="width:34px;height:34px;flex:none;border-radius:50%;background:rgba(22,163,74,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">Ü</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13.5px;font-weight:800;color:#0f172a;white-space:nowrap">Ümit Topal</div>
+                <div style="font-size:11.5px;color:#5b6678;margin-top:2px;white-space:nowrap">0536 967 35 11 · Esenler</div>
+              </div>
+              <div style="flex:none;text-align:right">
+                <span style="display:inline-block;padding:3px 8px;border-radius:999px;background:#fff7e6;color:#a16207;font-size:10.5px;font-weight:800;white-space:nowrap">Belirsiz</span>
+                <div style="font-size:10.5px;color:#5b6678;margin-top:4px;white-space:nowrap">18 Eki 2026</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- PHONE 2: ÖNİZLEME & GÖNDERİM -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <div style="font-family:var(--font-sans);font-size:13px;font-weight:800;color:#073368;white-space:nowrap">2 · Telefon — Önizleme ve Gönderim</div>
+      <div style="width:390px;height:844px;box-sizing:border-box;border:10px solid #0e2a47;border-radius:44px;background:#f4f6f9;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(7,51,104,.18)">
+
+        <div style="flex:none;height:56px;display:flex;align-items:center;gap:10px;padding:0 14px;background:#fff;border-bottom:1px solid #e2e8f0">
+          <img src="sancakkombiservislogo.jpg" alt="Sancak Kombi" style="width:34px;height:34px;border-radius:10px;object-fit:cover;flex:none;border:1.5px solid rgba(34,197,94,.25)">
+          <div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;font-family:monospace">
+            <span style="font-weight:700;font-size:14px;color:#0f172a">sancakkombi</span><span style="font-weight:500;font-size:13px;color:#16a34a">/admin</span>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:12px 12px 24px;display:flex;flex-direction:column;gap:12px;box-sizing:border-box">
+
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px">
+            <div style="display:flex;align-items:center;gap:8px;font-family:var(--font-sans);font-size:15px;font-weight:800;color:#0f172a;white-space:nowrap"><svg viewBox="0 0 24 24" width="18" height="18" fill="#25d366" aria-hidden="true" style="flex:none"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>Canlı Mesaj Önizlemesi</div>
+            <div style="font-size:12px;color:#5b6678;margin-top:3px;line-height:1.5">Müşterinin cep telefonunda mesaj tam olarak böyle görünecektir.</div>
+
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0">
+              <div style="min-width:0">
+                <div style="font-size:10.5px;font-weight:700;color:#5b6678;white-space:nowrap">Önizlenen Müşteri:</div>
+                <div style="font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap">kamil yolcu <span style="font-weight:600;color:#5b6678">(0536 266 35 15)</span></div>
+              </div>
+              <span style="flex:none;font-size:11px;font-weight:800;color:#0f172a;border:1px solid #e2e8f0;border-radius:9px;padding:6px 9px;background:#fff;white-space:nowrap">İsmi Değiştir</span>
+            </div>
+
+            <!-- WhatsApp mock: palette from sk-wa-* rules -->
+            <div style="margin-top:12px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#efeae2">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;background:#008069;color:#fff">
+                <div style="display:flex;align-items:center;gap:8px;min-width:0;flex:1">
+                  <i data-lucide="chevron-left" class="ic" style="width:17px;height:17px;color:#fff"></i>
+                  <div style="position:relative;width:32px;height:32px;flex:none;border-radius:50%;overflow:hidden;background:#fff;border:1.5px solid rgba(255,255,255,.3)"><img src="sancakkombiservislogo.jpg" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                  <div style="min-width:0">
+                    <div style="display:flex;align-items:center;gap:4px;font-size:13px;font-weight:700;white-space:nowrap">Sancak Kombi <svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><circle cx="12" cy="12" r="10" fill="#25D366"/><path d="M7.5 12L10.5 15L16.5 9" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></div>
+                    <div style="font-size:10px;opacity:.85;line-height:1.3">Resmi İşletme Hesabı · 0212 581 75 74</div>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px;flex:none"><i data-lucide="video" class="ic" style="width:16px;height:16px;color:#fff"></i><i data-lucide="phone" class="ic" style="width:15px;height:15px;color:#fff"></i><i data-lucide="more-vertical" class="ic" style="width:16px;height:16px;color:#fff"></i></div>
+              </div>
+              <div style="padding:14px 12px 12px">
+                <div style="text-align:center;margin-bottom:10px"><span style="font-size:10px;font-weight:700;color:#54656f;background:rgba(255,255,255,.85);border-radius:7px;padding:4px 9px;box-shadow:0 1px 2px rgba(0,0,0,.08)">BUGÜN</span></div>
+                <div style="background:#fff;border-radius:10px;border-top-left-radius:2px;padding:9px 11px 6px;box-shadow:0 1px 3px rgba(0,0,0,.12);font-size:13px;line-height:1.55;color:#111b21">
+                  Merhaba <strong style="background:#dcf8c6;padding:0 3px;border-radius:4px">kamil yolcu</strong> 👋<br><br>
+                  Kış gelmeden kombinizin bakımını yaptırmanın tam zamanı. 🔥<br><br>
+                  Sancak Kombi olarak mevcut müşterilerimiz için bakım randevularını açtık. Düzenli bakım; kombinizin güvenli ve verimli çalışmasına yardımcı olur. 🛠️<br><br>
+                  Size uygun günü birlikte planlayalım. 🗓️<br><br>
+                  Sancak Kombi
+                  <div style="display:flex;justify-content:flex-end;align-items:center;gap:3px;font-size:10px;color:#667781;margin-top:4px">22:20 <i data-lucide="check-check" class="ic" style="width:14px;height:14px;color:#53bdeb"></i></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:6px;margin-top:8px">
+                  <div style="background:#fff;border-radius:8px;padding:9px;text-align:center;font-size:12.5px;font-weight:700;color:#0284c7;box-shadow:0 1px 2px rgba(0,0,0,.08)">📅 Randevu Al</div>
+                  <div style="background:#fff;border-radius:8px;padding:9px;text-align:center;font-size:12.5px;font-weight:700;color:#0284c7;box-shadow:0 1px 2px rgba(0,0,0,.08)">📞 Beni Arayın</div>
+                  <div style="background:#fff;border-radius:8px;padding:9px;text-align:center;font-size:12.5px;font-weight:700;color:#0284c7;box-shadow:0 1px 2px rgba(0,0,0,.08)">🔕 İlgilenmiyorum</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px">
+            <div>
+              <div style="font-size:11.5px;font-weight:700;color:#5b6678">Kampanya Başlığı (Takip İçin)</div>
+              <div style="margin-top:5px;height:44px;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13.5px;color:#0f172a;background:#f8fafc;white-space:nowrap">2026 Sonbahar Bakım Kampanyası</div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px">
+              <div style="border:1px solid #e2e8f0;border-radius:12px;padding:9px 4px;text-align:center"><div style="font-family:var(--font-sans);font-size:16px;font-weight:800;color:#16a34a">0</div><div style="font-size:10px;color:#5b6678;font-weight:700;white-space:nowrap">Hazır Alıcı</div></div>
+              <div style="border:1px solid #e2e8f0;border-radius:12px;padding:9px 4px;text-align:center"><div style="font-size:12px;font-weight:800;color:#16a34a;white-space:nowrap">Kişiye Özel</div><div style="font-size:10px;color:#5b6678;font-weight:700;white-space:nowrap">Tekil WhatsApp</div></div>
+              <div style="border:1px solid #e2e8f0;border-radius:12px;padding:9px 4px;text-align:center"><div style="font-size:12px;font-weight:800;color:#16a34a;white-space:nowrap">Meta Onaylı</div><div style="font-size:10px;color:#5b6678;font-weight:700;white-space:nowrap">Resmi Şablon</div></div>
+            </div>
+            <div style="height:50px;border-radius:14px;background:#a7e8c0;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;white-space:nowrap"><i data-lucide="send" class="ic" style="width:17px;height:17px;color:#fff"></i>Gönderim İçin Müşteri Seçin</div>
+            <div style="display:flex;gap:6px;font-size:12px;line-height:1.5;color:#a16207;background:#fff7e6;border:1px solid #fde68a;border-radius:10px;padding:9px 11px"><i data-lucide="info" class="ic" style="width:14px;height:14px;margin-top:2px"></i><span>Sol listeden en az 1 <strong>izinli</strong> müşteri seçmelisiniz. <span style="color:#073368;font-weight:800;text-decoration:underline">Tüm İzinlileri Seç (3)</span></span></div>
+            <div style="display:flex;gap:6px;font-size:11px;line-height:1.5;color:#5b6678"><i data-lucide="lock" class="ic" style="width:12px;height:12px;margin-top:2px"></i><span><strong>Güvenli İletim:</strong> Meta onaylı <code>sonbahar_bakim_kampanyasi</code> şablonuyla iletilir.</span></div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TABLET -->
+    <div style="display:flex;flex-direction:column;gap:12px;align-items:center">
+      <div style="font-family:var(--font-sans);font-size:13px;font-weight:800;color:#073368;white-space:nowrap">3 · Tablet</div>
+      <div style="width:820px;height:1180px;box-sizing:border-box;border:12px solid #0e2a47;border-radius:36px;background:#f4f6f9;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 20px 50px rgba(7,51,104,.18)">
+
+        <div style="flex:none;height:60px;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 18px;background:#fff;border-bottom:1px solid #e2e8f0">
+          <div style="display:flex;align-items:center;gap:10px;flex:none">
+            <img src="sancakkombiservislogo.jpg" alt="Sancak Kombi" style="width:34px;height:34px;border-radius:10px;object-fit:cover;border:1.5px solid rgba(34,197,94,.25)">
+            <div style="display:flex;align-items:baseline;gap:4px;white-space:nowrap;font-family:monospace"><span style="font-weight:700;font-size:15px;color:#0f172a">sancakkombi</span><span style="font-size:13px;color:#16a34a">/admin</span></div>
+          </div>
+          <div style="display:flex;gap:3px;overflow-x:auto;padding:3px 5px;border-radius:12px;background:#fff;border:1px solid #e2e8f0">
+            <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="layout-dashboard" class="ic" style="width:13px;height:13px"></i>Genel Bakış</span>
+            <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="calendar" class="ic" style="width:13px;height:13px"></i>Randevular</span>
+            <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="file-text" class="ic" style="width:13px;height:13px"></i>Teklifler</span>
+            <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:600;color:#475569;white-space:nowrap"><i data-lucide="users" class="ic" style="width:13px;height:13px"></i>Müşteriler</span>
+            <span style="flex:none;display:inline-flex;align-items:center;gap:5px;padding:6px 9px;border-radius:9px;font-size:12px;font-weight:700;background:#16a34a;color:#fff;box-shadow:0 1px 4px rgba(22,163,74,.3);white-space:nowrap"><i data-lucide="megaphone" class="ic" style="width:13px;height:13px;color:#fff"></i>Kampanyalar</span>
+          </div>
+        </div>
+
+        <div style="flex:1;min-height:0;overflow-y:auto;padding:16px 20px 20px;display:flex;flex-direction:column;gap:14px;box-sizing:border-box">
+
+          <div style="background:#fff;border:1px solid rgba(34,197,94,.25);border-radius:18px;padding:18px 20px;display:flex;justify-content:space-between;align-items:center;gap:16px">
+            <div style="min-width:0">
+              <div style="font-family:var(--font-sans);font-size:11.5px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap">0212 581 75 74 · Kurumsal WhatsApp Servisi</div>
+              <div style="font-family:var(--font-sans);font-size:24px;font-weight:800;color:#0f172a;margin-top:4px;white-space:nowrap">Bakım Kampanyaları</div>
+              <div style="font-size:13px;color:#5b6678;margin-top:2px">Müşterilerinize tek tıkla, kendi isimleriyle kişiselleştirilmiş WhatsApp bakım daveti gönderin.</div>
+            </div>
+            <div style="display:flex;gap:8px;flex:none">
+              <div style="min-width:92px;text-align:center;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">300</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;white-space:nowrap">Kayıtlı Müşteri</div></div>
+              <div style="min-width:92px;text-align:center;background:rgba(22,163,74,.08);border:1px solid rgba(34,197,94,.25);border-radius:12px;padding:9px 10px"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">3</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;white-space:nowrap">Kampanyaya Uygun</div></div>
+              <div style="min-width:92px;text-align:center;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:9px 10px"><div style="font-family:var(--font-sans);font-size:20px;font-weight:800;color:#16a34a">0</div><div style="font-size:10.5px;font-weight:700;color:#5b6678;white-space:nowrap">Seçili Alıcı</div></div>
+            </div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:12px 14px">
+            <div style="font-size:12.5px;color:#0f172a;line-height:1.4"><strong style="color:#16a34a">1</strong> Alıcıları Belirleyin <span style="color:#5b6678">— Filtreleyin veya tek tıkla tüm izinli müşterileri seçin</span></div>
+            <div style="font-size:12.5px;color:#0f172a;line-height:1.4"><strong style="color:#16a34a">2</strong> Önizlemeyi İnceleyin <span style="color:#5b6678">— Mesajın müşteride nasıl görüneceğini canlı kontrol edin</span></div>
+            <div style="font-size:12.5px;color:#0f172a;line-height:1.4"><strong style="color:#16a34a">3</strong> Tek Tıkla Başlatın <span style="color:#5b6678">— Sistem her müşteriye kendi adıyla tek tek iletsin</span></div>
+          </div>
+
+          <div style="display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:14px;align-items:start">
+
+            <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:16px;min-width:0">
+              <div style="font-family:var(--font-sans);font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap">Alıcıları Seç</div>
+              <div style="font-size:12px;color:#5b6678;margin-top:2px">Listeden istediğiniz müşterileri işaretleyin; mesaj sadece izinli olanlara gider.</div>
+              <div style="display:flex;gap:6px;margin-top:12px;flex-wrap:wrap">
+                <span style="padding:6px 11px;border-radius:999px;background:#16a34a;color:#fff;font-size:12px;font-weight:800;white-space:nowrap">Tümü (300)</span>
+                <span style="padding:6px 11px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap">İzinli (3)</span>
+                <span style="padding:6px 11px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap">Belirsiz (297)</span>
+                <span style="padding:6px 11px;border-radius:999px;background:#fff;border:1px solid #e2e8f0;color:#5b6678;font-size:12px;font-weight:700;white-space:nowrap">İstemiyor (0)</span>
+              </div>
+              <div style="display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;margin-top:10px">
+                <div style="height:42px;box-sizing:border-box;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc;font-size:13px;color:#94a3b8;white-space:nowrap"><i data-lucide="search" class="ic" style="width:14px;height:14px"></i>İsim, telefon veya ilçe ile ara...</div>
+                <div style="height:42px;display:flex;align-items:center;padding:0 14px;border-radius:12px;background:#16a34a;color:#fff;font-size:12.5px;font-weight:800;white-space:nowrap">Tüm İzinlileri Seç (3)</div>
+                <div style="height:42px;display:flex;align-items:center;padding:0 14px;border-radius:12px;border:1px solid #e2e8f0;color:#1f2937;font-size:12.5px;font-weight:700;white-space:nowrap">Görünenleri Seç</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:10px;padding:8px 10px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0">
+                <span style="font-size:10.5px;font-weight:800;color:#5b6678;letter-spacing:.06em;white-space:nowrap">TOPLU İZİN:</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#1f2937;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:6px 9px;white-space:nowrap"><i data-lucide="shield-check" class="ic" style="width:12px;height:12px"></i>Seçilenlere İzin Ver</span>
+                <span style="display:inline-flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:#1f2937;background:#fff;border:1px solid #e2e8f0;border-radius:9px;padding:6px 9px;white-space:nowrap"><i data-lucide="x-circle" class="ic" style="width:12px;height:12px"></i>Kampanya İstemiyor</span>
+              </div>
+
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-bottom:8px;border-bottom:1px solid #e2e8f0">
+                <span style="display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#0f172a;white-space:nowrap"><i data-lucide="square" class="ic" style="width:15px;height:15px;color:#94a3b8"></i>Tümünü İşaretle (300 müşteri)</span>
+                <span style="font-size:11px;color:#5b6678;white-space:nowrap">Satıra tıklayarak sağda önizleyebilirsiniz</span>
+              </div>
+
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;background:rgba(22,163,74,.08);border-left:3px solid #16a34a;border-bottom:1px solid #e2e8f0">
+                <i data-lucide="square" class="ic" style="width:16px;height:16px;color:#94a3b8"></i>
+                <div style="width:32px;height:32px;flex:none;border-radius:50%;background:rgba(22,163,74,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">K</div>
+                <div style="flex:1;min-width:0"><div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap"><span style="font-size:13.5px;font-weight:800;color:#0f172a;white-space:nowrap">kamil yolcu</span><span style="font-size:10px;font-weight:800;color:#16a34a;background:rgba(22,163,74,.12);border-radius:999px;padding:2px 7px;white-space:nowrap">Önizleniyor</span></div><div style="font-size:11.5px;color:#5b6678;white-space:nowrap">0536 266 35 15 · Bayrampaşa</div></div>
+                <span style="font-size:10.5px;font-weight:800;color:#a16207;background:#fff7e6;border-radius:999px;padding:3px 8px;white-space:nowrap">Belirsiz</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:800;color:#fff;background:#073368;border-radius:9px;padding:6px 10px;white-space:nowrap"><i data-lucide="eye" class="ic" style="width:12px;height:12px;color:#fff"></i>Önizle</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 8px;border-bottom:1px solid #e2e8f0">
+                <i data-lucide="square" class="ic" style="width:16px;height:16px;color:#94a3b8"></i>
+                <div style="width:32px;height:32px;flex:none;border-radius:50%;background:rgba(22,163,74,.12);color:#16a34a;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px">Ü</div>
+                <div style="flex:1;min-width:0"><div style="font-size:13.5px;font-weight:800;color:#0f172a;white-space:nowrap">Ümit Topal</div><div style="font-size:11.5px;color:#5b6678;white-space:nowrap">0536 967 35 11 · Esenler</div></div>
+                <span style="font-size:10.5px;font-weight:800;color:#a16207;background:#fff7e6;border-radius:999px;padding:3px 8px;white-space:nowrap">Belirsiz</span>
+                <span style="display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:700;color:#1f2937;border:1px solid #e2e8f0;border-radius:9px;padding:6px 10px;white-space:nowrap"><i data-lucide="eye" class="ic" style="width:12px;height:12px"></i>Önizle</span>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:16px">
+                <div style="font-family:var(--font-sans);font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap">Canlı Mesaj Önizlemesi</div>
+                <div style="font-size:12px;color:#5b6678;margin-top:2px">Müşterinin cep telefonunda mesaj tam olarak böyle görünecektir.</div>
+                <div style="margin-top:12px;border-radius:14px;overflow:hidden;border:1px solid #e2e8f0;background:#efeae2">
+                  <div style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#008069;color:#fff">
+                    <div style="width:30px;height:30px;border-radius:50%;background:#fff;overflow:hidden;flex:none"><img src="sancakkombiservislogo.jpg" alt="" style="width:100%;height:100%;object-fit:cover"></div>
+                    <div><div style="font-size:13px;font-weight:700;white-space:nowrap">Sancak Kombi ✔</div><div style="font-size:10px;opacity:.85;white-space:nowrap">Resmi İşletme Hesabı · 0212 581 75 74</div></div>
+                  </div>
+                  <div style="padding:12px">
+                    <div style="background:#fff;border-radius:10px;border-top-left-radius:2px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:#111b21;box-shadow:0 1px 3px rgba(0,0,0,.12)">
+                      Merhaba <strong style="background:#dcf8c6;padding:0 3px;border-radius:4px">kamil yolcu</strong> 👋<br>Kış gelmeden kombinizin bakımını yaptırmanın tam zamanı. 🔥<br><span style="color:#667781">… Sancak Kombi</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:16px;display:flex;flex-direction:column;gap:10px">
+                <div style="height:42px;box-sizing:border-box;display:flex;align-items:center;padding:0 12px;border:1px solid #e2e8f0;border-radius:12px;font-size:13px;color:#0f172a;background:#f8fafc;white-space:nowrap">2026 Sonbahar Bakım Kampanyası</div>
+                <div style="height:50px;border-radius:14px;background:#a7e8c0;color:#fff;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px;font-weight:800;white-space:nowrap"><i data-lucide="send" class="ic" style="width:16px;height:16px;color:#fff"></i>Gönderim İçin Müşteri Seçin</div>
+                <div style="display:flex;gap:6px;font-size:12px;line-height:1.5;color:#a16207;background:#fff7e6;border:1px solid #fde68a;border-radius:10px;padding:9px 11px"><i data-lucide="info" class="ic" style="width:14px;height:14px;margin-top:2px"></i><span>Sol listeden en az 1 <strong>izinli</strong> müşteri seçmelisiniz.</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div style="background:#fff;border:1px solid #e2e8f0;border-radius:18px;padding:16px">
+            <div style="display:flex;align-items:center;gap:8px;font-family:var(--font-sans);font-size:16px;font-weight:800;color:#0f172a;white-space:nowrap"><i data-lucide="clock-3" class="ic" style="width:17px;height:17px"></i>Kampanya Geçmişi &amp; Raporlar</div>
+            <div style="font-size:12px;color:#5b6678;margin-top:2px">Daha önce gönderilen kampanyalar ve müşteri geri dönüşleri.</div>
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:center;margin-top:12px;padding:12px 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+              <div style="min-width:0"><div style="font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap">2026 Sonbahar Bakım Kampanyası</div><div style="font-size:11px;color:#5b6678;white-space:nowrap">08 Eki 2026 · 1/1 gönderildi · 1 okundu</div></div>
+              <div style="min-width:0"><div style="font-size:10.5px;color:#5b6678">Alıcı</div><div style="font-size:12.5px;font-weight:800;color:#0f172a;white-space:nowrap">Fatih Sancaklı</div></div>
+              <div style="min-width:0"><div style="font-size:10.5px;color:#5b6678">Gönderim zamanı</div><div style="font-size:12.5px;font-weight:800;color:#0f172a;white-space:nowrap">08 Eki 2026 12:42</div></div>
+              <div><span style="display:inline-block;font-size:11px;font-weight:800;color:#16a34a;background:rgba(22,163,74,.12);border-radius:999px;padding:4px 9px;white-space:nowrap">Okundu</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr) minmax(0,1.3fr) minmax(0,1fr);gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid #e2e8f0">
+              <div style="min-width:0"><div style="font-size:13px;font-weight:800;color:#0f172a;white-space:nowrap">Bakım</div><div style="font-size:11px;color:#5b6678;white-space:nowrap">18 Eki 2026 · 1/1 gönderildi · 1 okundu</div></div>
+              <div style="min-width:0"><div style="font-size:10.5px;color:#5b6678">Alıcı</div><div style="font-size:12.5px;font-weight:800;color:#0f172a;white-space:nowrap">Fettah Sancaklı</div></div>
+              <div style="min-width:0"><div style="font-size:10.5px;color:#5b6678">Gönderim zamanı</div><div style="font-size:12.5px;font-weight:800;color:#0f172a;white-space:nowrap">18 Eki 2026 22:06</div></div>
+              <div><span style="display:inline-block;font-size:11px;font-weight:800;color:#16a34a;background:rgba(22,163,74,.12);border-radius:999px;padding:4px 9px;white-space:nowrap">Okundu</span></div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  componentDidMount() {
+    let n = 0;
+    const t = setInterval(() => {
+      n += 1;
+      if (window.lucide) lucide.createIcons({ attrs: { 'stroke-width': 2 } });
+      if (n > 20) clearInterval(t);
+    }, 250);
+  }
+}
+</script>
+</body>
+</html>
