@@ -183,8 +183,17 @@ fun ServiceReceiptScreen(
     }
 
     val dateStr = receiptDetail?.date?.ifBlank { null } ?: record?.date?.ifBlank { null } ?: "-"
-    val amountVal = if ((receiptDetail?.amount ?: 0.0) > 0.0) receiptDetail!!.amount else (record?.amount ?: 0.0)
-    val amountStr = "₺%.2f".format(amountVal).replace(".", ",")
+    val totalAmount = receiptDetail?.totalAmount?.takeIf { it > 0.0 }
+        ?: record?.totalAmount?.takeIf { it > 0.0 }
+        ?: receiptDetail?.amount?.takeIf { it > 0.0 }
+        ?: record?.amount
+        ?: 0.0
+    val collectedAmount = (receiptDetail?.collectedAmount ?: record?.collectedAmount ?: 0.0)
+        .coerceIn(0.0, totalAmount.coerceAtLeast(0.0))
+    val remainingAmount = (totalAmount - collectedAmount).coerceAtLeast(0.0)
+    val amountStr = "₺%.2f".format(totalAmount).replace(".", ",")
+    val collectedAmountStr = "₺%.2f".format(collectedAmount).replace(".", ",")
+    val remainingAmountStr = "₺%.2f".format(remainingAmount).replace(".", ",")
 
     val deviceBrand = receiptDetail?.deviceBrand?.ifBlank { null } ?: ""
     val deviceModel = receiptDetail?.deviceModel?.ifBlank { null } ?: ""
@@ -640,6 +649,23 @@ fun ServiceReceiptScreen(
                                     fontWeight = FontWeight.Bold,
                                     color = if (isExpense) Color(0xFFDC2626) else Color(0xFF059669)
                                 )
+                            }
+                            if (!isExpense) {
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text("Tahsil Edilen", fontSize = 11.sp, color = Color.Gray)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(collectedAmountStr, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFF059669))
+                                }
+                                Row(modifier = Modifier.fillMaxWidth()) {
+                                    Text("Kalan Alacak", fontSize = 11.sp, color = Color.Gray)
+                                    Spacer(modifier = Modifier.weight(1f))
+                                    Text(
+                                        remainingAmountStr,
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = if (remainingAmount > 0.0) Color(0xFFDC2626) else Color(0xFF059669)
+                                    )
+                                }
                             }
                             Row(modifier = Modifier.fillMaxWidth()) {
                                 Text("Ödeme Yöntemi", fontSize = 11.sp, color = Color.Gray)

@@ -1,5 +1,7 @@
 package com.example
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -16,6 +18,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.initializer
@@ -51,6 +56,19 @@ import com.example.ui.theme.SancakKombiTheme
 import com.example.ui.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
+
+    private fun openServiceReceiptPdf(entryId: String) {
+        if (entryId.isBlank()) {
+            Toast.makeText(this, "PDF servis fişi bulunamadı.", Toast.LENGTH_LONG).show()
+            return
+        }
+        val previewUrl = "https://www.sancakkombi.com/api/receipt/${Uri.encode(entryId)}"
+        runCatching {
+            startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(previewUrl)))
+        }.onFailure {
+            Toast.makeText(this, "PDF önizlemesi açılamadı.", Toast.LENGTH_LONG).show()
+        }
+    }
 
     private val viewModel: MainViewModel by viewModels {
         viewModelFactory {
@@ -90,6 +108,7 @@ class MainActivity : ComponentActivity() {
             val stockItems by viewModel.stockItems.collectAsState()
             val stockMovements by viewModel.stockMovements.collectAsState()
             val selectedRecordForReceipt by viewModel.selectedFinanceRecordForReceipt.collectAsState()
+            var receiptReturnRoute by remember { mutableStateOf("finance") }
 
             val proposals by viewModel.proposals.collectAsState()
             val selectedProposal by viewModel.selectedProposal.collectAsState()
@@ -199,6 +218,7 @@ class MainActivity : ComponentActivity() {
                                     AppointmentsScreen(
                                         appointments = appointments,
                                         customers = customers,
+                                        financeRecords = financeRecords,
                                         stockItems = stockItems,
                                         bankAccounts = bankAccounts,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
@@ -208,6 +228,9 @@ class MainActivity : ComponentActivity() {
                                         onCompleteJob = { id, report, callback -> viewModel.completeJob(id, report, callback) },
                                         onCreateServiceReceipt = { appointment, report, callback ->
                                             viewModel.createServiceReceipt(appointment, report, callback)
+                                        },
+                                        onViewReceipt = { record ->
+                                            openServiceReceiptPdf(record.id)
                                         },
                                         onDeleteAppointment = { id -> viewModel.deleteAppointment(id) },
                                         onSendBankTransfer = { id, accKey, amt, date, callback ->
@@ -235,6 +258,7 @@ class MainActivity : ComponentActivity() {
                                             viewModel.updateFinanceRecordStatus(id, status, onResult)
                                         },
                                         onViewReceipt = { record ->
+                                            receiptReturnRoute = "customers"
                                             viewModel.selectFinanceRecordForReceipt(record)
                                             viewModel.navigateTo("service_receipt")
                                         }
@@ -257,6 +281,7 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onUpdateBankAccounts = { accs -> viewModel.updateBankAccounts(accs) },
                                         onViewReceipt = { record ->
+                                            receiptReturnRoute = "finance"
                                             viewModel.selectFinanceRecordForReceipt(record)
                                             viewModel.navigateTo("service_receipt")
                                         }
@@ -265,7 +290,7 @@ class MainActivity : ComponentActivity() {
                                 "service_receipt", "makbuz" -> {
                                     ServiceReceiptScreen(
                                         record = selectedRecordForReceipt,
-                                        onBackClick = { viewModel.navigateTo("finance") },
+                                        onBackClick = { viewModel.navigateTo(receiptReturnRoute) },
                                         onFetchReceiptDetail = { id -> viewModel.getReceiptDetail(id) }
                                     )
                                 }

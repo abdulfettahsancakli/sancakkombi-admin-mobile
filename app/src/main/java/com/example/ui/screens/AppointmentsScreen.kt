@@ -70,6 +70,7 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.BankAccount
 import com.example.data.model.Customer
+import com.example.data.model.FinanceRecord
 import com.example.data.model.JobReport
 import com.example.data.model.StockItem
 import com.example.utils.parseLocalizedDouble
@@ -81,6 +82,7 @@ import kotlin.math.abs
 fun AppointmentsScreen(
     appointments: List<Appointment>,
     customers: List<Customer> = emptyList(),
+    financeRecords: List<FinanceRecord> = emptyList(),
     stockItems: List<StockItem> = emptyList(),
     bankAccounts: List<BankAccount> = emptyList(),
     onBackClick: () -> Unit,
@@ -89,6 +91,7 @@ fun AppointmentsScreen(
     onUpdateStatus: (String, AppointmentStatus) -> Unit,
     onCompleteJob: (String, JobReport, (Result<Unit>) -> Unit) -> Unit,
     onCreateServiceReceipt: ((Appointment, JobReport, (Result<Unit>) -> Unit) -> Unit)? = null,
+    onViewReceipt: (FinanceRecord) -> Unit = {},
     onDeleteAppointment: (String) -> Unit,
     onSendBankTransfer: ((String, String, Double?, String?, (Result<String>) -> Unit) -> Unit)? = null,
     onGetAvailableSlots: ((String, (Result<List<String>>) -> Unit) -> Unit)? = null,
@@ -132,6 +135,21 @@ fun AppointmentsScreen(
         }
     }
     val showToast: (String) -> Unit = { msg -> toastMessage = msg }
+    val openCompletionOrReceipt: (Appointment) -> Unit = { appointment ->
+        if (appointment.status == AppointmentStatus.TAMAMLANDI) {
+            val receiptRecord = financeRecords
+                .filter { it.appointmentId == appointment.id }
+                .maxByOrNull { it.totalAmount }
+            if (receiptRecord != null) {
+                onViewReceipt(receiptRecord)
+            } else {
+                showToast("Bu randevuya ait PDF servis fişi bulunamadı")
+            }
+        } else {
+            receiptTargetAppointment = appointment
+            showServiceReceiptModal = true
+        }
+    }
 
     // Count appointments per customer name to determine "Eski müşteri" vs "Yeni"
     val customerAppointmentCounts = remember(appointments, customers) {
@@ -271,10 +289,7 @@ fun AppointmentsScreen(
                         else "🔄 Randevu tekrar açıldı"
                     )
                 },
-                onCompleteOrReceipt = { appt ->
-                    receiptTargetAppointment = appt
-                    showServiceReceiptModal = true
-                },
+                onCompleteOrReceipt = openCompletionOrReceipt,
                 onUpdateAppointmentStatus = { appt, status ->
                     onUpdateStatus(appt.id, status)
                     showToast("Randevu durumu ${status.label.lowercase(TrLocale)} olarak güncellendi")
@@ -379,10 +394,7 @@ fun AppointmentsScreen(
                                         onUpdateStatus(appt.id, next)
                                         showToast("❌ Randevu durumu güncellendi")
                                     },
-                                    onCompleteOrReceipt = { appt ->
-                                        receiptTargetAppointment = appt
-                                        showServiceReceiptModal = true
-                                    },
+                                    onCompleteOrReceipt = openCompletionOrReceipt,
                                     onUpdateAppointmentStatus = { appt, status ->
                                         onUpdateStatus(appt.id, status)
                                         showToast("Randevu durumu ${status.label.lowercase(TrLocale)} olarak güncellendi")
@@ -417,10 +429,7 @@ fun AppointmentsScreen(
                                         selectedAppointmentId = appt.id
                                         detailSheetAppointment = appt
                                     },
-                                    onCompleteOrReceipt = { appt ->
-                                        receiptTargetAppointment = appt
-                                        showServiceReceiptModal = true
-                                    },
+                                    onCompleteOrReceipt = openCompletionOrReceipt,
                                     onUpdateAppointmentStatus = { appt, status ->
                                         onUpdateStatus(appt.id, status)
                                         showToast("Randevu durumu ${status.label.lowercase(TrLocale)} olarak güncellendi")
@@ -674,8 +683,7 @@ fun AppointmentsScreen(
                             },
                             onCompleteOrReceipt = {
                                 detailSheetAppointment = null
-                                receiptTargetAppointment = sheetAppt
-                                showServiceReceiptModal = true
+                                openCompletionOrReceipt(sheetAppt)
                             },
                             onUpdateStatus = { status ->
                                 onUpdateStatus(sheetAppt.id, status)
