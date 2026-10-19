@@ -6,9 +6,12 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.os.Build
 import android.widget.Toast
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 import com.example.MainActivity
 import com.example.data.model.Appointment
 import java.text.SimpleDateFormat
@@ -19,6 +22,15 @@ object ReminderManager {
 
     private const val CHANNEL_ID = "appointment_reminders_channel"
     private const val CHANNEL_NAME = "Randevu Hatırlatıcıları"
+
+    fun areNotificationsEnabled(context: Context): Boolean {
+        val permissionGranted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+            ContextCompat.checkSelfPermission(
+                context,
+                android.Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        return permissionGranted && NotificationManagerCompat.from(context).areNotificationsEnabled()
+    }
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -44,6 +56,7 @@ object ReminderManager {
         createNotificationChannel(context)
 
         val triggerTimeMillis = parseAppointmentTime(appointment.date, appointment.timeSlot, minutesBefore)
+            ?: return
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
         val intent = Intent(context, AppointmentReminderReceiver::class.java).apply {
@@ -177,9 +190,6 @@ object ReminderManager {
             set(Calendar.HOUR_OF_DAY, hour)
             set(Calendar.MINUTE, minute)
             set(Calendar.SECOND, 0)
-            if (timeInMillis <= System.currentTimeMillis()) {
-                add(Calendar.DAY_OF_YEAR, 1)
-            }
         }
 
         val intent = Intent(context, AppointmentReminderReceiver::class.java).apply {
@@ -196,11 +206,14 @@ object ReminderManager {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        // The summary contains today's live data, so never carry it into tomorrow.
+        alarmManager.cancel(pendingIntent)
+        if (calendar.timeInMillis <= System.currentTimeMillis()) return
+
         try {
-            alarmManager.setRepeating(
+            alarmManager.setAndAllowWhileIdle(
                 AlarmManager.RTC_WAKEUP,
                 calendar.timeInMillis,
-                AlarmManager.INTERVAL_DAY,
                 pendingIntent
             )
         } catch (e: Exception) {
@@ -215,6 +228,7 @@ object ReminderManager {
     }
 
     fun showImmediateNotification(context: Context, title: String, message: String) {
+        if (!areNotificationsEnabled(context)) return
         createNotificationChannel(context)
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -251,18 +265,18 @@ object ReminderManager {
         alarmManager.cancel(pendingIntent)
     }
 
-    private fun parseAppointmentTime(dateStr: String, timeSlot: String, minutesBefore: Int): Long {
+    private fun parseAppointmentTime(dateStr: String, timeSlot: String, minutesBefore: Int): Long? {
         val calendar = Calendar.getInstance()
 
         try {
             // Check if dateStr is YYYY-MM-DD or DD.MM.YYYY
-            val sdf = if (dateStr.contains("-")) {
-                SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-            } else if (dateStr.contains(".")) {
-                SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
-            } else {
-                null
-            }
+            val sdf = when {
+                dateStr.length >= 10 && dateStr.getOrNull(4) == '-' ->
+                    SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                dateStr.contains(".") -> SimpleDateFormat("dd.MM.yyyy", Locale.getDefault())
+                dateStr.contains("/") -> SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+                else -> null
+            }?.apply { isLenient = false }
 
             if (sdf != null) {
                 val parsedDate = sdf.parse(dateStr)
@@ -281,19 +295,14 @@ object ReminderManager {
                 calendar.set(Calendar.MINUTE, minute)
                 calendar.set(Calendar.SECOND, 0)
             }
-        } catch (e: Exception) {
-            e.printStackTrace()
+        } catch (_: Exception) {
+            return null
         }
 
         // Subtract minutesBefore
         calendar.add(Calendar.MINUTE, -minutesBefore)
 
         val targetMillis = calendar.timeInMillis
-        // If targetMillis is in the past, schedule for 10 seconds from now for demo
-        return if (targetMillis <= System.currentTimeMillis()) {
-            System.currentTimeMillis() + 10000L
-        } else {
-            targetMillis
-        }
+        return targetMillis.takeIf { it > System.currentTimeMillis() }
     }
 }

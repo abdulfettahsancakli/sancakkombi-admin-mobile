@@ -28,6 +28,7 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         customerName: String,
         address: String
     ) {
+        if (!ReminderManager.areNotificationsEnabled(context)) return
         val notificationManager =
             context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -55,7 +56,9 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val contentText = if (customerName.isNotBlank()) {
+        val contentText = if (appointmentId.startsWith("daily_")) {
+            customerName.ifBlank { "Günlük servis planınız hazır." }
+        } else if (customerName.isNotBlank()) {
             "Müşteri: $customerName | $address"
         } else {
             "Yaklaşan randevunuzun zamanı geldi."

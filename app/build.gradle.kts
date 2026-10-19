@@ -15,8 +15,8 @@ val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
   ?: System.getenv("MAPS_API_KEY")
   ?: localProperties.getProperty("MAPS_API_KEY").orEmpty()
 val escapedMapsApiKey = mapsApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
-val appVersionCode = 18
-val appVersionName = "1.17"
+val appVersionCode = 19
+val appVersionName = "1.18"
 
 android {
   namespace = "com.example"

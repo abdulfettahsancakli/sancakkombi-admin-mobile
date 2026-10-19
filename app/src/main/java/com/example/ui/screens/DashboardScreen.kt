@@ -39,15 +39,14 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.AddAlert
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.Handyman
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.PendingActions
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsOff
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Receipt
@@ -60,7 +59,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -115,6 +113,8 @@ import kotlinx.coroutines.delay
 fun DashboardScreen(
     stats: DashboardStats,
     appointments: List<com.example.data.model.Appointment> = emptyList(),
+    phoneNotificationsEnabled: Boolean = false,
+    onEnablePhoneNotifications: () -> Unit = {},
     onNavigateToModule: (AdminModule) -> Unit,
     onOpenWhatsAppTemplates: () -> Unit,
     modifier: Modifier = Modifier
@@ -142,52 +142,49 @@ fun DashboardScreen(
         SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
     }
     val todayAppts = remember(appointments, todayStr) {
-        appointments.filter { it.date == todayStr || it.date.contains(todayStr) }.ifEmpty { appointments.take(4) }
+        appointments
+            .filter {
+                normalizeToIsoDate(it.date) == todayStr &&
+                    it.status != com.example.data.model.AppointmentStatus.IPTAL
+            }
+            .sortedBy {
+                val (hour, minute) = parseSlotStart(it.timeSlot)
+                hour * 60 + minute
+            }
     }
 
     val dynamicNotifications = remember(stats, todayAppts, nowMillis) {
         val list = mutableListOf<DynamicNotificationItem>()
         val now = Calendar.getInstance().apply { timeInMillis = nowMillis }
 
-        val firstAppt = todayAppts.firstOrNull()
-        val morningDesc = if (firstAppt != null) {
-            "Bugün toplam ${todayAppts.size} randevunuz var, hepsini birlikte hallederiz! İlk servis: ${firstAppt.timeSlot} - ${firstAppt.customerName} (${firstAppt.district})"
-        } else {
-            "Bugün için planlanmış randevunuz bulunmuyor. İyi çalışmalar dileriz!"
+        val completedCount = todayAppts.count {
+            it.status == com.example.data.model.AppointmentStatus.TAMAMLANDI
         }
-        // 09:00 card — only once 09:00 has actually passed; label = real time-ago
-        if (isAtOrAfter(now, 9, 0)) {
-            list.add(
-                DynamicNotificationItem(
-                    title = "☀️ Günün Randevu Özeti (09:00)",
-                    desc = morningDesc,
-                    time = timeAgoLabel(now, 9, 0),
-                    isUnread = minutesSince(now, 9, 0) < 120,
-                    icon = Icons.Default.DateRange,
-                    iconColor = Color(0xFF0288D1),
-                    targetModule = AdminModule.RANDEVULAR
-                )
+        val remainingCount = todayAppts.size - completedCount
+        list.add(
+            DynamicNotificationItem(
+                title = if (todayAppts.isEmpty()) "Bugün planınız boş" else "Bugünün servis planı",
+                desc = if (todayAppts.isEmpty()) {
+                    "Bugün için kayıtlı bir servis randevusu bulunmuyor."
+                } else {
+                    "${todayAppts.size} randevu • $completedCount tamamlandı • $remainingCount kaldı"
+                },
+                time = "Bugün",
+                requiresAttention = false,
+                icon = Icons.Default.DateRange,
+                iconColor = Color(0xFF0288D1),
+                actionLabel = "Planı aç",
+                targetModule = AdminModule.RANDEVULAR
             )
-        }
-
-        // 12:00 card — only once noon has actually passed
-        if (isAtOrAfter(now, 12, 0)) {
-            list.add(
-                DynamicNotificationItem(
-                    title = "🕛 Gün Ortası Durumu (12:00)",
-                    desc = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edebilirsiniz.",
-                    time = timeAgoLabel(now, 12, 0),
-                    isUnread = minutesSince(now, 12, 0) < 120,
-                    icon = Icons.Default.PendingActions,
-                    iconColor = Color(0xFFF59E0B),
-                    targetModule = AdminModule.RANDEVULAR
-                )
-            )
-        }
+        )
 
         // Next-appointment card — live countdown/elapsed based on its real time slot
-        if (firstAppt != null) {
-            val (h, m) = parseSlotStart(firstAppt.timeSlot)
+        val nextAppt = todayAppts.firstOrNull { appointment ->
+            appointment.status != com.example.data.model.AppointmentStatus.TAMAMLANDI &&
+                parseSlotStart(appointment.timeSlot).let { (h, m) -> minutesUntil(now, h, m) >= -60 }
+        }
+        if (nextAppt != null) {
+            val (h, m) = parseSlotStart(nextAppt.timeSlot)
             val diffMin = minutesUntil(now, h, m)
             val liveLabel = when {
                 diffMin > 0 && diffMin < 60 -> "$diffMin dakika sonra"
@@ -197,12 +194,13 @@ fun DashboardScreen(
             }
             list.add(
                 DynamicNotificationItem(
-                    title = "⏰ Yaklaşan Randevu",
-                    desc = "${firstAppt.customerName} • ${firstAppt.serviceType} (${firstAppt.district}, ${firstAppt.timeSlot})",
+                    title = "Sıradaki servis",
+                    desc = "${nextAppt.customerName} • ${nextAppt.serviceType} • ${nextAppt.district}",
                     time = liveLabel,
-                    isUnread = diffMin > -120,
+                    requiresAttention = diffMin in -15..60,
                     icon = Icons.Default.Bolt,
                     iconColor = Color(0xFF10B981),
+                    actionLabel = "Randevuyu aç",
                     targetModule = AdminModule.RANDEVULAR
                 )
             )
@@ -211,33 +209,37 @@ fun DashboardScreen(
         if (stats.bekleyenOnay > 0) {
             list.add(
                 DynamicNotificationItem(
-                    title = "📋 Bekleyen Teklif Yanıtı",
-                    desc = "${stats.bekleyenOnay} adet müşteri teklifi yanıt beklemektedir.",
-                    time = "Bugün",
-                    isUnread = false,
+                    title = "Yanıt bekleyen teklifler",
+                    desc = "${stats.bekleyenOnay} teklif müşteri onayı bekliyor.",
+                    time = "Aksiyon",
+                    requiresAttention = true,
                     icon = Icons.Default.Description,
-                    iconColor = Color(0xFF8B5CF6),
+                    iconColor = Color(0xFFF59E0B),
+                    actionLabel = "Teklifleri aç",
                     targetModule = AdminModule.TEKLIFLER
                 )
             )
         }
 
-        list.add(
-            DynamicNotificationItem(
-                title = "🔧 Yaklaşan Periyodik Bakımlar",
-                desc = "Yıllık kombi bakımı yaklaşan müşterilerinizi Bakım Takvimi üzerinden inceleyebilirsiniz.",
-                time = "Dün",
-                isUnread = false,
-                icon = Icons.Default.Handyman,
-                iconColor = Color(0xFFF97316),
-                targetModule = AdminModule.BAKIM_TAKVIMLERI
+        if (stats.acikAlacak.filter(Char::isDigit).any { it != '0' }) {
+            list.add(
+                DynamicNotificationItem(
+                    title = "Takip edilecek alacak",
+                    desc = "Toplam ${stats.acikAlacak} açık alacak bulunuyor.",
+                    time = "Aksiyon",
+                    requiresAttention = true,
+                    icon = Icons.Default.Wallet,
+                    iconColor = Color(0xFFDC2626),
+                    actionLabel = "Finansı aç",
+                    targetModule = AdminModule.FINANS
+                )
             )
-        )
+        }
 
         list
     }
 
-    val unreadCount = dynamicNotifications.count { it.isUnread }
+    val attentionCount = dynamicNotifications.count { it.requiresAttention }
 
     AnimatedVisibility(
         visible = contentVisible,
@@ -256,7 +258,7 @@ fun DashboardScreen(
             item(span = { GridItemSpan(2) }) {
                 DashboardGreetingHeader(
                     currentDate = currentDateStr,
-                    unreadNotificationCount = unreadCount,
+                    unreadNotificationCount = attentionCount,
                     onOpenNotifications = { showNotificationDialog = true }
                 )
             }
@@ -406,6 +408,8 @@ fun DashboardScreen(
     if (showNotificationDialog) {
         NotificationCenterDialog(
             notifications = dynamicNotifications,
+            phoneNotificationsEnabled = phoneNotificationsEnabled,
+            onEnablePhoneNotifications = onEnablePhoneNotifications,
             onNotificationClick = { module ->
                 onNavigateToModule(module)
             },
@@ -433,7 +437,10 @@ private fun DashboardGreetingHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
+            ) {
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -451,47 +458,66 @@ private fun DashboardGreetingHeader(
 
                 Spacer(modifier = Modifier.width(12.dp))
 
-                Column {
-                    // Warmer, more personal greeting for the field technician
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Günaydın, Usta! 👋",
+                        text = "Günaydın, Usta",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "$currentDate · bugün harika bir gün olacak",
+                        text = currentDate,
                         fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            Box(contentAlignment = Alignment.TopEnd) {
-                IconButton(
-                    onClick = onOpenNotifications,
-                    modifier = Modifier
-                        .size(42.dp)
-                        .clip(CircleShape)
-                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
-                ) {
-                    Text(text = "🔔", fontSize = 17.sp)
-                }
+            Spacer(modifier = Modifier.width(8.dp))
 
-                if (unreadNotificationCount > 0) {
-                    Box(
-                        modifier = Modifier
-                            .size(18.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFEF4444)),
-                        contentAlignment = Alignment.Center
-                    ) {
+            Surface(
+                onClick = onOpenNotifications,
+                shape = RoundedCornerShape(14.dp),
+                color = if (unreadNotificationCount > 0) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.55f)
+                },
+                contentColor = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier
+                    .height(48.dp)
+                    .testTag("dashboard_notifications")
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 11.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        imageVector = if (unreadNotificationCount > 0) {
+                            Icons.Default.NotificationsActive
+                        } else {
+                            Icons.Default.Notifications
+                        },
+                        contentDescription = if (unreadNotificationCount > 0) {
+                            "$unreadNotificationCount işlem dikkat bekliyor"
+                        } else {
+                            "Bildirimleri aç"
+                        },
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    if (unreadNotificationCount > 0) {
                         Text(
-                            text = unreadNotificationCount.toString(),
-                            fontSize = 10.sp,
+                            text = "$unreadNotificationCount aksiyon",
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            maxLines = 1
                         )
                     }
                 }
@@ -1075,34 +1101,11 @@ private fun PulseEffectDot(
 
 // ---- Real-clock helpers for the notification panel ----
 
-private fun isAtOrAfter(now: Calendar, hour: Int, minute: Int): Boolean {
-    val target = (now.clone() as Calendar).apply {
-        set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
-    }
-    return now.timeInMillis >= target.timeInMillis
-}
-
-private fun minutesSince(now: Calendar, hour: Int, minute: Int): Int {
-    val target = (now.clone() as Calendar).apply {
-        set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
-    }
-    return ((now.timeInMillis - target.timeInMillis) / 60_000L).toInt()
-}
-
 private fun minutesUntil(now: Calendar, hour: Int, minute: Int): Int {
     val target = (now.clone() as Calendar).apply {
         set(Calendar.HOUR_OF_DAY, hour); set(Calendar.MINUTE, minute); set(Calendar.SECOND, 0)
     }
     return ((target.timeInMillis - now.timeInMillis) / 60_000L).toInt()
-}
-
-private fun timeAgoLabel(now: Calendar, hour: Int, minute: Int): String {
-    val diff = minutesSince(now, hour, minute)
-    return when {
-        diff < 1 -> "Az önce"
-        diff < 60 -> "$diff dakika önce"
-        else -> "${diff / 60} saat önce"
-    }
 }
 
 /** Parses a slot like "14:00" or "14:00-16:00" into (hour, minute). */
@@ -1118,15 +1121,18 @@ data class DynamicNotificationItem(
     val title: String,
     val desc: String,
     val time: String,
-    val isUnread: Boolean,
+    val requiresAttention: Boolean,
     val icon: ImageVector,
     val iconColor: Color,
+    val actionLabel: String,
     val targetModule: AdminModule
 )
 
 @Composable
 private fun NotificationCenterDialog(
     notifications: List<DynamicNotificationItem>,
+    phoneNotificationsEnabled: Boolean,
+    onEnablePhoneNotifications: () -> Unit,
     onNotificationClick: (AdminModule) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -1154,18 +1160,33 @@ private fun NotificationCenterDialog(
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
-                    Text("Usta Bildirimleri", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                    Column {
+                        Text("İş Merkezi", fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                        Text(
+                            "Bugünün önemli işleri",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
 
                 Surface(
                     shape = RoundedCornerShape(12.dp),
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                    color = if (notifications.any { it.requiresAttention }) {
+                        Color(0xFFF59E0B).copy(alpha = 0.14f)
+                    } else {
+                        MaterialTheme.colorScheme.primaryContainer
+                    }
                 ) {
                     Text(
-                        text = "09:00 & 12:00 Aktif",
+                        text = if (notifications.any { it.requiresAttention }) {
+                            "${notifications.count { it.requiresAttention }} aksiyon"
+                        } else {
+                            "Güncel"
+                        },
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
@@ -1176,6 +1197,63 @@ private fun NotificationCenterDialog(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = MaterialTheme.colorScheme.surface,
+                    border = BorderStroke(
+                        1.dp,
+                        if (phoneNotificationsEnabled) Color(0xFF10B981).copy(alpha = 0.45f)
+                        else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = if (phoneNotificationsEnabled) {
+                                Icons.Default.NotificationsActive
+                            } else {
+                                Icons.Default.NotificationsOff
+                            },
+                            contentDescription = null,
+                            tint = if (phoneNotificationsEnabled) Color(0xFF059669)
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (phoneNotificationsEnabled) {
+                                    "Telefon bildirimleri açık"
+                                } else {
+                                    "Telefon bildirimleri kapalı"
+                                },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = if (phoneNotificationsEnabled) {
+                                    "Randevudan 30 dakika önce haber verilecek."
+                                } else {
+                                    "Yaklaşan servisleri kaçırmamak için izin verin."
+                                },
+                                fontSize = 11.sp,
+                                lineHeight = 15.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (!phoneNotificationsEnabled) {
+                            TextButton(onClick = onEnablePhoneNotifications) {
+                                Text("Aç", fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
                 notifications.forEach { item ->
                     NotificationItemCard(
                         item = item,
@@ -1204,8 +1282,12 @@ private fun NotificationItemCard(
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(14.dp),
-        color = if (item.isUnread) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-        border = BorderStroke(1.dp, if (item.isUnread) item.iconColor.copy(alpha = 0.35f) else MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(
+            1.dp,
+            if (item.requiresAttention) item.iconColor.copy(alpha = 0.5f)
+            else MaterialTheme.colorScheme.outline.copy(alpha = 0.22f)
+        )
     ) {
         Row(
             modifier = Modifier
@@ -1240,8 +1322,12 @@ private fun NotificationItemCard(
                         text = item.title,
                         fontSize = 12.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = item.time,
                         fontSize = 10.sp,
@@ -1254,8 +1340,38 @@ private fun NotificationItemCard(
                     text = item.desc,
                     fontSize = 11.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 15.sp
+                    lineHeight = 15.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Spacer(modifier = Modifier.height(6.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (item.requiresAttention) {
+                        Text(
+                            text = "Aksiyon gerekli",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = item.iconColor
+                        )
+                        Text(
+                            text = "  •  ",
+                            fontSize = 10.sp,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Text(
+                        text = item.actionLabel,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
         }
     }

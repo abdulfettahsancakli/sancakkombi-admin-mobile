@@ -1,12 +1,16 @@
 package com.example
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -23,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.data.local.TokenStore
@@ -90,6 +95,19 @@ class MainActivity : ComponentActivity() {
         com.example.utils.ReminderManager.createNotificationChannel(applicationContext)
         enableEdgeToEdge()
         setContent {
+            var phoneNotificationsEnabled by remember {
+                mutableStateOf(com.example.utils.ReminderManager.areNotificationsEnabled(applicationContext))
+            }
+            val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission()
+            ) { granted ->
+                phoneNotificationsEnabled = granted
+                Toast.makeText(
+                    applicationContext,
+                    if (granted) "Telefon bildirimleri açıldı." else "Bildirim izni verilmedi.",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
             val isLoggedIn by viewModel.isLoggedIn.collectAsState()
             val isDarkTheme by viewModel.isDarkTheme.collectAsState()
             val currentRoute by viewModel.currentRoute.collectAsState()
@@ -136,12 +154,35 @@ class MainActivity : ComponentActivity() {
             val campaignsError by viewModel.campaignsError.collectAsState()
             val whatsAppStatus by viewModel.whatsAppStatus.collectAsState()
 
-            LaunchedEffect(appointments) {
-                com.example.utils.ReminderManager.scheduleDailySummaryReminders(
-                    applicationContext,
-                    appointments.size,
-                    appointments.firstOrNull()?.let { "${it.timeSlot} - ${it.customerName} (${it.district})" }
-                )
+            LaunchedEffect(appointments, phoneNotificationsEnabled) {
+                if (phoneNotificationsEnabled) {
+                    val today = com.example.ui.screens.todayIsoString()
+                    val todayAppointments = appointments
+                        .filter {
+                            com.example.ui.screens.normalizeToIsoDate(it.date) == today &&
+                                it.status != com.example.data.model.AppointmentStatus.IPTAL
+                        }
+                        .sortedBy { it.timeSlot }
+                    com.example.utils.ReminderManager.scheduleDailySummaryReminders(
+                        applicationContext,
+                        todayAppointments.size,
+                        todayAppointments.firstOrNull()?.let {
+                            "${it.timeSlot} - ${it.customerName} (${it.district})"
+                        }
+                    )
+                    appointments.forEach {
+                        if (it.status == com.example.data.model.AppointmentStatus.IPTAL ||
+                            it.status == com.example.data.model.AppointmentStatus.TAMAMLANDI
+                        ) {
+                            com.example.utils.ReminderManager.cancelReminder(applicationContext, it.id)
+                        } else {
+                            com.example.utils.ReminderManager.scheduleAppointmentReminder(
+                                applicationContext,
+                                it
+                            )
+                        }
+                    }
+                }
             }
 
             SancakKombiTheme(darkTheme = isDarkTheme) {
@@ -206,6 +247,24 @@ class MainActivity : ComponentActivity() {
                                     DashboardScreen(
                                         stats = stats,
                                         appointments = appointments,
+                                        phoneNotificationsEnabled = phoneNotificationsEnabled,
+                                        onEnablePhoneNotifications = {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                                                ContextCompat.checkSelfPermission(
+                                                    this@MainActivity,
+                                                    Manifest.permission.POST_NOTIFICATIONS
+                                                ) != PackageManager.PERMISSION_GRANTED
+                                            ) {
+                                                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                                            } else {
+                                                phoneNotificationsEnabled = true
+                                                Toast.makeText(
+                                                    applicationContext,
+                                                    "Telefon bildirimleri açık.",
+                                                    Toast.LENGTH_SHORT
+                                                ).show()
+                                            }
+                                        },
                                         onNavigateToModule = { module ->
                                             viewModel.navigateTo(module.id, module)
                                         },
