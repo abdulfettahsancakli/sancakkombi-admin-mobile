@@ -431,6 +431,9 @@ fun TabletLandscapeSplitView(
     t: AppointmentTokens,
     allAppointments: List<Appointment>,
     filteredAppointments: List<Appointment>,
+    filteredCount: Int,
+    visibleCount: Int,
+    onLoadMore: () -> Unit,
     selectedAppointment: Appointment?,
     onSelectAppointment: (Appointment) -> Unit,
     searchQuery: String,
@@ -441,6 +444,7 @@ fun TabletLandscapeSplitView(
     onEditAppointment: (Appointment) -> Unit,
     onCancelAppointment: (Appointment) -> Unit,
     onCompleteOrReceipt: (Appointment) -> Unit,
+    onUpdateAppointmentStatus: (Appointment, AppointmentStatus) -> Unit,
     onDeleteAppointment: (Appointment) -> Unit,
     onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -578,6 +582,26 @@ fun TabletLandscapeSplitView(
                                 }
                             }
                         }
+                        if (visibleCount < filteredCount) {
+                            item(key = "tablet_load_more") {
+                                Surface(
+                                    onClick = onLoadMore,
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = t.primaryC,
+                                    border = BorderStroke(1.dp, t.primary),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Box(modifier = Modifier.padding(11.dp), contentAlignment = Alignment.Center) {
+                                        Text(
+                                            "Daha fazla göster (${filteredCount - visibleCount})",
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = t.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -602,6 +626,7 @@ fun TabletLandscapeSplitView(
                     onEdit = { onEditAppointment(sel) },
                     onCancel = { onCancelAppointment(sel) },
                     onCompleteOrReceipt = { onCompleteOrReceipt(sel) },
+                    onUpdateStatus = { status -> onUpdateAppointmentStatus(sel, status) },
                     onDelete = { onDeleteAppointment(sel) },
                     onShowToast = onShowToast
                 )
@@ -629,11 +654,13 @@ fun AppointmentDetailPane(
     onEdit: () -> Unit,
     onCancel: () -> Unit,
     onCompleteOrReceipt: () -> Unit,
+    onUpdateStatus: (AppointmentStatus) -> Unit,
     onDelete: () -> Unit,
     onShowToast: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val clipboard = androidx.compose.ui.platform.LocalClipboardManager.current
     val st = statusMeta(appointment.status, t)
     val svcCol = serviceColor(appointment.serviceType, t)
     var activeViewerPhotoUrl by remember { mutableStateOf<String?>(null) }
@@ -688,7 +715,11 @@ fun AppointmentDetailPane(
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
-                        color = t.text2
+                        color = t.primary,
+                        modifier = Modifier.clickable {
+                            clipboard.setText(androidx.compose.ui.text.AnnotatedString(appointment.phone))
+                            onShowToast("Telefon numarası panoya kopyalandı")
+                        }
                     )
                 }
                 Surface(
@@ -943,19 +974,32 @@ fun AppointmentDetailPane(
                 }
 
                 Surface(
-                    onClick = onDelete,
+                    onClick = {
+                        onUpdateStatus(
+                            if (appointment.status == AppointmentStatus.BEKLIYOR) AppointmentStatus.ONAYLANDI
+                            else AppointmentStatus.BEKLIYOR
+                        )
+                    },
                     shape = RoundedCornerShape(12.dp),
                     color = t.surface2,
                     border = BorderStroke(1.dp, t.border),
                     modifier = Modifier.height(44.dp)
                 ) {
                     Box(modifier = Modifier.padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
-                        Text("🗑️ Sil", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = t.text2)
+                        Text(
+                            if (appointment.status == AppointmentStatus.BEKLIYOR) "▶ Devam" else "⏸ Beklet",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = t.amber
+                        )
                     }
                 }
 
                 Surface(
-                    onClick = onCompleteOrReceipt,
+                    onClick = {
+                        if (appointment.status == AppointmentStatus.BEKLIYOR) onUpdateStatus(AppointmentStatus.ONAYLANDI)
+                        else onCompleteOrReceipt()
+                    },
                     shape = RoundedCornerShape(12.dp),
                     color = t.green,
                     modifier = Modifier
@@ -965,7 +1009,12 @@ fun AppointmentDetailPane(
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Text(
-                            text = if (appointment.status == AppointmentStatus.TAMAMLANDI) "🧾 Servis Fişi" else "✓ Tamamla & Fiş Kes",
+                            text = when (appointment.status) {
+                                AppointmentStatus.BEKLIYOR -> "✓ Onayla"
+                                AppointmentStatus.TAMAMLANDI -> "🧾 Servis Fişi"
+                                AppointmentStatus.IPTAL -> "🧾 Fiş"
+                                AppointmentStatus.ONAYLANDI -> "✓ Tamamla & Fiş Kes"
+                            },
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = Color.White
