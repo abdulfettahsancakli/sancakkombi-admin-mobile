@@ -555,6 +555,25 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun addFinanceCollection(
+        id: String,
+        amount: Double,
+        paymentMethod: String,
+        note: String
+    ): Result<Unit> = requireToken { token ->
+        val response = api.addFinanceCollection(
+            authHeader(token),
+            id,
+            com.example.data.remote.FinanceCollectionRequestDto(amount, paymentMethod, note)
+        )
+        if (response.isSuccessful && response.body()?.success == true) {
+            financeTrigger.value += 1
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
+
     override suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit> = requireToken { token ->
         val response = api.updateBankAccounts(authHeader(token), accounts)
         if (response.isSuccessful) {

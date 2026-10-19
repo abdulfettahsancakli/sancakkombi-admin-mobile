@@ -80,6 +80,7 @@ interface AdminRepository {
     suspend fun addFinanceRecord(record: FinanceRecord): Result<Unit>
     suspend fun deleteFinanceRecord(id: String): Result<Unit>
     suspend fun updateFinanceRecordStatus(id: String, status: String): Result<Unit>
+    suspend fun addFinanceCollection(id: String, amount: Double, paymentMethod: String, note: String): Result<Unit>
     suspend fun updateBankAccounts(accounts: List<BankAccount>): Result<Unit>
     suspend fun getReceiptDetail(entryId: String): Result<com.example.data.remote.ReceiptDetailDto>
 

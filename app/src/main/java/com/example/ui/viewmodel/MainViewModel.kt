@@ -167,7 +167,9 @@ class MainViewModel(
     val whatsAppStatus: StateFlow<com.example.data.model.WhatsAppStatus> = _whatsAppStatus.asStateFlow()
 
     private fun recalculateFinanceSummary(records: List<FinanceRecord>) {
-        val totalIncome = records.filter { it.type == com.example.data.model.FinanceType.GELIR }.sumOf { it.amount }
+        val totalIncome = records.filter {
+            it.type == com.example.data.model.FinanceType.GELIR && it.status == "Ödendi"
+        }.sumOf { it.amount }
         val totalExpense = records.filter { it.type == com.example.data.model.FinanceType.GIDER }.sumOf { it.amount }
         val outstanding = records.filter { it.status == "Kısmi" || it.status == "Bekliyor" }.sumOf { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) }
         _financeSummary.value = FinanceSummary(
@@ -649,7 +651,36 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
-            onResult(repository.updateFinanceRecordStatus(id, status))
+            val record = _financeRecords.value.firstOrNull { it.id == id }
+            val remaining = record?.let { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) } ?: 0.0
+            if (status == "paid" && record != null && remaining > 0.005) {
+                onResult(
+                    repository.addFinanceCollection(
+                        id = id,
+                        amount = remaining,
+                        paymentMethod = record.paymentMethod.ifBlank { "Nakit" },
+                        note = "Kalan alacağın tamamı tahsil edildi"
+                    )
+                )
+            } else {
+                onResult(repository.updateFinanceRecordStatus(id, status))
+            }
+        }
+    }
+
+    fun addFinanceCollection(
+        id: String,
+        amount: Double,
+        paymentMethod: String,
+        note: String,
+        onResult: (Result<Unit>) -> Unit = {}
+    ) {
+        if (amount <= 0.0) {
+            onResult(Result.failure(IllegalArgumentException("Tahsilat tutarı sıfırdan büyük olmalıdır.")))
+            return
+        }
+        viewModelScope.launch {
+            onResult(repository.addFinanceCollection(id, amount, paymentMethod, note))
         }
     }
 

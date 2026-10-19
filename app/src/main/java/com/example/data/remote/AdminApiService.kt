@@ -162,6 +162,13 @@ interface AdminApiService {
         @Body body: FinanceStatusUpdateRequestDto
     ): Response<SuccessResponseDto>
 
+    @PATCH("api/admin/finance/records/{id}")
+    suspend fun addFinanceCollection(
+        @Header("Authorization") auth: String,
+        @Path("id") id: String,
+        @Body body: FinanceCollectionRequestDto
+    ): Response<SuccessResponseDto>
+
     @GET("api/admin/finance/summary")
     suspend fun getFinanceSummary(@Header("Authorization") auth: String): Response<FinanceSummary>
 

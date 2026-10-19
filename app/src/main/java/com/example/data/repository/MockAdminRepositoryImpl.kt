@@ -800,7 +800,7 @@ class MockAdminRepositoryImpl : AdminRepository {
     override fun getFinanceRecords(): Flow<List<FinanceRecord>> = _financeRecords.asStateFlow()
 
     override fun getFinanceSummary(): Flow<FinanceSummary> = _financeRecords.map { list ->
-        val totalInc = list.filter { it.type == FinanceType.GELIR }.sumOf { it.amount }
+        val totalInc = list.filter { it.type == FinanceType.GELIR && it.status == "Ödendi" }.sumOf { it.amount }
         val totalExp = list.filter { it.type == FinanceType.GIDER }.sumOf { it.amount }
         val outstanding = list.filter { it.status == "Kısmi" || it.status == "Bekliyor" }.sumOf { (it.totalAmount - it.collectedAmount).coerceAtLeast(0.0) }
         FinanceSummary(
@@ -851,6 +851,45 @@ class MockAdminRepositoryImpl : AdminRepository {
             }
             record.copy(status = nextStatus, collectedAmount = collected)
         }
+        recalculateStats()
+        return Result.success(Unit)
+    }
+
+    override suspend fun addFinanceCollection(
+        id: String,
+        amount: Double,
+        paymentMethod: String,
+        note: String
+    ): Result<Unit> {
+        val record = _financeRecords.value.firstOrNull { it.id == id }
+            ?: return Result.failure(IllegalArgumentException("Finans kaydı bulunamadı."))
+        val remaining = (record.totalAmount - record.collectedAmount).coerceAtLeast(0.0)
+        if (amount <= 0.0 || amount > remaining) {
+            return Result.failure(IllegalArgumentException("Tahsilat tutarı kalan alacağı aşamaz."))
+        }
+        val nextCollected = record.collectedAmount + amount
+        val nextRemaining = (record.totalAmount - nextCollected).coerceAtLeast(0.0)
+        val updated = record.copy(
+            amount = nextRemaining,
+            collectedAmount = nextCollected,
+            status = if (nextRemaining == 0.0) "Ödendi" else "Kısmi",
+            paymentMethod = paymentMethod
+        )
+        val payment = FinanceRecord(
+            id = "collection_${System.currentTimeMillis()}",
+            date = record.date,
+            type = FinanceType.GELIR,
+            amount = amount,
+            status = "Ödendi",
+            source = record.source,
+            totalAmount = amount,
+            collectedAmount = amount,
+            note = note.ifBlank { "Parçalı tahsilat" },
+            appointmentId = record.appointmentId,
+            category = record.category,
+            paymentMethod = paymentMethod
+        )
+        _financeRecords.value = listOf(payment) + _financeRecords.value.map { if (it.id == id) updated else it }
         recalculateStats()
         return Result.success(Unit)
     }

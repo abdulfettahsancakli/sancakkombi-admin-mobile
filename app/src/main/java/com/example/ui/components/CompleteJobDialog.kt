@@ -85,6 +85,7 @@ import com.example.data.model.StockItem
 import com.example.data.model.UsedPart
 import com.example.ui.screens.SendBankTransferDialog
 import com.example.utils.parseLocalizedDouble
+import java.util.Locale
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -99,7 +100,7 @@ fun CompleteJobDialog(
     onSendBankTransfer: (accountKey: String, amount: Double?, date: String?, onResult: (Result<String>) -> Unit) -> Unit = { _, _, _, _ -> },
     modifier: Modifier = Modifier
 ) {
-    var currentStep by remember { mutableStateOf(1) } // 1: Finans, 2: İş Detayı, 3: Fotoğraf & İmza
+    var currentStep by remember { mutableStateOf(1) } // 1: İş ve tutar, 2: Tahsilat, 3: Fotoğraf & İmza
 
     // IBAN Sending Dialog State
     var showIbanDialog by remember { mutableStateOf(false) }
@@ -115,9 +116,6 @@ fun CompleteJobDialog(
     // Revenue Section State
     var addRevenueRecord by remember { mutableStateOf(existingReport?.addRevenueRecord ?: true) }
     var collectedAmount by remember { mutableStateOf(existingReport?.collectedAmount ?: "") }
-    var paymentStatus by remember {
-        mutableStateOf(if (createMode) "Ödendi" else existingReport?.paymentStatus?.ifBlank { "Bekliyor" } ?: "Bekliyor")
-    }
     var paymentMethod by remember {
         mutableStateOf(if (createMode) "Nakit" else existingReport?.paymentMethod?.trim().orEmpty())
     }
@@ -138,6 +136,9 @@ fun CompleteJobDialog(
     }
     var serviceFee by remember { mutableStateOf(existingReport?.serviceFee ?: "") }
     var otherFee by remember { mutableStateOf(existingReport?.otherFee ?: "") }
+    val receiptTotal = usedParts.sumOf { it.quantity * it.price } +
+        (parseLocalizedDouble(serviceFee) ?: 0.0) +
+        (parseLocalizedDouble(otherFee) ?: 0.0)
     var deviceTested by remember { mutableStateOf(existingReport?.deviceTested ?: false) }
     var createExpenseRecord by remember { mutableStateOf(existingReport?.createExpenseRecord ?: false) }
     var isSubmitting by remember { mutableStateOf(false) }
@@ -221,8 +222,8 @@ fun CompleteJobDialog(
                 ) {
                     StepTab(
                         stepNumber = 1,
-                        title = "1. Finans",
-                        icon = Icons.Default.AttachMoney,
+                        title = "1. İş/Tutar",
+                        icon = Icons.Default.Build,
                         isActive = currentStep == 1,
                         isDone = currentStep > 1,
                         onClick = { currentStep = 1 },
@@ -230,8 +231,8 @@ fun CompleteJobDialog(
                     )
                     StepTab(
                         stepNumber = 2,
-                        title = "2. İş Detayı",
-                        icon = Icons.Default.Build,
+                        title = "2. Tahsilat",
+                        icon = Icons.Default.AttachMoney,
                         isActive = currentStep == 2,
                         isDone = currentStep > 2,
                         onClick = { currentStep = 2 },
@@ -256,28 +257,7 @@ fun CompleteJobDialog(
                     transitionSpec = { fadeIn() with fadeOut() }
                 ) { step ->
                     when (step) {
-                        1 -> Step1FinanceView(
-                            appointment = appointment,
-                            technicianName = technicianName,
-                            onTechnicianNameChange = { technicianName = it },
-                            expandedTech = expandedTech,
-                            onExpandedTechChange = { expandedTech = it },
-                            techList = techList,
-                            collectedAmount = collectedAmount,
-                            onCollectedAmountChange = { collectedAmount = it },
-                            paymentMethod = paymentMethod,
-                            onPaymentMethodChange = { paymentMethod = it },
-                            paymentStatus = paymentStatus,
-                            onPaymentStatusChange = { paymentStatus = it },
-                            paymentPromiseDate = paymentPromiseDate,
-                            onPaymentPromiseDateChange = { paymentPromiseDate = it },
-                            revenueNote = revenueNote,
-                            onRevenueNoteChange = { revenueNote = it },
-                            allowTransferMessage = !createMode,
-                            onOpenIbanDialog = { showIbanDialog = true }
-                        )
-
-                        2 -> Step2JobDetailsView(
+                        1 -> Step2JobDetailsView(
                             deviceBrand = deviceBrand,
                             onDeviceBrandChange = { deviceBrand = it },
                             deviceModel = deviceModel,
@@ -294,6 +274,26 @@ fun CompleteJobDialog(
                             onOtherFeeChange = { otherFee = it },
                             createExpenseRecord = createExpenseRecord,
                             onCreateExpenseRecordChange = { createExpenseRecord = it }
+                        )
+
+                        2 -> Step1FinanceView(
+                            appointment = appointment,
+                            totalAmount = receiptTotal,
+                            technicianName = technicianName,
+                            onTechnicianNameChange = { technicianName = it },
+                            expandedTech = expandedTech,
+                            onExpandedTechChange = { expandedTech = it },
+                            techList = techList,
+                            collectedAmount = collectedAmount,
+                            onCollectedAmountChange = { collectedAmount = it },
+                            paymentMethod = paymentMethod,
+                            onPaymentMethodChange = { paymentMethod = it },
+                            paymentPromiseDate = paymentPromiseDate,
+                            onPaymentPromiseDateChange = { paymentPromiseDate = it },
+                            revenueNote = revenueNote,
+                            onRevenueNoteChange = { revenueNote = it },
+                            allowTransferMessage = !createMode,
+                            onOpenIbanDialog = { showIbanDialog = true }
                         )
 
                         3 -> Step3SignAndPhotosView(
@@ -343,7 +343,38 @@ fun CompleteJobDialog(
 
                     if (currentStep < 3) {
                         Button(
-                            onClick = { currentStep++ },
+                            onClick = {
+                                if (currentStep == 1) {
+                                    if (createMode && workDoneNote.isBlank()) {
+                                        submitError = "Yapılan iş açıklaması servis fişi için zorunludur."
+                                        return@Button
+                                    }
+                                    if (receiptTotal <= 0.0) {
+                                        submitError = "Malzeme, servis ücreti veya diğer ücretlerden en az birini girin."
+                                        return@Button
+                                    }
+                                    if (createMode && collectedAmount.isBlank()) {
+                                        collectedAmount = "%.2f".format(Locale.US, receiptTotal)
+                                    }
+                                }
+                                if (currentStep == 2) {
+                                    val collected = parseLocalizedDouble(collectedAmount) ?: 0.0
+                                    if (collected < 0.0 || collected > receiptTotal) {
+                                        submitError = "Tahsil edilen tutar 0 ile iş toplamı arasında olmalıdır."
+                                        return@Button
+                                    }
+                                    if (collected > 0.0 && paymentMethod.isBlank()) {
+                                        submitError = "Tahsilat için ödeme yöntemi seçin."
+                                        return@Button
+                                    }
+                                    if (receiptTotal - collected > 0.005 && paymentPromiseDate.isBlank()) {
+                                        submitError = "Kalan alacak için ödeme sözü / hatırlatma tarihi girin."
+                                        return@Button
+                                    }
+                                }
+                                submitError = null
+                                currentStep++
+                            },
                             shape = RoundedCornerShape(10.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                             modifier = Modifier.height(44.dp)
@@ -361,9 +392,7 @@ fun CompleteJobDialog(
                                     currentStep = 2
                                     return@Button
                                 }
-                                val quickReceiptTotal = usedParts.sumOf { it.quantity * it.price } +
-                                    (parseLocalizedDouble(serviceFee) ?: 0.0) +
-                                    (parseLocalizedDouble(otherFee) ?: 0.0)
+                                val quickReceiptTotal = receiptTotal
                                 if (createMode && quickReceiptTotal <= 0.0) {
                                     submitError = "Servis fişi için malzeme, servis ücreti veya diğer ücretlerden en az birini girin."
                                     currentStep = 2
@@ -378,13 +407,20 @@ fun CompleteJobDialog(
                                     saveBitmapToCache(context, it, "technician_signature")
                                 }
 
+                                val normalizedCollected = (parseLocalizedDouble(collectedAmount) ?: 0.0)
+                                    .coerceIn(0.0, quickReceiptTotal)
+                                val normalizedPaymentStatus = when {
+                                    normalizedCollected <= 0.005 -> "Bekliyor"
+                                    quickReceiptTotal - normalizedCollected <= 0.005 -> "Ödendi"
+                                    else -> "Kısmi"
+                                }
                                 val report = JobReport(
                                     technicianName = technicianName,
                                     notifyCustomerMessage = notifyCustomerMessage,
                                     sendWhatsappPdf = sendWhatsappPdf,
                                     addRevenueRecord = addRevenueRecord,
                                     collectedAmount = collectedAmount,
-                                    paymentStatus = paymentStatus,
+                                    paymentStatus = normalizedPaymentStatus,
                                     paymentMethod = paymentMethod,
                                     paymentPromiseDate = paymentPromiseDate,
                                     revenueNote = revenueNote,
@@ -538,6 +574,7 @@ private fun StepTab(
 @Composable
 private fun Step1FinanceView(
     appointment: Appointment,
+    totalAmount: Double,
     technicianName: String,
     onTechnicianNameChange: (String) -> Unit,
     expandedTech: Boolean,
@@ -547,8 +584,6 @@ private fun Step1FinanceView(
     onCollectedAmountChange: (String) -> Unit,
     paymentMethod: String,
     onPaymentMethodChange: (String) -> Unit,
-    paymentStatus: String,
-    onPaymentStatusChange: (String) -> Unit,
     paymentPromiseDate: String,
     onPaymentPromiseDateChange: (String) -> Unit,
     revenueNote: String,
@@ -556,6 +591,13 @@ private fun Step1FinanceView(
     allowTransferMessage: Boolean = true,
     onOpenIbanDialog: () -> Unit = {}
 ) {
+    val collectedValue = (parseLocalizedDouble(collectedAmount) ?: 0.0).coerceAtLeast(0.0)
+    val remainingValue = (totalAmount - collectedValue).coerceAtLeast(0.0)
+    val derivedStatus = when {
+        collectedValue <= 0.005 -> "Bekliyor"
+        remainingValue <= 0.005 -> "Ödendi"
+        else -> "Kısmi"
+    }
     Column {
         // Compact Summary
         Card(
@@ -572,6 +614,12 @@ private fun Step1FinanceView(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(text = appointment.serviceType, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     Text(text = "Tarih: ${appointment.date} • ${appointment.timeSlot}", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        PaymentSummaryValue("İş toplamı", totalAmount, MaterialTheme.colorScheme.onSurface)
+                        PaymentSummaryValue("Alınan", collectedValue, Color(0xFF2E7D32))
+                        PaymentSummaryValue("Kalan", remainingValue, if (remainingValue > 0.0) MaterialTheme.colorScheme.error else Color(0xFF2E7D32))
+                    }
                 }
             }
         }
@@ -707,28 +755,31 @@ private fun Step1FinanceView(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Tahsilat Durumu Chips
-        Text(text = "Tahsilat Durumu:", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(modifier = Modifier.height(4.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("Ödendi", "Kısmi", "Bekliyor").forEach { st ->
-                FilterChip(
-                    selected = paymentStatus == st,
-                    onClick = { onPaymentStatusChange(st) },
-                    label = { Text(st, fontSize = 11.sp) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = when (st) {
-                            "Ödendi" -> Color(0xFF2E7D32)
-                            "Kısmi" -> Color(0xFF2563EB)
-                            else -> Color(0xFFF59E0B)
-                        },
-                        selectedLabelColor = Color.White
-                    )
+        Surface(
+            shape = RoundedCornerShape(10.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Tahsilat durumu", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    derivedStatus,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = when (derivedStatus) {
+                        "Ödendi" -> Color(0xFF2E7D32)
+                        "Kısmi" -> MaterialTheme.colorScheme.primary
+                        else -> MaterialTheme.colorScheme.error
+                    }
                 )
             }
         }
 
-        if (paymentStatus != "Ödendi") {
+        if (remainingValue > 0.005) {
             Spacer(modifier = Modifier.height(8.dp))
             OutlinedTextField(
                 value = paymentPromiseDate,
@@ -749,6 +800,19 @@ private fun Step1FinanceView(
             placeholder = { Text("Örn: Gelecek sefere eşanjör temizlenecek, petek vanası gevşek") },
             modifier = Modifier.fillMaxWidth(),
             minLines = 2
+        )
+    }
+}
+
+@Composable
+private fun PaymentSummaryValue(label: String, amount: Double, color: Color) {
+    Column(horizontalAlignment = Alignment.Start) {
+        Text(label, fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "₺%.2f".format(amount).replace(".", ","),
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = color
         )
     }
 }

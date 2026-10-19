@@ -252,6 +252,9 @@ class MainActivity : ComponentActivity() {
                                         onUpdateFinanceRecordStatus = { id, status, onResult ->
                                             viewModel.updateFinanceRecordStatus(id, status, onResult)
                                         },
+                                        onAddFinanceCollection = { id, amount, method, note, onResult ->
+                                            viewModel.addFinanceCollection(id, amount, method, note, onResult)
+                                        },
                                         onUpdateBankAccounts = { accs -> viewModel.updateBankAccounts(accs) },
                                         onViewReceipt = { record ->
                                             viewModel.selectFinanceRecordForReceipt(record)

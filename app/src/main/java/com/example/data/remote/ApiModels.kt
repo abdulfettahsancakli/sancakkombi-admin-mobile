@@ -110,6 +110,13 @@ data class FinanceStatusUpdateRequestDto(
 )
 
 @JsonClass(generateAdapter = true)
+data class FinanceCollectionRequestDto(
+    val collectionAmount: Double,
+    val paymentMethod: String,
+    val note: String = ""
+)
+
+@JsonClass(generateAdapter = true)
 data class ProposalCreateResponseDto(
     val success: Boolean = false,
     val error: String? = null,

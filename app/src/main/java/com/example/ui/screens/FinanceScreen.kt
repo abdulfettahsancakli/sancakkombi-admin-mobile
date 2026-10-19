@@ -167,6 +167,7 @@ fun FinanceScreen(
     onAddFinanceRecord: (FinanceRecord) -> Unit,
     onDeleteFinanceRecord: (String) -> Unit = {},
     onUpdateFinanceRecordStatus: (String, String, (Result<Unit>) -> Unit) -> Unit,
+    onAddFinanceCollection: (String, Double, String, String, (Result<Unit>) -> Unit) -> Unit,
     onUpdateBankAccounts: (List<BankAccount>) -> Unit,
     onViewReceipt: (FinanceRecord) -> Unit,
     modifier: Modifier = Modifier
@@ -345,13 +346,13 @@ fun FinanceScreen(
             bankAccounts = bankAccounts,
             record = receivable,
             onDismiss = { selectedReceivable = null },
-            onMarkCollected = {
-                onUpdateFinanceRecordStatus(receivable.id, "paid") { result ->
+            onAddCollection = { amount, paymentMethod, note ->
+                onAddFinanceCollection(receivable.id, amount, paymentMethod, note) { result ->
                     result.onSuccess {
                         selectedReceivable = null
-                        Toast.makeText(context, "Alacak tahsil edildi olarak güncellendi.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Tahsilat kaydedildi, kalan alacak güncellendi.", Toast.LENGTH_LONG).show()
                     }.onFailure { error ->
-                        Toast.makeText(context, "Alacak güncellenemedi: ${error.message}", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, "Tahsilat kaydedilemedi: ${error.message}", Toast.LENGTH_LONG).show()
                     }
                 }
             }
@@ -698,6 +699,13 @@ private fun SummaryAndReceivablesTab(
                                 fontSize = 11.sp,
                                 color = colors.warningColor
                             )
+                            if (featuredReceivable.dueDate.isNotBlank()) {
+                                Text(
+                                    text = "Hatırlatma: ${featuredReceivable.dueDate}",
+                                    fontSize = 10.sp,
+                                    color = colors.textSecondary
+                                )
+                            }
                             Text(
                                 text = "Dokun: Tahsil Et / WhatsApp'tan Hatırlat",
                                 fontSize = 10.sp,
@@ -723,6 +731,45 @@ private fun SummaryAndReceivablesTab(
                                 Text("Aksiyon Al →", fontSize = 10.sp, color = colors.textPrimary)
                             }
                         }
+                    }
+                }
+            }
+
+            outstandingRecords.drop(1).forEach { receivable ->
+                val remaining = (receivable.totalAmount - receivable.collectedAmount).coerceAtLeast(0.0)
+                Spacer(modifier = Modifier.height(8.dp))
+                OledCard(
+                    colors = colors,
+                    borderColor = colors.cardBorder,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onReceivableClick(receivable) }
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                receivable.source.ifBlank { "Müşteri / açıklama belirtilmedi" },
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = colors.textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                if (receivable.dueDate.isNotBlank()) "Hatırlatma: ${receivable.dueDate}" else "Vade tarihi girilmemiş",
+                                fontSize = 10.sp,
+                                color = colors.textSecondary
+                            )
+                        }
+                        Text(
+                            "₺%.2f".format(remaining).replace(".", ","),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colors.dangerColor
+                        )
                     }
                 }
             }
@@ -1439,7 +1486,7 @@ private fun ReceivableActionBottomSheet(
     bankAccounts: List<BankAccount>,
     record: FinanceRecord,
     onDismiss: () -> Unit,
-    onMarkCollected: () -> Unit
+    onAddCollection: (Double, String, String) -> Unit
 ) {
     val cloudWhatsApp = LocalCloudWhatsAppActions.current
     val paymentAccount = bankAccounts.firstOrNull { account ->
@@ -1449,6 +1496,18 @@ private fun ReceivableActionBottomSheet(
             account.iban.isNotBlank()
     }
     val remainingAmount = (record.totalAmount - record.collectedAmount).coerceAtLeast(0.0)
+    var collectionAmount by remember(record.id) {
+        mutableStateOf("%.2f".format(Locale.US, remainingAmount))
+    }
+    var paymentMethod by remember(record.id) { mutableStateOf("Nakit") }
+    var collectionNote by remember(record.id) { mutableStateOf("") }
+    val parsedCollection = parseLocalizedDouble(collectionAmount)
+    val collectionError = when {
+        collectionAmount.isBlank() -> null
+        parsedCollection == null || parsedCollection <= 0.0 -> "Geçerli bir tahsilat tutarı girin."
+        parsedCollection > remainingAmount -> "Tahsilat kalan alacağı aşamaz."
+        else -> null
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -1458,6 +1517,7 @@ private fun ReceivableActionBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 20.dp, vertical = 12.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1486,9 +1546,51 @@ private fun ReceivableActionBottomSheet(
                 Column(modifier = Modifier.padding(14.dp)) {
                     Text("Müşteri / açıklama: ${record.source.ifBlank { "Belirtilmedi" }}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
                     Text("Durum: ${record.status} • Tarih: ${record.date}", fontSize = 12.sp, color = colors.warningColor)
-                    Text("Kalan Alacak Tutar: ₺%.2f".format(remainingAmount).replace(".", ","), fontSize = 16.sp, fontWeight = FontWeight.Bold, color = colors.dangerColor)
+                    if (record.dueDate.isNotBlank()) {
+                        Text("Vade / hatırlatma: ${record.dueDate}", fontSize = 12.sp, color = colors.textSecondary)
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("İş toplamı: ₺%.2f".format(record.totalAmount).replace(".", ","), fontSize = 13.sp, color = colors.textSecondary)
+                    Text("Şimdiye kadar alınan: ₺%.2f".format(record.collectedAmount).replace(".", ","), fontSize = 13.sp, color = colors.textSecondary)
+                    Text("Kalan alacak: ₺%.2f".format(remainingAmount).replace(".", ","), fontSize = 17.sp, fontWeight = FontWeight.Bold, color = colors.dangerColor)
                 }
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            Text("Yeni tahsilat", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = colors.textPrimary)
+            Spacer(modifier = Modifier.height(6.dp))
+            OutlinedTextField(
+                value = collectionAmount,
+                onValueChange = { collectionAmount = it },
+                label = { Text("Bu sefer alınan tutar") },
+                prefix = { Text("₺ ") },
+                supportingText = {
+                    Text(collectionError ?: "Tamamını veya yalnızca alınan kısmı girebilirsiniz.")
+                },
+                isError = collectionError != null,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                items(listOf("Nakit", "Kredi Kartı", "EFT / Havale")) { method ->
+                    FilterChip(
+                        selected = paymentMethod == method,
+                        onClick = { paymentMethod = method },
+                        label = { Text(method) }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            OutlinedTextField(
+                value = collectionNote,
+                onValueChange = { collectionNote = it },
+                label = { Text("Tahsilat notu (isteğe bağlı)") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -1536,16 +1638,24 @@ private fun ReceivableActionBottomSheet(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Action 2: Mark as Collected
+            // Action 2: Add full or partial collection
             Button(
-                onClick = onMarkCollected,
+                onClick = {
+                    val amount = parsedCollection ?: return@Button
+                    onAddCollection(amount, paymentMethod, collectionNote)
+                },
+                enabled = parsedCollection != null && collectionError == null,
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = colors.successColor)
             ) {
                 Icon(imageVector = Icons.Default.CheckCircle, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Tahsil Edildi Olarak İşaretle", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(
+                    if (parsedCollection != null && parsedCollection < remainingAmount) "Parçalı Tahsilatı Kaydet" else "Kalanın Tamamını Tahsil Et",
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -1906,7 +2016,7 @@ private fun FinanceAnalyticsTab(
     colors: FinanceThemeColors,
     financeRecords: List<FinanceRecord>
 ) {
-    val incomeRecords = financeRecords.filter { it.type == FinanceType.GELIR }
+    val incomeRecords = financeRecords.filter { it.type == FinanceType.GELIR && it.status == "Ödendi" }
     val expenseRecords = financeRecords.filter { it.type == FinanceType.GIDER }
 
     val totalIncome = incomeRecords.sumOf { it.amount }
