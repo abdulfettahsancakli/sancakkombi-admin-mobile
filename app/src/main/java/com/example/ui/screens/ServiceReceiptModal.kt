@@ -82,6 +82,7 @@ import com.example.ui.components.Line
 import com.example.ui.components.renderSignatureToBitmap
 import com.example.ui.components.saveBitmapToCache
 import com.example.ui.components.VoiceDictationButton
+import com.example.utils.calculateReceiptPayment
 import com.example.utils.parseLocalizedDouble
 import java.text.SimpleDateFormat
 import java.io.File
@@ -324,6 +325,12 @@ fun ServiceReceiptFlowContent(
         }
         mutableStateOf(norm)
     }
+    var partialCollectedAmountStr by remember(existingReport) {
+        val status = existingReport?.paymentStatus?.lowercase(TrLocale).orEmpty()
+        val isPartial = status.contains("partial") || status.contains("kısmi")
+        mutableStateOf(if (isPartial) existingReport?.collectedAmount.orEmpty() else "")
+    }
+    var showPartialAmountError by remember(existingReport) { mutableStateOf(false) }
     var cashNote by remember(existingReport) {
         mutableStateOf(existingReport?.revenueNote ?: "")
     }
@@ -383,6 +390,11 @@ fun ServiceReceiptFlowContent(
     val laborVal = parseLocalizedDouble(laborStr) ?: 0.0
     val otherVal = parseLocalizedDouble(otherFeeStr) ?: 0.0
     val grandTotal = partsSum + laborVal + otherVal
+    val paymentBreakdown = calculateReceiptPayment(
+        totalAmount = grandTotal,
+        paymentStatus = payStatus,
+        partialAmountText = partialCollectedAmountStr
+    )
 
     var isSubmitting by remember { mutableStateOf(false) }
 
@@ -1902,7 +1914,10 @@ fun ServiceReceiptFlowContent(
                             statusRows.forEach { (key, label, accent) ->
                                 val isSel = payStatus == key
                                 Surface(
-                                    onClick = { payStatus = key },
+                                    onClick = {
+                                        payStatus = key
+                                        showPartialAmountError = false
+                                    },
                                     shape = RoundedCornerShape(12.dp),
                                     color = if (isSel) t.surface else t.surface2,
                                     border = BorderStroke(
@@ -1936,6 +1951,69 @@ fun ServiceReceiptFlowContent(
                                                         it.dashedBorder(2.dp, t.border, 10.dp, 20.dp, 0.dp)
                                                     } else it
                                                 }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        if (payStatus == "partial") {
+                            Spacer(modifier = Modifier.height(12.dp))
+                            FormFieldLabel(t = t, text = "Tahsil Edilen Tutar (₺) *")
+                            FormTextInput(
+                                t = t,
+                                value = partialCollectedAmountStr,
+                                onValueChange = { partialCollectedAmountStr = it },
+                                placeholder = "Örn: 3.000",
+                                keyboardType = KeyboardType.Decimal,
+                                isMono = true,
+                                testTag = "partial_collection_amount_input",
+                                isError = showPartialAmountError && !paymentBreakdown.isValid
+                            )
+                            Text(
+                                text = if (showPartialAmountError && !paymentBreakdown.isValid) {
+                                    "⚠️ ${paymentBreakdown.errorMessage}"
+                                } else {
+                                    "Bu fişte şimdi aldığınız gerçek tutarı girin."
+                                },
+                                fontSize = 11.sp,
+                                fontWeight = if (showPartialAmountError && !paymentBreakdown.isValid) FontWeight.Bold else FontWeight.Medium,
+                                color = if (showPartialAmountError && !paymentBreakdown.isValid) t.red else t.text2,
+                                modifier = Modifier.padding(top = 5.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = t.surface2,
+                            border = BorderStroke(1.dp, t.border),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                listOf(
+                                    Triple("İş Toplamı", grandTotal, t.text),
+                                    Triple("Tahsil Edilen", paymentBreakdown.collectedAmount, t.green),
+                                    Triple("Kalan Alacak", paymentBreakdown.remainingAmount, if (paymentBreakdown.remainingAmount > 0.0) t.red else t.green)
+                                ).forEach { (label, amount, color) ->
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = label,
+                                            fontSize = 9.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = t.text2,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = "₺${formatTL(amount)}",
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Black,
+                                            fontFamily = FontFamily.Monospace,
+                                            color = color,
+                                            maxLines = 1
                                         )
                                     }
                                 }
@@ -2340,6 +2418,11 @@ fun ServiceReceiptFlowContent(
                                 onShowToast("🛠️ Yapılan iş açıklaması zorunlu")
                                 return@Surface
                             }
+                            if (step == 3 && !paymentBreakdown.isValid) {
+                                showPartialAmountError = true
+                                onShowToast(paymentBreakdown.errorMessage ?: "Tahsilat tutarını kontrol edin")
+                                return@Surface
+                            }
                             step += 1
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -2379,6 +2462,12 @@ fun ServiceReceiptFlowContent(
                             if (workDone.isBlank()) {
                                 onShowToast("🛠️ Yapılan iş açıklaması zorunlu")
                                 step = 2
+                                return@Surface
+                            }
+                            if (!paymentBreakdown.isValid) {
+                                showPartialAmountError = true
+                                onShowToast(paymentBreakdown.errorMessage ?: "Tahsilat tutarını kontrol edin")
+                                step = 3
                                 return@Surface
                             }
                             isSubmitting = true
@@ -2440,7 +2529,7 @@ fun ServiceReceiptFlowContent(
                                 notifyCustomerMessage = true,
                                 sendWhatsappPdf = sendWhatsApp,
                                 addRevenueRecord = true,
-                                collectedAmount = grandTotal.toString(),
+                                collectedAmount = paymentBreakdown.collectedAmount.toString(),
                                 paymentStatus = paymentStatusTr,
                                 paymentMethod = paymentMethodTr,
                                 paymentPromiseDate = promisedDate.trim(),

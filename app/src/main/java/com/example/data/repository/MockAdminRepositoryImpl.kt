@@ -33,6 +33,7 @@ import com.example.data.model.MessageLog
 import com.example.data.model.MessageTemplate
 import com.example.data.model.MessagingStats
 import com.example.data.model.StaffMessagingSettings
+import com.example.utils.parseLocalizedDouble
 
 class MockAdminRepositoryImpl : AdminRepository {
 
@@ -564,15 +565,20 @@ class MockAdminRepositoryImpl : AdminRepository {
             }
 
             if (jobReport.addRevenueRecord) {
-                val collected = jobReport.collectedAmount.replace(",", ".").toDoubleOrNull() ?: 0.0
-                if (collected > 0.0) {
+                val collected = parseLocalizedDouble(jobReport.collectedAmount) ?: 0.0
+                val totalAmount = (
+                    (parseLocalizedDouble(jobReport.serviceFee) ?: 0.0) +
+                        (parseLocalizedDouble(jobReport.otherFee) ?: 0.0) +
+                        jobReport.usedParts.sumOf { it.price * it.quantity }
+                    ).coerceAtLeast(0.0)
+                if (totalAmount > 0.0) {
                     val record = FinanceRecord(
                         id = "appointment_$appointmentId",
                         date = updated.date,
                         type = FinanceType.GELIR,
                         amount = collected,
-                        totalAmount = collected,
-                        collectedAmount = collected,
+                        totalAmount = totalAmount,
+                        collectedAmount = collected.coerceIn(0.0, totalAmount),
                         status = jobReport.paymentStatus,
                         source = "${updated.customerName} • ${updated.serviceType}",
                         note = jobReport.revenueNote.ifBlank { jobReport.workDoneNote },

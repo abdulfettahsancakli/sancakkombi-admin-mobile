@@ -879,12 +879,13 @@ fun FormTextInput(
     height: Dp = 48.dp,
     keyboardType: KeyboardType = KeyboardType.Text,
     isMono: Boolean = false,
-    testTag: String? = null
+    testTag: String? = null,
+    isError: Boolean = false
 ) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = t.surface2,
-        border = BorderStroke(1.dp, t.border),
+        border = BorderStroke(if (isError) 2.dp else 1.dp, if (isError) t.red else t.border),
         modifier = modifier
             .fillMaxWidth()
             .height(height)
