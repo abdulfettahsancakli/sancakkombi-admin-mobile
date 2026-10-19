@@ -352,18 +352,10 @@ fun ProposalsTabletLandscapeSplitView(
                             )
                         ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                // Sol Kenarlık Durum Vurgu Çizgisi (3.5dp border-left accent)
-                                Box(
-                                    modifier = Modifier
-                                        .width(3.5.dp)
-                                        .matchParentSize()
-                                        .background(vis.accentColor)
-                                )
-
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 12.dp, top = 10.dp, end = 10.dp, bottom = 10.dp),
+                                        .padding(horizontal = 10.dp, vertical = 10.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {

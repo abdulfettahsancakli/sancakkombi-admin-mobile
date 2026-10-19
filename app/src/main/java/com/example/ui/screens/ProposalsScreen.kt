@@ -363,18 +363,10 @@ fun ProposalsPhoneView(
                             border = BorderStroke(1.dp, tokens.border)
                         ) {
                             Box(modifier = Modifier.fillMaxWidth()) {
-                                // Sol Kenarlık Durum Vurgu Çizgisi (3dp border-left accent)
-                                Box(
-                                    modifier = Modifier
-                                        .width(3.dp)
-                                        .matchParentSize()
-                                        .background(vis.accentColor)
-                                )
-
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(start = 14.dp, top = 11.dp, end = 12.dp, bottom = 11.dp),
+                                        .padding(horizontal = 12.dp, vertical = 11.dp),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     // 1. Satır: Marka Kutusu + Marka/Model + Teklif No + Durum Rozeti
