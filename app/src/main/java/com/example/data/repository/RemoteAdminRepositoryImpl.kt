@@ -57,6 +57,12 @@ import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import retrofit2.Response
 import java.io.File
+import java.net.UnknownHostException
+
+private fun connectionErrorMessage(error: Exception): String = when (error) {
+    is UnknownHostException -> "İnternet veya DNS bağlantısı kurulamadı. Wi-Fi/mobil veriyi kontrol edip tekrar deneyin."
+    else -> "Sunucuya bağlanılamadı: ${error.message ?: "Bağlantı hatası"}"
+}
 
 private fun DashboardStatsDto.toDomain() = DashboardStats(
     bugunkuRandevu = bugunkuRandevu,
@@ -175,7 +181,7 @@ class RemoteAdminRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Log.e("RemoteAdminRepo", "requireToken API error: ${e.message}", e)
-            Result.failure(IllegalStateException("Sunucuya bağlanılamadı: ${e.message}"))
+            Result.failure(IllegalStateException(connectionErrorMessage(e)))
         }
     }
 
@@ -212,7 +218,7 @@ class RemoteAdminRepositoryImpl(
             throw e
         } catch (e: Exception) {
             Log.e("Auth", "login: Network exception: ${e.message}", e)
-            Result.failure(IllegalStateException("Sunucuya bağlanılamadı: ${e.message}"))
+            Result.failure(IllegalStateException(connectionErrorMessage(e)))
         }
     }
 

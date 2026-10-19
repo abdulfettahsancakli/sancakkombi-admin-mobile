@@ -7,9 +7,12 @@ import com.squareup.moshi.Moshi
 import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
+import okhttp3.Dns
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
 import retrofit2.converter.moshi.MoshiConverterFactory
+import java.net.InetAddress
+import java.net.UnknownHostException
 
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.FinanceType
@@ -58,6 +61,30 @@ class ProposalStatusAdapter {
 }
 
 object NetworkModule {
+    /**
+     * Some mobile/private DNS providers intermittently fail to resolve the www
+     * record. Keep normal system DNS first, and only fall back for our own API
+     * host. TLS still validates www.sancakkombi.com through HTTPS/SNI.
+     */
+    private val resilientDns = object : Dns {
+        override fun lookup(hostname: String): List<InetAddress> {
+            return try {
+                Dns.SYSTEM.lookup(hostname)
+            } catch (error: UnknownHostException) {
+                if (hostname.equals("www.sancakkombi.com", ignoreCase = true) ||
+                    hostname.equals("sancakkombi.com", ignoreCase = true)
+                ) {
+                    listOf(
+                        InetAddress.getByAddress(hostname, byteArrayOf(216.toByte(), 198.toByte(), 79, 1)),
+                        InetAddress.getByAddress(hostname, byteArrayOf(64, 29, 17, 1))
+                    )
+                } else {
+                    throw error
+                }
+            }
+        }
+    }
+
     private val moshi: Moshi = Moshi.Builder()
         .add(AppointmentStatusAdapter())
         .add(FinanceTypeAdapter())
@@ -67,6 +94,7 @@ object NetworkModule {
 
     private fun okHttpClient(tokenStore: TokenStore): OkHttpClient {
         return OkHttpClient.Builder()
+            .dns(resilientDns)
             .addInterceptor(
                 HttpLoggingInterceptor().apply {
                     // Do not write passwords, bearer tokens, or uploaded file contents to Logcat.

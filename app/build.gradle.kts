@@ -15,8 +15,8 @@ val mapsApiKey = providers.gradleProperty("MAPS_API_KEY").orNull
   ?: System.getenv("MAPS_API_KEY")
   ?: localProperties.getProperty("MAPS_API_KEY").orEmpty()
 val escapedMapsApiKey = mapsApiKey.replace("\\", "\\\\").replace("\"", "\\\"")
-val appVersionCode = 20
-val appVersionName = "1.19"
+val appVersionCode = 21
+val appVersionName = "1.20"
 
 android {
   namespace = "com.example"
@@ -24,7 +24,7 @@ android {
 
   defaultConfig {
     applicationId = "com.aistudio.sancakkombi.admin"
-    minSdk = 24
+    minSdk = 23
     targetSdk = 36
     versionCode = appVersionCode
     versionName = appVersionName
@@ -36,12 +36,18 @@ android {
   }
 
   signingConfigs {
+    getByName("debug") {
+      enableV1Signing = true
+      enableV2Signing = true
+    }
     create("release") {
       val keystorePath = System.getenv("KEYSTORE_PATH") ?: "${rootDir}/my-upload-key.jks"
       storeFile = file(keystorePath)
       storePassword = System.getenv("STORE_PASSWORD")
       keyAlias = "upload"
       keyPassword = System.getenv("KEY_PASSWORD")
+      enableV1Signing = true
+      enableV2Signing = true
     }
   }
 
