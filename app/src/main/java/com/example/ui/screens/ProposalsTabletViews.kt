@@ -344,7 +344,7 @@ fun ProposalsTabletLandscapeSplitView(
                                 .clickable { onSelectProposal(proposal) },
                             shape = RoundedCornerShape(12.dp),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (isSelected) tokens.primaryC else tokens.surface2
+                                containerColor = Color.Transparent
                             ),
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isSelected) 1.5.dp else 1.dp,
@@ -385,8 +385,6 @@ fun ProposalsTabletLandscapeSplitView(
                                             if (proposal.customerDistrict.isNotBlank()) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .clip(RoundedCornerShape(4.dp))
-                                                        .background(tokens.surface)
                                                         .padding(horizontal = 4.dp, vertical = 1.dp)
                                                 ) {
                                                     Text(
@@ -418,7 +416,7 @@ fun ProposalsTabletLandscapeSplitView(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(6.dp))
-                                                .background(vis.bgColor)
+                                                .border(1.dp, vis.accentColor, RoundedCornerShape(6.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
@@ -552,8 +550,7 @@ fun ProposalsTabletLandscapeSplitView(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(tokens.surface2)
+                                        .border(1.dp, tokens.border, RoundedCornerShape(10.dp))
                                         .padding(horizontal = 12.dp, vertical = 9.dp),
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.SpaceBetween

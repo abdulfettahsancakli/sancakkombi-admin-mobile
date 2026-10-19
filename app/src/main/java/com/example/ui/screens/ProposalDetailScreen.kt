@@ -580,12 +580,10 @@ fun ProposalDocumentCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     proposal.items.forEachIndexed { i, item ->
-                        val bgRow = if (i % 2 == 0) Color(0xFFF9FAFB) else Color(0xFFFFFFFF)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(bgRow)
+                                .border(1.dp, Color(0xFFE5E7EB), RoundedCornerShape(6.dp))
                                 .padding(horizontal = 8.dp, vertical = 7.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {

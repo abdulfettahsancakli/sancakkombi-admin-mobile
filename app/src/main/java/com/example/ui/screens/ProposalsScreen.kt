@@ -333,7 +333,7 @@ fun ProposalsPhoneView(
                                 .fillMaxWidth()
                                 .padding(vertical = 20.dp),
                             shape = RoundedCornerShape(14.dp),
-                            colors = CardDefaults.cardColors(containerColor = tokens.surface),
+                            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
                             border = androidx.compose.foundation.BorderStroke(1.dp, tokens.border)
                         ) {
                             Box(
@@ -411,7 +411,7 @@ fun ProposalsPhoneView(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(vis.bgColor)
+                                                .border(1.dp, vis.accentColor, RoundedCornerShape(8.dp))
                                                 .padding(horizontal = 8.dp, vertical = 3.dp)
                                         ) {
                                             Text(
@@ -440,8 +440,6 @@ fun ProposalsPhoneView(
                                                 if (proposal.customerDistrict.isNotBlank()) {
                                                     Box(
                                                         modifier = Modifier
-                                                            .clip(RoundedCornerShape(6.dp))
-                                                            .background(tokens.surface2)
                                                             .padding(horizontal = 5.dp, vertical = 2.dp)
                                                     ) {
                                                         Text(
@@ -493,7 +491,7 @@ fun ProposalsPhoneView(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(tokens.primaryC)
+                                                .border(1.dp, tokens.border, RoundedCornerShape(10.dp))
                                                 .clickable { sendProposalWhatsApp(context, proposal, cloudWhatsApp) }
                                                 .padding(vertical = 7.dp),
                                             contentAlignment = Alignment.Center
@@ -510,7 +508,7 @@ fun ProposalsPhoneView(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(tokens.primaryC)
+                                                .border(1.dp, tokens.border, RoundedCornerShape(10.dp))
                                                 .clickable { dialProposalPhone(context, proposal.customerPhone) }
                                                 .padding(vertical = 7.dp),
                                             contentAlignment = Alignment.Center
@@ -527,7 +525,7 @@ fun ProposalsPhoneView(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(tokens.surface2)
+                                                .border(1.dp, tokens.border, RoundedCornerShape(10.dp))
                                                 .clickable {
                                                     if (!isDownloadingPdf) {
                                                         coroutineScope.launch {

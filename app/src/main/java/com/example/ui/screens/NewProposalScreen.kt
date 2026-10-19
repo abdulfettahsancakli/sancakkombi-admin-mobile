@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -593,7 +594,8 @@ fun NewProposalFormContent(
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = tokens.surface2)
+                        colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+                        border = BorderStroke(1.dp, tokens.border)
                     ) {
                         Column(modifier = Modifier.padding(10.dp)) {
                             Row(
