@@ -1032,6 +1032,8 @@ class MockAdminRepositoryImpl : AdminRepository {
         return Result.success(Unit)
     }
 
+    override suspend fun sendMaintenanceReminder(ruleId: String): Result<Unit> = Result.success(Unit)
+
     // Reports Implementation
     override fun getReportData(timeRange: com.example.data.model.ReportTimeRange): Flow<com.example.data.model.ReportData> {
         val data = when (timeRange) {

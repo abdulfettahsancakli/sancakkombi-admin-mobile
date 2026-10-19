@@ -109,6 +109,7 @@ interface AdminRepository {
     suspend fun updateMaintenanceRule(rule: MaintenanceRule): Result<Unit>
     suspend fun deleteMaintenanceRule(ruleId: String): Result<Unit>
     suspend fun toggleMaintenanceRuleStatus(ruleId: String): Result<Unit>
+    suspend fun sendMaintenanceReminder(ruleId: String): Result<Unit>
 
     // Reports
     fun getReportData(timeRange: com.example.data.model.ReportTimeRange): Flow<com.example.data.model.ReportData>

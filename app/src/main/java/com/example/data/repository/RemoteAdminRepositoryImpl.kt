@@ -753,6 +753,15 @@ class RemoteAdminRepositoryImpl(
         }
     }
 
+    override suspend fun sendMaintenanceReminder(ruleId: String): Result<Unit> = requireToken { token ->
+        val response = api.sendMaintenanceReminder(authHeader(token), ruleId)
+        if (response.isSuccessful && response.body()?.success == true) {
+            Result.success(Unit)
+        } else {
+            Result.failure(IllegalStateException(response.body()?.error ?: errorMessage(response)))
+        }
+    }
+
     // Raporlar
 
     @OptIn(ExperimentalCoroutinesApi::class)

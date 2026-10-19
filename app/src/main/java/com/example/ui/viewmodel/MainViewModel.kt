@@ -761,6 +761,10 @@ class MainViewModel(
         }
     }
 
+    fun sendMaintenanceReminder(ruleId: String, onResult: (Result<Unit>) -> Unit) {
+        viewModelScope.launch { onResult(repository.sendMaintenanceReminder(ruleId)) }
+    }
+
     // Report Actions
     fun setReportTimeRange(range: com.example.data.model.ReportTimeRange) {
         _selectedReportRange.value = range

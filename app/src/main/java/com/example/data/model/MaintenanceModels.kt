@@ -12,10 +12,17 @@ data class MaintenanceStats(
 @JsonClass(generateAdapter = true)
 data class MaintenanceRule(
     val id: String,
+    val customerId: String = "",
     val customerName: String,
+    val customerPhone: String = "",
+    val customerDistrict: String = "",
+    val customerAddress: String = "",
+    val deviceBrand: String = "",
+    val deviceModel: String = "",
     val serviceType: String,
     val status: String = "Aktif", // "Aktif" or "Pasif"
     val nextReminderDate: String, // e.g. "13.04.2027"
     val intervalMonths: Int = 12,
+    val intervalDays: Int = intervalMonths * 30,
     val channel: String = "WhatsApp"
 )

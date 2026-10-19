@@ -328,3 +328,10 @@ data class CustomerImportResponseDto(
     val matched: Int = 0,
     val error: String? = null
 )
+
+@JsonClass(generateAdapter = true)
+data class MaintenanceReminderSendResponseDto(
+    val success: Boolean = false,
+    val status: String? = null,
+    val error: String? = null
+)

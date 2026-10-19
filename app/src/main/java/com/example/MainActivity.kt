@@ -343,7 +343,9 @@ class MainActivity : ComponentActivity() {
                                         onAddRule = { r -> viewModel.addMaintenanceRule(r) },
                                         onUpdateRule = { r -> viewModel.updateMaintenanceRule(r) },
                                         onDeleteRule = { id -> viewModel.deleteMaintenanceRule(id) },
-                                        onToggleRuleStatus = { id -> viewModel.toggleMaintenanceRuleStatus(id) }
+                                        onToggleRuleStatus = { id -> viewModel.toggleMaintenanceRuleStatus(id) },
+                                        onSendReminder = { id, callback -> viewModel.sendMaintenanceReminder(id, callback) },
+                                        onCreateAppointment = { viewModel.navigateTo("appointments") }
                                     )
                                 }
                                 "reports", "raporlar" -> {

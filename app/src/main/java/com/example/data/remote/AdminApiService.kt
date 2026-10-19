@@ -240,6 +240,12 @@ interface AdminApiService {
     @POST("api/admin/maintenance/rules/{id}/toggle")
     suspend fun toggleMaintenanceRuleStatus(@Header("Authorization") auth: String, @Path("id") id: String): Response<SuccessResponseDto>
 
+    @POST("api/admin/maintenance/rules/{id}/send")
+    suspend fun sendMaintenanceReminder(
+        @Header("Authorization") auth: String,
+        @Path("id") id: String
+    ): Response<MaintenanceReminderSendResponseDto>
+
     // Raporlar
     @GET("api/admin/reports")
     suspend fun getReportData(@Header("Authorization") auth: String, @Query("range") range: String): Response<ReportData>
