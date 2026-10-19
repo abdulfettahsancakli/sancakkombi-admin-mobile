@@ -59,8 +59,18 @@ import com.example.ui.screens.StockScreen
 import com.example.ui.screens.WhatsAppStatusScreen
 import com.example.ui.theme.SancakKombiTheme
 import com.example.ui.viewmodel.MainViewModel
+import com.example.utils.AppointmentReminderReceiver
+import com.example.utils.NotificationPreferenceStore
+import kotlinx.coroutines.flow.MutableStateFlow
 
 class MainActivity : ComponentActivity() {
+
+    private val pendingAppointmentId = MutableStateFlow<String?>(null)
+
+    private fun handleNotificationIntent(intent: Intent?) {
+        pendingAppointmentId.value = intent?.getStringExtra(AppointmentReminderReceiver.EXTRA_APPOINTMENT_ID)
+            ?.takeUnless { it.startsWith("daily_") }
+    }
 
     private fun openServiceReceiptPdf(entryId: String) {
         if (entryId.isBlank()) {
@@ -92,12 +102,17 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        handleNotificationIntent(intent)
         com.example.utils.ReminderManager.createNotificationChannel(applicationContext)
         enableEdgeToEdge()
         setContent {
             var phoneNotificationsEnabled by remember {
                 mutableStateOf(com.example.utils.ReminderManager.areNotificationsEnabled(applicationContext))
             }
+            var notificationPreferences by remember {
+                mutableStateOf(NotificationPreferenceStore.load(applicationContext))
+            }
+            val notificationAppointmentId by pendingAppointmentId.collectAsState()
             val notificationPermissionLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
                 contract = ActivityResultContracts.RequestPermission()
             ) { granted ->
@@ -154,7 +169,13 @@ class MainActivity : ComponentActivity() {
             val campaignsError by viewModel.campaignsError.collectAsState()
             val whatsAppStatus by viewModel.whatsAppStatus.collectAsState()
 
-            LaunchedEffect(appointments, phoneNotificationsEnabled) {
+            LaunchedEffect(isLoggedIn, notificationAppointmentId) {
+                if (isLoggedIn && !notificationAppointmentId.isNullOrBlank()) {
+                    viewModel.navigateTo("appointments", com.example.data.model.AdminModule.RANDEVULAR)
+                }
+            }
+
+            LaunchedEffect(appointments, phoneNotificationsEnabled, notificationPreferences) {
                 if (phoneNotificationsEnabled) {
                     val today = com.example.ui.screens.todayIsoString()
                     val todayAppointments = appointments
@@ -163,22 +184,28 @@ class MainActivity : ComponentActivity() {
                                 it.status != com.example.data.model.AppointmentStatus.IPTAL
                         }
                         .sortedBy { it.timeSlot }
-                    com.example.utils.ReminderManager.scheduleDailySummaryReminders(
-                        applicationContext,
-                        todayAppointments.size,
-                        todayAppointments.firstOrNull()?.let {
-                            "${it.timeSlot} - ${it.customerName} (${it.district})"
-                        }
-                    )
+                    if (notificationPreferences.dailySummary) {
+                        com.example.utils.ReminderManager.scheduleDailySummaryReminders(
+                            applicationContext,
+                            todayAppointments.size,
+                            todayAppointments.firstOrNull()?.let {
+                                "${it.timeSlot} - ${it.customerName} (${it.district})"
+                            }
+                        )
+                    } else {
+                        com.example.utils.ReminderManager.cancelDailySummaryReminders(applicationContext)
+                    }
                     appointments.forEach {
                         if (it.status == com.example.data.model.AppointmentStatus.IPTAL ||
-                            it.status == com.example.data.model.AppointmentStatus.TAMAMLANDI
+                            it.status == com.example.data.model.AppointmentStatus.TAMAMLANDI ||
+                            !notificationPreferences.appointmentReminders
                         ) {
                             com.example.utils.ReminderManager.cancelReminder(applicationContext, it.id)
                         } else {
                             com.example.utils.ReminderManager.scheduleAppointmentReminder(
                                 applicationContext,
-                                it
+                                it,
+                                notificationPreferences.reminderMinutes
                             )
                         }
                     }
@@ -248,6 +275,11 @@ class MainActivity : ComponentActivity() {
                                         stats = stats,
                                         appointments = appointments,
                                         phoneNotificationsEnabled = phoneNotificationsEnabled,
+                                        notificationPreferences = notificationPreferences,
+                                        onNotificationPreferencesChange = { updated ->
+                                            notificationPreferences = updated
+                                            NotificationPreferenceStore.save(applicationContext, updated)
+                                        },
                                         onEnablePhoneNotifications = {
                                             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
                                                 ContextCompat.checkSelfPermission(
@@ -268,6 +300,10 @@ class MainActivity : ComponentActivity() {
                                         onNavigateToModule = { module ->
                                             viewModel.navigateTo(module.id, module)
                                         },
+                                        onOpenAppointment = { appointmentId ->
+                                            pendingAppointmentId.value = appointmentId
+                                            viewModel.navigateTo("appointments", com.example.data.model.AdminModule.RANDEVULAR)
+                                        },
                                         onOpenWhatsAppTemplates = {
                                             viewModel.navigateTo("message_templates", com.example.data.model.AdminModule.MESAJ_SISTEMI)
                                         }
@@ -280,6 +316,7 @@ class MainActivity : ComponentActivity() {
                                         financeRecords = financeRecords,
                                         stockItems = stockItems,
                                         bankAccounts = bankAccounts,
+                                        initialAppointmentId = notificationAppointmentId,
                                         onBackClick = { viewModel.navigateTo("dashboard") },
                                         onAddAppointment = { appt, callback -> viewModel.addAppointment(appt, callback) },
                                         onUpdateAppointment = { appt, callback -> viewModel.updateAppointment(appt, callback) },
@@ -297,7 +334,8 @@ class MainActivity : ComponentActivity() {
                                         },
                                         onGetAvailableSlots = { dateIso, callback ->
                                             viewModel.getAvailableSlots(dateIso, callback)
-                                        }
+                                        },
+                                        onInitialAppointmentHandled = { pendingAppointmentId.value = null }
                                     )
                                 }
                                 "customers", "musteriler" -> {
@@ -552,5 +590,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        handleNotificationIntent(intent)
     }
 }

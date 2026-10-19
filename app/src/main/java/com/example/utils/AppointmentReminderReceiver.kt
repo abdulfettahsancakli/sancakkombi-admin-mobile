@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import com.example.MainActivity
 
@@ -17,8 +18,9 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Randevu Hatırlatması"
         val customerName = intent.getStringExtra(EXTRA_CUSTOMER_NAME) ?: ""
         val address = intent.getStringExtra(EXTRA_ADDRESS) ?: ""
+        val phone = intent.getStringExtra(EXTRA_PHONE) ?: ""
 
-        showNotification(context, appointmentId, title, customerName, address)
+        showNotification(context, appointmentId, title, customerName, address, phone)
     }
 
     private fun showNotification(
@@ -26,7 +28,8 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         appointmentId: String,
         title: String,
         customerName: String,
-        address: String
+        address: String,
+        phone: String
     ) {
         if (!ReminderManager.areNotificationsEnabled(context)) return
         val notificationManager =
@@ -48,6 +51,8 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
 
         val openAppIntent = Intent(context, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+            putExtra(EXTRA_DESTINATION, if (appointmentId.startsWith("daily_")) "dashboard" else "appointments")
+            if (!appointmentId.startsWith("daily_")) putExtra(EXTRA_APPOINTMENT_ID, appointmentId)
         }
         val pendingIntent = PendingIntent.getActivity(
             context,
@@ -64,7 +69,7 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
             "Yaklaşan randevunuzun zamanı geldi."
         }
 
-        val notification = NotificationCompat.Builder(context, channelId)
+        val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(android.R.drawable.ic_dialog_info)
             .setContentTitle("⏰ $title")
             .setContentText(contentText)
@@ -72,7 +77,34 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .build()
+
+        if (!appointmentId.startsWith("daily_")) {
+            if (phone.isNotBlank()) {
+                val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:${Uri.encode(phone)}"))
+                val dialPendingIntent = PendingIntent.getActivity(
+                    context,
+                    appointmentId.hashCode() + 1,
+                    dialIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(android.R.drawable.ic_menu_call, "Ara", dialPendingIntent)
+            }
+            if (address.isNotBlank()) {
+                val routeIntent = Intent(
+                    Intent.ACTION_VIEW,
+                    Uri.parse("google.navigation:q=${Uri.encode(address)}")
+                )
+                val routePendingIntent = PendingIntent.getActivity(
+                    context,
+                    appointmentId.hashCode() + 2,
+                    routeIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                )
+                builder.addAction(android.R.drawable.ic_menu_directions, "Rota", routePendingIntent)
+            }
+        }
+
+        val notification = builder.build()
 
         notificationManager.notify(appointmentId.hashCode(), notification)
     }
@@ -82,5 +114,7 @@ class AppointmentReminderReceiver : BroadcastReceiver() {
         const val EXTRA_TITLE = "extra_title"
         const val EXTRA_CUSTOMER_NAME = "extra_customer_name"
         const val EXTRA_ADDRESS = "extra_address"
+        const val EXTRA_PHONE = "extra_phone"
+        const val EXTRA_DESTINATION = "extra_destination"
     }
 }

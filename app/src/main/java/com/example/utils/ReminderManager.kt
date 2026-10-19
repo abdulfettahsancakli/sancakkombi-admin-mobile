@@ -63,6 +63,7 @@ object ReminderManager {
             putExtra(AppointmentReminderReceiver.EXTRA_APPOINTMENT_ID, appointment.id)
             putExtra(AppointmentReminderReceiver.EXTRA_TITLE, "${appointment.serviceType} Randevusu (${appointment.timeSlot})")
             putExtra(AppointmentReminderReceiver.EXTRA_CUSTOMER_NAME, appointment.customerName)
+            putExtra(AppointmentReminderReceiver.EXTRA_PHONE, appointment.phone)
             putExtra(
                 AppointmentReminderReceiver.EXTRA_ADDRESS,
                 "${appointment.district} / ${appointment.neighborhood} ${appointment.streetDoorNo}".trim()
@@ -182,6 +183,20 @@ object ReminderManager {
 
         val noonMsg = "Günün ilk yarısı tamamlandı. Kalan servislerinizi ve günün akışını kontrol edin."
         scheduleDailyAlarm(context, 12, 0, 10002, "🕛 Gün Ortası Durumu (12:00)", noonMsg)
+    }
+
+    fun cancelDailySummaryReminders(context: Context) {
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        listOf(10001, 10002).forEach { requestCode ->
+            val intent = Intent(context, AppointmentReminderReceiver::class.java)
+            val pendingIntent = PendingIntent.getBroadcast(
+                context,
+                requestCode,
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+            alarmManager.cancel(pendingIntent)
+        }
     }
 
     private fun scheduleDailyAlarm(context: Context, hour: Int, minute: Int, requestCode: Int, title: String, message: String) {

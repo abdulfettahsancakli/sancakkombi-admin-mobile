@@ -60,6 +60,7 @@ import com.example.data.model.Appointment
 import com.example.data.model.AppointmentStatus
 import com.example.data.model.Customer
 import com.example.data.model.IstanbulLocationData
+import com.example.ui.components.VoiceDictationButton
 import java.util.Calendar
 import java.util.UUID
 
@@ -708,6 +709,11 @@ fun QuickAppointmentContent(
                     onValueChange = { note = it },
                     placeholder = "Müşteri ne dedi? Cihaz marka/modeli, hata kodu, daire tarifi...",
                     minHeight = 86.dp
+                )
+                VoiceDictationButton(
+                    currentText = note,
+                    onTextChange = { note = it },
+                    label = "Şikâyeti sesle yaz"
                 )
             }
 

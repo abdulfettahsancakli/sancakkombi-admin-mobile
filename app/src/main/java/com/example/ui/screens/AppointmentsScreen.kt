@@ -85,6 +85,7 @@ fun AppointmentsScreen(
     financeRecords: List<FinanceRecord> = emptyList(),
     stockItems: List<StockItem> = emptyList(),
     bankAccounts: List<BankAccount> = emptyList(),
+    initialAppointmentId: String? = null,
     onBackClick: () -> Unit,
     onAddAppointment: (Appointment, (Result<Unit>) -> Unit) -> Unit,
     onUpdateAppointment: (Appointment, (Result<Unit>) -> Unit) -> Unit,
@@ -95,6 +96,7 @@ fun AppointmentsScreen(
     onDeleteAppointment: (String) -> Unit,
     onSendBankTransfer: ((String, String, Double?, String?, (Result<String>) -> Unit) -> Unit)? = null,
     onGetAvailableSlots: ((String, (Result<List<String>>) -> Unit) -> Unit)? = null,
+    onInitialAppointmentHandled: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -113,6 +115,18 @@ fun AppointmentsScreen(
     var visibleAppointmentCount by remember { mutableStateOf(10) }
     var expandedId by remember { mutableStateOf<String?>(appointments.firstOrNull()?.id) }
     var selectedAppointmentId by remember { mutableStateOf<String?>(appointments.firstOrNull()?.id) }
+
+    LaunchedEffect(initialAppointmentId, appointments) {
+        val targetId = initialAppointmentId ?: return@LaunchedEffect
+        if (appointments.any { it.id == targetId }) {
+            searchQuery = ""
+            statusFilter = null
+            dateRange = "all"
+            expandedId = targetId
+            selectedAppointmentId = targetId
+            onInitialAppointmentHandled()
+        }
+    }
 
     // Tablet View state: "list", "calendar", "map"
     var tabletView by remember { mutableStateOf("list") }

@@ -81,6 +81,7 @@ import com.example.data.model.UsedPart
 import com.example.ui.components.Line
 import com.example.ui.components.renderSignatureToBitmap
 import com.example.ui.components.saveBitmapToCache
+import com.example.ui.components.VoiceDictationButton
 import com.example.utils.parseLocalizedDouble
 import java.text.SimpleDateFormat
 import java.io.File
@@ -817,6 +818,11 @@ fun ServiceReceiptFlowContent(
                             placeholder = "Örn: Sıcak su hiç gelmiyor, F28 hatası...",
                             minHeight = 68.dp
                         )
+                        VoiceDictationButton(
+                            currentText = complaint,
+                            onTextChange = { complaint = it },
+                            label = "Şikâyeti sesle yaz"
+                        )
                     }
                 }
 
@@ -918,6 +924,11 @@ fun ServiceReceiptFlowContent(
                             onValueChange = { workDone = it },
                             placeholder = "Yapılan işlem detayı, değişen parça, ölçüm değerleri...",
                             minHeight = 76.dp
+                        )
+                        VoiceDictationButton(
+                            currentText = workDone,
+                            onTextChange = { workDone = it },
+                            label = "Yapılan işi sesle yaz"
                         )
                     }
 

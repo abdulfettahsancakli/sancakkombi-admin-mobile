@@ -876,6 +876,11 @@ private fun Step2JobDetailsView(
             modifier = Modifier.fillMaxWidth(),
             minLines = 2
         )
+        VoiceDictationButton(
+            currentText = workDoneNote,
+            onTextChange = onWorkDoneNoteChange,
+            label = "Yapılan işi sesle yaz"
+        )
 
         Spacer(modifier = Modifier.height(10.dp))
 

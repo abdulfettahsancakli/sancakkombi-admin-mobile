@@ -25,14 +25,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
@@ -61,6 +64,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -86,6 +91,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.AdminModule
 import com.example.data.model.DashboardStats
+import com.example.utils.NotificationPreferences
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -114,8 +120,11 @@ fun DashboardScreen(
     stats: DashboardStats,
     appointments: List<com.example.data.model.Appointment> = emptyList(),
     phoneNotificationsEnabled: Boolean = false,
+    notificationPreferences: NotificationPreferences = NotificationPreferences(),
+    onNotificationPreferencesChange: (NotificationPreferences) -> Unit = {},
     onEnablePhoneNotifications: () -> Unit = {},
     onNavigateToModule: (AdminModule) -> Unit,
+    onOpenAppointment: (String) -> Unit = {},
     onOpenWhatsAppTemplates: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -153,7 +162,7 @@ fun DashboardScreen(
             }
     }
 
-    val dynamicNotifications = remember(stats, todayAppts, nowMillis) {
+    val dynamicNotifications = remember(stats, todayAppts, nowMillis, notificationPreferences) {
         val list = mutableListOf<DynamicNotificationItem>()
         val now = Calendar.getInstance().apply { timeInMillis = nowMillis }
 
@@ -161,8 +170,8 @@ fun DashboardScreen(
             it.status == com.example.data.model.AppointmentStatus.TAMAMLANDI
         }
         val remainingCount = todayAppts.size - completedCount
-        list.add(
-            DynamicNotificationItem(
+        if (notificationPreferences.dailySummary) {
+            list.add(DynamicNotificationItem(
                 title = if (todayAppts.isEmpty()) "Bugün planınız boş" else "Bugünün servis planı",
                 desc = if (todayAppts.isEmpty()) {
                     "Bugün için kayıtlı bir servis randevusu bulunmuyor."
@@ -175,15 +184,15 @@ fun DashboardScreen(
                 iconColor = Color(0xFF0288D1),
                 actionLabel = "Planı aç",
                 targetModule = AdminModule.RANDEVULAR
-            )
-        )
+            ))
+        }
 
         // Next-appointment card — live countdown/elapsed based on its real time slot
         val nextAppt = todayAppts.firstOrNull { appointment ->
             appointment.status != com.example.data.model.AppointmentStatus.TAMAMLANDI &&
                 parseSlotStart(appointment.timeSlot).let { (h, m) -> minutesUntil(now, h, m) >= -60 }
         }
-        if (nextAppt != null) {
+        if (nextAppt != null && notificationPreferences.appointmentReminders) {
             val (h, m) = parseSlotStart(nextAppt.timeSlot)
             val diffMin = minutesUntil(now, h, m)
             val liveLabel = when {
@@ -201,12 +210,13 @@ fun DashboardScreen(
                     icon = Icons.Default.Bolt,
                     iconColor = Color(0xFF10B981),
                     actionLabel = "Randevuyu aç",
-                    targetModule = AdminModule.RANDEVULAR
+                    targetModule = AdminModule.RANDEVULAR,
+                    targetId = nextAppt.id
                 )
             )
         }
 
-        if (stats.bekleyenOnay > 0) {
+        if (stats.bekleyenOnay > 0 && notificationPreferences.proposalAlerts) {
             list.add(
                 DynamicNotificationItem(
                     title = "Yanıt bekleyen teklifler",
@@ -221,7 +231,7 @@ fun DashboardScreen(
             )
         }
 
-        if (stats.acikAlacak.filter(Char::isDigit).any { it != '0' }) {
+        if (notificationPreferences.financeAlerts && stats.acikAlacak.filter(Char::isDigit).any { it != '0' }) {
             list.add(
                 DynamicNotificationItem(
                     title = "Takip edilecek alacak",
@@ -409,9 +419,15 @@ fun DashboardScreen(
         NotificationCenterDialog(
             notifications = dynamicNotifications,
             phoneNotificationsEnabled = phoneNotificationsEnabled,
+            notificationPreferences = notificationPreferences,
+            onNotificationPreferencesChange = onNotificationPreferencesChange,
             onEnablePhoneNotifications = onEnablePhoneNotifications,
-            onNotificationClick = { module ->
-                onNavigateToModule(module)
+            onNotificationClick = { module, targetId ->
+                if (module == AdminModule.RANDEVULAR && !targetId.isNullOrBlank()) {
+                    onOpenAppointment(targetId)
+                } else {
+                    onNavigateToModule(module)
+                }
             },
             onDismiss = { showNotificationDialog = false }
         )
@@ -1125,15 +1141,18 @@ data class DynamicNotificationItem(
     val icon: ImageVector,
     val iconColor: Color,
     val actionLabel: String,
-    val targetModule: AdminModule
+    val targetModule: AdminModule,
+    val targetId: String? = null
 )
 
 @Composable
 private fun NotificationCenterDialog(
     notifications: List<DynamicNotificationItem>,
     phoneNotificationsEnabled: Boolean,
+    notificationPreferences: NotificationPreferences,
+    onNotificationPreferencesChange: (NotificationPreferences) -> Unit,
     onEnablePhoneNotifications: () -> Unit,
-    onNotificationClick: (AdminModule) -> Unit,
+    onNotificationClick: (AdminModule, String?) -> Unit,
     onDismiss: () -> Unit
 ) {
     AlertDialog(
@@ -1194,7 +1213,10 @@ private fun NotificationCenterDialog(
         },
         text = {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(max = 560.dp)
+                    .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Surface(
@@ -1254,11 +1276,16 @@ private fun NotificationCenterDialog(
                     }
                 }
 
+                NotificationPreferenceControls(
+                    preferences = notificationPreferences,
+                    onChange = onNotificationPreferencesChange
+                )
+
                 notifications.forEach { item ->
                     NotificationItemCard(
                         item = item,
                         onClick = {
-                            onNotificationClick(item.targetModule)
+                            onNotificationClick(item.targetModule, item.targetId)
                             onDismiss()
                         }
                     )
@@ -1272,6 +1299,92 @@ private fun NotificationCenterDialog(
         },
         shape = RoundedCornerShape(20.dp)
     )
+}
+
+@Composable
+private fun NotificationPreferenceControls(
+    preferences: NotificationPreferences,
+    onChange: (NotificationPreferences) -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surface,
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.22f))
+    ) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = "Bildirim tercihleri",
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            NotificationPreferenceRow(
+                title = "Randevu hatırlatmaları",
+                checked = preferences.appointmentReminders,
+                onCheckedChange = { onChange(preferences.copy(appointmentReminders = it)) }
+            )
+            if (preferences.appointmentReminders) {
+                Text(
+                    "Randevudan ne kadar önce?",
+                    fontSize = 11.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    listOf(15, 30, 60).forEach { minute ->
+                        FilterChip(
+                            selected = preferences.reminderMinutes == minute,
+                            onClick = { onChange(preferences.copy(reminderMinutes = minute)) },
+                            label = { Text("$minute dk", fontSize = 11.sp) },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                }
+            }
+            NotificationPreferenceRow(
+                title = "Sabah ve gün ortası özeti",
+                checked = preferences.dailySummary,
+                onCheckedChange = { onChange(preferences.copy(dailySummary = it)) }
+            )
+            NotificationPreferenceRow(
+                title = "Bekleyen teklif uyarıları",
+                checked = preferences.proposalAlerts,
+                onCheckedChange = { onChange(preferences.copy(proposalAlerts = it)) }
+            )
+            NotificationPreferenceRow(
+                title = "Alacak ve tahsilat uyarıları",
+                checked = preferences.financeAlerts,
+                onCheckedChange = { onChange(preferences.copy(financeAlerts = it)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun NotificationPreferenceRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(
+            text = title,
+            modifier = Modifier.weight(1f),
+            fontSize = 12.sp,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Switch(checked = checked, onCheckedChange = onCheckedChange)
+    }
 }
 
 @Composable
