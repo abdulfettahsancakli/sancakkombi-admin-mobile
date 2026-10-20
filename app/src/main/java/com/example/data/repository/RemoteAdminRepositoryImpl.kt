@@ -386,6 +386,8 @@ class RemoteAdminRepositoryImpl(
     }
 
     override suspend fun createServiceReceipt(appointment: Appointment, jobReport: JobReport): Result<Unit> = requireToken { token ->
+        // Backend telefon ve is tarihinden tek uygun acik randevu bulursa bu
+        // hizli fisi o kayda baglayip tamamlar; yeni/mukerrer randevu acmaz.
         val uploadedPhotoUrls = jobReport.photoUris.mapNotNull { uploadContentUri(token, it, "job-photos") }
         val uploadedCustomerSignatureUrl = jobReport.customerSignaturePath?.let { uploadLocalFile(token, it, "signatures") }
         val uploadedTechnicianSignatureUrl = jobReport.technicianSignaturePath?.let { uploadLocalFile(token, it, "signatures") }

@@ -94,7 +94,10 @@ data class CompleteJobRequestDto(
 @JsonClass(generateAdapter = true)
 data class ServiceReceiptRequestDto(
     val appointment: com.example.data.model.Appointment,
-    val jobReport: com.example.data.model.JobReport
+    val jobReport: com.example.data.model.JobReport,
+    // Hizli "Servis Fisi Kes" akisinda ayni telefon/tarihe ait tek acik
+    // randevuyu yeni kayit acmadan tamamlamasi icin backend'e niyet bildirir.
+    val completeOpenAppointment: Boolean = true
 )
 
 @JsonClass(generateAdapter = true)

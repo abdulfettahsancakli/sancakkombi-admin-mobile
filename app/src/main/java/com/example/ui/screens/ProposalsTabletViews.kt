@@ -419,6 +419,18 @@ fun ProposalsTabletLandscapeSplitView(
                                             )
                                         }
                                     }
+
+                                    IconButton(
+                                        onClick = { onDeleteProposal(proposal.id) },
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Delete,
+                                            contentDescription = "Teklifi sil",
+                                            tint = tokens.red,
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                    }
                                 }
                             }
                         }

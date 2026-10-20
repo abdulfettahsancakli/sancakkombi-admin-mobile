@@ -26,7 +26,9 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -36,6 +38,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -64,7 +67,7 @@ fun ProposalsScreen(
     onBackClick: () -> Unit,
     onNewProposalClick: () -> Unit,
     onViewProposalDetail: (Proposal) -> Unit,
-    onDeleteProposal: (String) -> Unit,
+    onDeleteProposal: (String, (Result<Unit>) -> Unit) -> Unit,
     catalogItems: List<CatalogItem> = emptyList(),
     onUpdateProposalStatus: ((String, ProposalStatus) -> Unit)? = null,
     onCreateProposal: ((Proposal) -> Unit)? = null,
@@ -76,6 +79,9 @@ fun ProposalsScreen(
         mutableStateOf(proposals.firstOrNull()?.id)
     }
     var showTabletNewProposalDialog by remember { mutableStateOf(false) }
+    var proposalPendingDeletion by remember { mutableStateOf<Proposal?>(null) }
+    var isDeletingProposal by remember { mutableStateOf(false) }
+    val context = LocalContext.current
 
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
         val isTablet = maxWidth >= 600.dp
@@ -92,7 +98,7 @@ fun ProposalsScreen(
                 onBackClick = onBackClick,
                 onOpenNewProposalDialog = { showTabletNewProposalDialog = true },
                 onUpdateStatus = { id, st -> onUpdateProposalStatus?.invoke(id, st) },
-                onDeleteProposal = onDeleteProposal,
+                onDeleteProposal = { id -> proposalPendingDeletion = proposals.find { it.id == id } },
                 tokens = tokens
             )
 
@@ -114,10 +120,54 @@ fun ProposalsScreen(
                 onBackClick = onBackClick,
                 onNewProposalClick = onNewProposalClick,
                 onViewProposalDetail = onViewProposalDetail,
+                onDeleteProposal = { id -> proposalPendingDeletion = proposals.find { it.id == id } },
                 onUpdateStatus = onUpdateProposalStatus,
                 tokens = tokens
             )
         }
+    }
+
+    proposalPendingDeletion?.let { proposal ->
+        AlertDialog(
+            onDismissRequest = { if (!isDeletingProposal) proposalPendingDeletion = null },
+            title = { Text("Teklif silinsin mi?") },
+            text = {
+                Text(
+                    "${proposal.quoteNumber.ifBlank { proposal.id }} numaralı ${proposal.customerName} teklifi kalıcı olarak silinecek."
+                )
+            },
+            dismissButton = {
+                TextButton(
+                    enabled = !isDeletingProposal,
+                    onClick = { proposalPendingDeletion = null }
+                ) {
+                    Text("Vazgeç")
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    enabled = !isDeletingProposal,
+                    onClick = {
+                        isDeletingProposal = true
+                        onDeleteProposal(proposal.id) { result ->
+                            isDeletingProposal = false
+                            if (result.isSuccess) {
+                                proposalPendingDeletion = null
+                                android.widget.Toast.makeText(context, "Teklif silindi.", android.widget.Toast.LENGTH_SHORT).show()
+                            } else {
+                                android.widget.Toast.makeText(
+                                    context,
+                                    result.exceptionOrNull()?.message ?: "Teklif silinemedi.",
+                                    android.widget.Toast.LENGTH_LONG
+                                ).show()
+                            }
+                        }
+                    }
+                ) {
+                    Text(if (isDeletingProposal) "Siliniyor…" else "Sil", color = tokens.red)
+                }
+            }
+        )
     }
 }
 
@@ -127,6 +177,7 @@ fun ProposalsPhoneView(
     onBackClick: () -> Unit,
     onNewProposalClick: () -> Unit,
     onViewProposalDetail: (Proposal) -> Unit,
+    onDeleteProposal: (String) -> Unit,
     tokens: ProposalTokens,
     onUpdateStatus: ((String, ProposalStatus) -> Unit)? = null,
     modifier: Modifier = Modifier
@@ -474,7 +525,7 @@ fun ProposalsPhoneView(
                                         }
                                     }
 
-                                    // 3. Satır: Hızlı Aksiyon Butonları (WhatsApp, Ara, PDF)
+                                    // 3. Satır: Hızlı Aksiyon Butonları (WhatsApp, Ara, PDF, Sil)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -539,6 +590,35 @@ fun ProposalsPhoneView(
                                                 fontWeight = FontWeight.Bold,
                                                 color = tokens.text
                                             )
+                                        }
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(tokens.redC)
+                                                .border(1.dp, tokens.red.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                                .clickable { onDeleteProposal(proposal.id) }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Delete,
+                                                    contentDescription = null,
+                                                    tint = tokens.red,
+                                                    modifier = Modifier.size(13.dp)
+                                                )
+                                                Text(
+                                                    text = "Sil",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = tokens.red
+                                                )
+                                            }
                                         }
                                     }
                                 }

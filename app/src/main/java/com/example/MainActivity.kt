@@ -400,7 +400,7 @@ class MainActivity : ComponentActivity() {
                                             viewModel.selectProposal(prop)
                                             viewModel.navigateTo("proposal_detail")
                                         },
-                                        onDeleteProposal = { id -> viewModel.deleteProposal(id) },
+                                        onDeleteProposal = { id, callback -> viewModel.deleteProposal(id, callback) },
                                         catalogItems = catalogItems,
                                         onUpdateProposalStatus = { id, st -> viewModel.updateProposalStatus(id, st) },
                                         onCreateProposal = { prop -> viewModel.addProposal(prop) },

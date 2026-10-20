@@ -736,9 +736,9 @@ class MainViewModel(
         _selectedProposal.value = proposal
     }
 
-    fun deleteProposal(id: String) {
+    fun deleteProposal(id: String, onResult: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch {
-            repository.deleteProposal(id)
+            onResult(repository.deleteProposal(id))
         }
     }
 
